@@ -1,0 +1,42 @@
+{
+  "name": "live-plugin-manager",
+  "version": "0.1.0",
+  "description": "bla bla",
+  "main": "index.js",
+  "typings": "index.d.ts",
+  "scripts": {
+    "src-build": "tsc",
+    "src-build-w": "tsc -w",
+    "start-demo": "nodemon ./demo/index.js -e js",
+    "develop": "npm run src-build-w",
+    "test": "mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/davideicardi/live-plugin-manager.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/davideicardi/live-plugin-manager/issues"
+  },
+  "homepage": "https://github.com/davideicardi/live-plugin-manager#readme",
+  "devDependencies": {
+    "@types/chai": "^3.4.34",
+    "@types/mocha": "^2.2.40",
+    "chai": "^3.5.0",
+    "mocha": "^3.2.0",
+    "nodemon": "^1.11.0",
+    "tslint": "^4.3.1",
+    "typescript": "^2.2.2"
+  },
+  "dependencies": {
+    "@types/debug": "0.0.29",
+    "@types/fs-extra": "^2.0.0",
+    "@types/node": "^7.0.12",
+    "debug": "^2.6.0",
+    "fs-extra": "^2.1.2",
+    "tar.gz": "^1.0.5",
+    "web-request": "^1.0.7"
+  }
+}
