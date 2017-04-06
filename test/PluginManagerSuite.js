@@ -12,30 +12,30 @@ const chai_1 = require("chai");
 const path = require("path");
 const fs = require("fs-extra");
 const index_1 = require("../index");
-const pluginsDirectory = path.join(__dirname, "test-plugins");
+const pluginsPath = path.join(__dirname, "test-plugins");
 describe("PluginManager suite", () => {
     let manager;
     beforeEach(() => __awaiter(this, void 0, void 0, function* () {
-        fs.removeSync(pluginsDirectory);
+        fs.removeSync(pluginsPath);
         manager = new index_1.PluginManager({
-            pluginsDirectory
+            pluginsPath
         });
     }));
     afterEach(() => __awaiter(this, void 0, void 0, function* () {
-        fs.removeSync(pluginsDirectory);
+        fs.removeSync(pluginsPath);
     }));
     it("should not have any installed plugins", () => __awaiter(this, void 0, void 0, function* () {
         const plugins = yield manager.list();
         chai_1.assert.equal(plugins.length, 0);
     }));
-    describe("when installing a plugin using npm url", () => {
+    describe("when installing a plugin using npm name", () => {
         beforeEach(() => __awaiter(this, void 0, void 0, function* () {
-            yield manager.install("https://registry.npmjs.org/lodash/-/lodash-4.17.4.tgz");
+            yield manager.install("lodash", "4.17.4");
         }));
         it("should be available", () => __awaiter(this, void 0, void 0, function* () {
             const plugins = yield manager.list();
             chai_1.assert.equal(plugins.length, 1);
-            chai_1.assert.equal(plugins[0].id, "lodash");
+            chai_1.assert.equal(plugins[0].name, "lodash");
             chai_1.assert.equal(plugins[0].version, "4.17.4");
             const _ = yield manager.get("lodash");
             chai_1.assert.isDefined(_);

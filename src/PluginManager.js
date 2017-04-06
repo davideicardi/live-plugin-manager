@@ -8,34 +8,47 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const WebRequest = require("web-request");
 const fs = require("fs-extra");
 const path = require("path");
-const url = require("url");
+const NpmRegistryClient_1 = require("./NpmRegistryClient");
 const Debug = require("debug");
 const debug = Debug("live-plugin-manager");
-const Targz = require("tar.gz");
+const BASE_NPM_URL = "https://registry.npmjs.org";
+const cwd = process.cwd();
+const DefaultOptions = {
+    npmRegistryUrl: BASE_NPM_URL,
+    npmRegistryConfig: {},
+    pluginsPath: path.join(cwd, "plugins"),
+};
 class PluginManager {
     constructor(options) {
-        this.options = options;
         this.installedPlugins = new Array();
-        this.downloadDirectory = path.join(options.pluginsDirectory, ".downloads");
+        this.options = Object.assign({}, DefaultOptions, options || {});
+        this.registryClient = new NpmRegistryClient_1.NpmRegistryClient(this.options.npmRegistryUrl, this.options.npmRegistryConfig);
     }
-    install(pluginReference) {
+    install(name, version = "latest") {
         return __awaiter(this, void 0, void 0, function* () {
-            fs.ensureDirSync(this.options.pluginsDirectory);
-            const npmUrl = NpmReference.parse(pluginReference);
-            const fileTgz = yield this.downloadNpmPlugin(npmUrl);
-            yield this.extractNpmPlugin(fileTgz, npmUrl.id);
+            fs.ensureDirSync(this.options.pluginsPath);
+            const registryInfo = yield this.registryClient.get(name, version);
+            // already installed
+            const installedInfo = this.getInfo(name);
+            if (installedInfo && installedInfo.version === registryInfo.version) {
+                return;
+            }
+            // TODO check if already downloaded:
+            //  if same version return
+            // 	if different version uninstall it and continue
+            yield this.registryClient.download(this.options.pluginsPath, registryInfo);
             this.installedPlugins.push({
-                id: npmUrl.id,
-                version: npmUrl.version,
-                source: npmUrl
+                name: registryInfo.name.toLowerCase(),
+                version: registryInfo.version,
+                source: "npm"
             });
         });
     }
-    uninstall(pluginId) {
+    uninstall(name) {
         return __awaiter(this, void 0, void 0, function* () {
+            // TODO
         });
     }
     list() {
@@ -43,79 +56,22 @@ class PluginManager {
             return this.installedPlugins;
         });
     }
-    get(pluginId) {
+    get(name) {
         return __awaiter(this, void 0, void 0, function* () {
-            return require(path.join(this.options.pluginsDirectory, pluginId));
-        });
-    }
-    extractNpmPlugin(tgzFile, pluginId) {
-        return __awaiter(this, void 0, void 0, function* () {
-            debug(`Extracting ${tgzFile} ...`);
-            const targz = new Targz({}, {
-                strip: 1 // strip the first "package" directory
-            });
-            yield targz.extract(tgzFile, path.join(this.options.pluginsDirectory, pluginId));
-        });
-    }
-    downloadNpmPlugin(npmUrl) {
-        return __awaiter(this, void 0, void 0, function* () {
-            fs.ensureDirSync(this.downloadDirectory);
-            const fileName = npmUrl.fileName;
-            const destinationFile = path.join(this.downloadDirectory, fileName);
-            // delete file if exists
-            if (fs.existsSync(destinationFile)) {
-                fs.removeSync(destinationFile);
+            const info = this.getInfo(name);
+            if (!info) {
+                throw new Error(`${name} not installed`);
             }
-            debug(`Downloading ${npmUrl.fullUrl} to ${destinationFile} ...`);
-            const request = WebRequest.stream(npmUrl.fullUrl);
-            const w = fs.createWriteStream(destinationFile);
-            request.pipe(w);
-            const response = yield request.response;
-            yield new Promise((resolve, reject) => {
-                w.on("error", (e) => {
-                    reject(e);
-                });
-                w.on("finish", () => {
-                    resolve();
-                });
-            });
-            return destinationFile;
+            return require(path.join(this.options.pluginsPath, info.name));
         });
+    }
+    getInfo(name) {
+        name = name.toLowerCase();
+        return this.installedPlugins.find((p) => p.name === name);
     }
 }
 exports.PluginManager = PluginManager;
 class PluginInfo {
 }
 exports.PluginInfo = PluginInfo;
-class NpmReference {
-    static parse(fullUrl) {
-        // assume that url is in this format:
-        // https://registry.npmjs.org/lodash/-/lodash-4.17.4.tgz
-        const parsedUrl = url.parse(fullUrl);
-        if (parsedUrl.hostname !== "registry.npmjs.org") {
-            throw new Error("Invalid npm host name");
-        }
-        if (!parsedUrl.pathname) {
-            throw new Error("Invalid npm url");
-        }
-        const parts = parsedUrl.pathname.split("/");
-        const id = parts[1];
-        const fileName = path.basename(parsedUrl.pathname);
-        const extension = path.extname(fileName);
-        const version = fileName.replace(`${id}-`, "").replace(extension, "");
-        if (id.indexOf(".") >= 0) {
-            throw new Error("Invalid npm url");
-        }
-        if (!version || !id || !fileName) {
-            throw new Error("Invalid npm url");
-        }
-        return {
-            fullUrl,
-            id,
-            version,
-            fileName
-        };
-    }
-}
-exports.NpmReference = NpmReference;
 //# sourceMappingURL=PluginManager.js.map

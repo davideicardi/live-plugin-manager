@@ -34,9 +34,14 @@
     "@types/debug": "0.0.29",
     "@types/fs-extra": "^2.0.0",
     "@types/node": "^7.0.12",
+    "@types/url-join": "^0.8.2",
+    "@types/uuid": "^2.0.29",
     "debug": "^2.6.0",
     "fs-extra": "^2.1.2",
+    "npm-registry-client": "^8.1.0",
     "tar.gz": "^1.0.5",
+    "url-join": "^1.1.0",
+    "uuid": "^3.0.1",
     "web-request": "^1.0.7"
   }
 }

@@ -4,20 +4,20 @@ import * as fs from "fs-extra";
 
 import {PluginManager} from "../index";
 
-const pluginsDirectory = path.join(__dirname, "test-plugins");
+const pluginsPath = path.join(__dirname, "test-plugins");
 
 describe("PluginManager suite", () => {
 	let manager: PluginManager;
 
 	beforeEach(async () => {
-		fs.removeSync(pluginsDirectory);
+		fs.removeSync(pluginsPath);
 		manager = new PluginManager({
-			pluginsDirectory
+			pluginsPath
 		});
 	});
 
 	afterEach(async () => {
-		fs.removeSync(pluginsDirectory);
+		fs.removeSync(pluginsPath);
 	});
 
 	it("should not have any installed plugins", async () => {
@@ -25,15 +25,15 @@ describe("PluginManager suite", () => {
 		assert.equal(plugins.length, 0);
 	});
 
-	describe("when installing a plugin using npm url", () => {
+	describe("when installing a plugin using npm name", () => {
 		beforeEach(async () => {
-			await manager.install("https://registry.npmjs.org/lodash/-/lodash-4.17.4.tgz");
+			await manager.install("lodash", "4.17.4");
 		});
 
 		it("should be available", async () => {
 			const plugins = await manager.list();
 			assert.equal(plugins.length, 1);
-			assert.equal(plugins[0].id, "lodash");
+			assert.equal(plugins[0].name, "lodash");
 			assert.equal(plugins[0].version, "4.17.4");
 
 			const _ = await manager.get("lodash");
