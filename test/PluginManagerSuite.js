@@ -130,8 +130,8 @@ describe("PluginManager suite", function () {
     });
     it("plugins respect the same node.js behavior", function () {
         return __awaiter(this, void 0, void 0, function* () {
-            const pluginPath = path.join(__dirname, "my-test-plugin");
-            const pluginInfo = yield manager.installFromPath(pluginPath);
+            const pluginSourcePath = path.join(__dirname, "my-test-plugin");
+            const pluginInfo = yield manager.installFromPath(pluginSourcePath);
             const pluginInstance = manager.require("my-test-plugin");
             chai_1.assert.isDefined(pluginInstance, "Plugin is not loaded");
             chai_1.assert.equal(pluginInstance.myVariable, "value1");
@@ -139,8 +139,8 @@ describe("PluginManager suite", function () {
             chai_1.assert.equal(pluginInstance.myVariableFromSubFile, "value3");
             chai_1.assert.equal(pluginInstance.myVariableFromSubFolder, "value4");
             chai_1.assert.equal(pluginInstance.myVariableDifferentStyleOfRequire, "value5");
-            chai_1.assert.equal(pluginInstance.myGlobals.__filename, path.join(pluginPath, "index.js"));
-            chai_1.assert.equal(pluginInstance.myGlobals.__dirname, pluginPath);
+            chai_1.assert.equal(pluginInstance.myGlobals.__filename, path.join(pluginsPath, "my-test-plugin", "index.js"));
+            chai_1.assert.equal(pluginInstance.myGlobals.__dirname, path.join(pluginsPath, "my-test-plugin"));
         });
     });
 });

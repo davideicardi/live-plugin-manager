@@ -1,7 +1,7 @@
 import * as fs from "fs-extra";
 import * as path from "path";
 import * as url from "url";
-import {NpmRegistryClient} from "./NpmRegistryClient";
+import {NpmRegistryClient, PackageInfo} from "./NpmRegistryClient";
 import {PluginVm} from "./PluginVm";
 import {PluginInfo} from "./PluginInfo";
 import * as Debug from "debug";
@@ -52,56 +52,38 @@ export class PluginManager {
 			return installedInfo;
 		}
 
-		// TODO check if already downloaded:
-		//  if same version return
-		// 	if different version uninstall it and continue
+		// already downloaded
+		if (!this.isAlreadyDownloaded(registryInfo.name, registryInfo.version)) {
+			this.removeDownloaded(registryInfo.name);
 
-		const location = await this.npmRegistry.download(
-			this.options.pluginsPath,
-			registryInfo);
+			const location = await this.npmRegistry.download(
+				this.options.pluginsPath,
+				registryInfo);
+		}
 
-		const pluginInfo = {
-			name: normalizeName(registryInfo.name),
-			version: registryInfo.version,
-			mainFile: path.join(location, registryInfo.main),
-			source: "npm",
-			location
-		};
-
-		await this.install(pluginInfo);
-
-		return pluginInfo;
+		return await this.install(registryInfo);
 	}
 
 	async installFromPath(location: string): Promise<PluginInfo> {
 		fs.ensureDirSync(this.options.pluginsPath);
 
-		const packageJsonFile = path.join(location, "package.json");
-		if (!fs.existsSync(packageJsonFile)) {
-			throw new Error(`Invalid plugin ${location}, package.json is missing`);
-		}
-		const packageJson = JSON.parse(fs.readFileSync(packageJsonFile, "utf8"));
+		const packageJson = this.readPackageJson(location);
 
-		if (!packageJson.main
-			|| !packageJson.name
-			|| !packageJson.version) {
-			throw new Error(
-				`Invalid plugin ${location}, 'main', 'name' and 'version' properties are required in package.json`);
+		// already installed
+		const installedInfo = this.getInfo(packageJson.name);
+		if (installedInfo && installedInfo.version === packageJson.version) {
+			return installedInfo;
 		}
 
-		fs.copySync(location, this.options.pluginsPath);
+		// already downloaded
+		if (!this.isAlreadyDownloaded(packageJson.name, packageJson.version)) {
+			this.removeDownloaded(packageJson.name);
 
-		const pluginInfo = {
-			name: normalizeName(packageJson.name),
-			version: packageJson.version,
-			mainFile: path.join(location, packageJson.main),
-			source: "path",
-			location
-		};
+			debug(`Copy from ${location} to ${this.options.pluginsPath}`);
+			fs.copySync(location, this.getPluginLocation(packageJson.name));
+		}
 
-		await this.install(pluginInfo);
-
-		return pluginInfo;
+		return await this.install(packageJson);
 	}
 
 	async uninstall(name: string): Promise<void> {
@@ -133,8 +115,77 @@ export class PluginManager {
 	}
 
 	getInfo(name: string): PluginInfo | undefined {
-		name = normalizeName(name);
 		return this.installedPlugins.find((p) => p.name === name);
+	}
+
+	private async installDependencies(packageInfo: PackageInfo): Promise<void> {
+		if (!packageInfo.dependencies) {
+			return;
+		}
+
+		for (const key in packageInfo.dependencies) {
+			if (packageInfo.dependencies.hasOwnProperty(key)) {
+				const version = packageInfo.dependencies[key].toString();
+
+				if (this.isModuleAvailable(key)) {
+					debug(`Skipping dependency ${key} of ${packageInfo.name}, is already installed`);
+				} else {
+					debug(`Installing dependency ${key} of ${packageInfo.name}, is already installed`);
+					await this.installFromNpm(key, version);
+				}
+			}
+		}
+	}
+
+	private isModuleAvailable(name: string): boolean {
+		try {
+			require.resolve(name);
+			return true;
+		} catch (e) {
+			return false;
+		}
+	}
+
+	private getPluginLocation(name: string) {
+		return path.join(this.options.pluginsPath, name);
+	}
+
+	private removeDownloaded(name: string) {
+		const location = this.getPluginLocation(name);
+		if (!fs.existsSync(location)) {
+			fs.removeSync(location);
+		}
+	}
+
+	private isAlreadyDownloaded(name: string, version: string): boolean {
+		const location = this.getPluginLocation(name);
+		if (!fs.existsSync(location)) {
+			return false;
+		}
+
+		try {
+			const packageJson = this.readPackageJson(location);
+
+			return (packageJson.name === name && packageJson.version === version);
+		} catch (e) {
+			return false;
+		}
+	}
+
+	private readPackageJson(location: string): PackageInfo {
+		const packageJsonFile = path.join(location, "package.json");
+		if (!fs.existsSync(packageJsonFile)) {
+			throw new Error(`Invalid plugin ${location}, package.json is missing`);
+		}
+		const packageJson = JSON.parse(fs.readFileSync(packageJsonFile, "utf8"));
+
+		if (!packageJson.name
+			|| !packageJson.version) {
+			throw new Error(
+				`Invalid plugin ${location}, 'main', 'name' and 'version' properties are required in package.json`);
+		}
+
+		return packageJson;
 	}
 
 	private async load(plugin: PluginInfo): Promise<void> {
@@ -145,15 +196,20 @@ export class PluginManager {
 		plugin.instance = undefined;
 	}
 
-	private async install(pluginInfo: PluginInfo) {
+	private async install(packageInfo: PackageInfo): Promise<PluginInfo> {
+		await this.installDependencies(packageInfo);
+
+		const location = this.getPluginLocation(packageInfo.name);
+		const pluginInfo = {
+			name: packageInfo.name,
+			version: packageInfo.version,
+			location,
+			mainFile: path.normalize(path.join(location, packageInfo.main || "index.js"))
+		};
+
 		await this.load(pluginInfo);
 		this.installedPlugins.push(pluginInfo);
-	}
-}
 
-function normalizeName(name: string) {
-	if (!name) {
-		throw new Error("Invalid plugin name");
+		return pluginInfo;
 	}
-	return name.toLowerCase();
 }

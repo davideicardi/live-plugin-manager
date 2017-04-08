@@ -123,8 +123,8 @@ describe("PluginManager suite", function() {
 	});
 
 	it("plugins respect the same node.js behavior", async function() {
-		const pluginPath = path.join(__dirname, "my-test-plugin");
-		const pluginInfo = await manager.installFromPath(pluginPath);
+		const pluginSourcePath = path.join(__dirname, "my-test-plugin");
+		const pluginInfo = await manager.installFromPath(pluginSourcePath);
 
 		const pluginInstance = manager.require("my-test-plugin");
 		assert.isDefined(pluginInstance, "Plugin is not loaded");
@@ -134,7 +134,7 @@ describe("PluginManager suite", function() {
 		assert.equal(pluginInstance.myVariableFromSubFile, "value3");
 		assert.equal(pluginInstance.myVariableFromSubFolder, "value4");
 		assert.equal(pluginInstance.myVariableDifferentStyleOfRequire, "value5");
-		assert.equal(pluginInstance.myGlobals.__filename, path.join(pluginPath, "index.js"));
-		assert.equal(pluginInstance.myGlobals.__dirname, pluginPath);
+		assert.equal(pluginInstance.myGlobals.__filename, path.join(pluginsPath, "my-test-plugin", "index.js"));
+		assert.equal(pluginInstance.myGlobals.__dirname, path.join(pluginsPath, "my-test-plugin"));
 	});
 });

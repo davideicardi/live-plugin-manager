@@ -20,7 +20,13 @@ export declare class PluginManager {
     list(): Promise<PluginInfo[]>;
     require(name: string): any;
     getInfo(name: string): PluginInfo | undefined;
+    private installDependencies(packageInfo);
+    private isModuleAvailable(name);
+    private getPluginLocation(name);
+    private removeDownloaded(name);
+    private isAlreadyDownloaded(name, version);
+    private readPackageJson(location);
     private load(plugin);
     private unload(plugin);
-    private install(pluginInfo);
+    private install(packageInfo);
 }

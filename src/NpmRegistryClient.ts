@@ -96,8 +96,8 @@ export interface PackageInfo {
 	name: string;
 	descriptions: string;
 	version: string;
-	main: string;
-	dependencies: any;
+	main?: string;
+	dependencies?: any;
 	dist: {
 		tarball: string
 	};

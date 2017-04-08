@@ -40,44 +40,30 @@ class PluginManager {
             if (installedInfo && installedInfo.version === registryInfo.version) {
                 return installedInfo;
             }
-            // TODO check if already downloaded:
-            //  if same version return
-            // 	if different version uninstall it and continue
-            const location = yield this.npmRegistry.download(this.options.pluginsPath, registryInfo);
-            const pluginInfo = {
-                name: normalizeName(registryInfo.name),
-                version: registryInfo.version,
-                mainFile: path.join(location, registryInfo.main),
-                source: "npm",
-                location
-            };
-            yield this.install(pluginInfo);
-            return pluginInfo;
+            // already downloaded
+            if (!this.isAlreadyDownloaded(registryInfo.name, registryInfo.version)) {
+                this.removeDownloaded(registryInfo.name);
+                const location = yield this.npmRegistry.download(this.options.pluginsPath, registryInfo);
+            }
+            return yield this.install(registryInfo);
         });
     }
     installFromPath(location) {
         return __awaiter(this, void 0, void 0, function* () {
             fs.ensureDirSync(this.options.pluginsPath);
-            const packageJsonFile = path.join(location, "package.json");
-            if (!fs.existsSync(packageJsonFile)) {
-                throw new Error(`Invalid plugin ${location}, package.json is missing`);
+            const packageJson = this.readPackageJson(location);
+            // already installed
+            const installedInfo = this.getInfo(packageJson.name);
+            if (installedInfo && installedInfo.version === packageJson.version) {
+                return installedInfo;
             }
-            const packageJson = JSON.parse(fs.readFileSync(packageJsonFile, "utf8"));
-            if (!packageJson.main
-                || !packageJson.name
-                || !packageJson.version) {
-                throw new Error(`Invalid plugin ${location}, 'main', 'name' and 'version' properties are required in package.json`);
+            // already downloaded
+            if (!this.isAlreadyDownloaded(packageJson.name, packageJson.version)) {
+                this.removeDownloaded(packageJson.name);
+                debug(`Copy from ${location} to ${this.options.pluginsPath}`);
+                fs.copySync(location, this.getPluginLocation(packageJson.name));
             }
-            fs.copySync(location, this.options.pluginsPath);
-            const pluginInfo = {
-                name: normalizeName(packageJson.name),
-                version: packageJson.version,
-                mainFile: path.join(location, packageJson.main),
-                source: "path",
-                location
-            };
-            yield this.install(pluginInfo);
-            return pluginInfo;
+            return yield this.install(packageJson);
         });
     }
     uninstall(name) {
@@ -107,8 +93,69 @@ class PluginManager {
         return info.instance;
     }
     getInfo(name) {
-        name = normalizeName(name);
         return this.installedPlugins.find((p) => p.name === name);
+    }
+    installDependencies(packageInfo) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!packageInfo.dependencies) {
+                return;
+            }
+            for (const key in packageInfo.dependencies) {
+                if (packageInfo.dependencies.hasOwnProperty(key)) {
+                    const version = packageInfo.dependencies[key].toString();
+                    if (this.isModuleAvailable(key)) {
+                        debug(`Skipping dependency ${key} of ${packageInfo.name}, is already installed`);
+                    }
+                    else {
+                        debug(`Installing dependency ${key} of ${packageInfo.name}, is already installed`);
+                        yield this.installFromNpm(key, version);
+                    }
+                }
+            }
+        });
+    }
+    isModuleAvailable(name) {
+        try {
+            require.resolve(name);
+            return true;
+        }
+        catch (e) {
+            return false;
+        }
+    }
+    getPluginLocation(name) {
+        return path.join(this.options.pluginsPath, name);
+    }
+    removeDownloaded(name) {
+        const location = this.getPluginLocation(name);
+        if (!fs.existsSync(location)) {
+            fs.removeSync(location);
+        }
+    }
+    isAlreadyDownloaded(name, version) {
+        const location = this.getPluginLocation(name);
+        if (!fs.existsSync(location)) {
+            return false;
+        }
+        try {
+            const packageJson = this.readPackageJson(location);
+            return (packageJson.name === name && packageJson.version === version);
+        }
+        catch (e) {
+            return false;
+        }
+    }
+    readPackageJson(location) {
+        const packageJsonFile = path.join(location, "package.json");
+        if (!fs.existsSync(packageJsonFile)) {
+            throw new Error(`Invalid plugin ${location}, package.json is missing`);
+        }
+        const packageJson = JSON.parse(fs.readFileSync(packageJsonFile, "utf8"));
+        if (!packageJson.name
+            || !packageJson.version) {
+            throw new Error(`Invalid plugin ${location}, 'main', 'name' and 'version' properties are required in package.json`);
+        }
+        return packageJson;
     }
     load(plugin) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -120,18 +167,21 @@ class PluginManager {
             plugin.instance = undefined;
         });
     }
-    install(pluginInfo) {
+    install(packageInfo) {
         return __awaiter(this, void 0, void 0, function* () {
+            yield this.installDependencies(packageInfo);
+            const location = this.getPluginLocation(packageInfo.name);
+            const pluginInfo = {
+                name: packageInfo.name,
+                version: packageInfo.version,
+                location,
+                mainFile: path.normalize(path.join(location, packageInfo.main || "index.js"))
+            };
             yield this.load(pluginInfo);
             this.installedPlugins.push(pluginInfo);
+            return pluginInfo;
         });
     }
 }
 exports.PluginManager = PluginManager;
-function normalizeName(name) {
-    if (!name) {
-        throw new Error("Invalid plugin name");
-    }
-    return name.toLowerCase();
-}
 //# sourceMappingURL=PluginManager.js.map
