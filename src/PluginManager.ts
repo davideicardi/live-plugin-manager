@@ -138,7 +138,7 @@ export class PluginManager {
 	}
 
 	private async load(plugin: PluginInfo): Promise<void> {
-		plugin.instance = this.vm.load(plugin.mainFile);
+		plugin.instance = this.vm.load(plugin, plugin.mainFile);
 	}
 
 	private async unload(plugin: PluginInfo): Promise<void> {

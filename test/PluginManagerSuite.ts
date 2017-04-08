@@ -35,14 +35,7 @@ describe("PluginManager suite", function() {
 		const pluginInstance = manager.require("my-basic-plugin");
 		assert.isDefined(pluginInstance, "Plugin is not loaded");
 
-		// try to use the plugin (plugin should respect the standard node behavior)
 		assert.equal(pluginInstance.myVariable, "value1");
-		assert.equal(pluginInstance.myVariable2, "value2");
-		assert.equal(pluginInstance.myVariableFromSubFile, "value3");
-		assert.equal(pluginInstance.myVariableFromSubFolder, "value4");
-		assert.equal(pluginInstance.myVariableDifferentStyleOfRequire, "instances 3");
-		assert.equal(pluginInstance.myGlobals.__filename, path.join(pluginPath, "index.js"));
-		assert.equal(pluginInstance.myGlobals.__dirname, pluginPath);
 	});
 
 	it("installing a plugin using npm", async function() {
@@ -127,5 +120,21 @@ describe("PluginManager suite", function() {
 				throw new Error("Expected to fail");
 			});
 		});
+	});
+
+	it("plugins respect the same node.js behavior", async function() {
+		const pluginPath = path.join(__dirname, "my-test-plugin");
+		const pluginInfo = await manager.installFromPath(pluginPath);
+
+		const pluginInstance = manager.require("my-test-plugin");
+		assert.isDefined(pluginInstance, "Plugin is not loaded");
+
+		assert.equal(pluginInstance.myVariable, "value1");
+		assert.equal(pluginInstance.myVariable2, "value2");
+		assert.equal(pluginInstance.myVariableFromSubFile, "value3");
+		assert.equal(pluginInstance.myVariableFromSubFolder, "value4");
+		assert.equal(pluginInstance.myVariableDifferentStyleOfRequire, "value5");
+		assert.equal(pluginInstance.myGlobals.__filename, path.join(pluginPath, "index.js"));
+		assert.equal(pluginInstance.myGlobals.__dirname, pluginPath);
 	});
 });

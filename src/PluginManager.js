@@ -112,7 +112,7 @@ class PluginManager {
     }
     load(plugin) {
         return __awaiter(this, void 0, void 0, function* () {
-            plugin.instance = this.vm.load(plugin.mainFile);
+            plugin.instance = this.vm.load(plugin, plugin.mainFile);
         });
     }
     unload(plugin) {
