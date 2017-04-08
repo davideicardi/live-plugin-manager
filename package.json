@@ -39,6 +39,7 @@
     "debug": "^2.6.0",
     "fs-extra": "^2.1.2",
     "npm-registry-client": "^8.1.0",
+    "npmlog": "^4.0.2",
     "tar.gz": "^1.0.5",
     "url-join": "^1.1.0",
     "uuid": "^3.0.1",

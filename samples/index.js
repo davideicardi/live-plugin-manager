@@ -15,8 +15,10 @@ const manager = new index_1.PluginManager({
 });
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
-        yield manager.install("forge-nodejs-sdk");
-        yield manager.install("jquery", "1.5.1");
+        yield manager.installFromNpm("moment");
+        yield manager.installFromNpm("jquery", "1.5.1");
+        yield manager.uninstall("moment");
+        yield manager.uninstall("jquery");
     });
 }
 run();

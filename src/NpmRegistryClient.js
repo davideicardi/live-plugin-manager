@@ -18,6 +18,8 @@ const Debug = require("debug");
 const debug = Debug("live-plugin-manager.NpmRegistryClient");
 const Targz = require("tar.gz");
 const RegistryClient = require("npm-registry-client");
+const log = require("npmlog");
+log.level = "silent"; // disable log for npm-registry-client
 class NpmRegistryClient {
     constructor(npmUrl, config) {
         this.npmUrl = npmUrl;
@@ -41,9 +43,10 @@ class NpmRegistryClient {
                 throw new Error("Invalid dist.tarball property");
             }
             const tgzFile = yield this.downloadTarball(packageInfo.dist.tarball);
-            yield this.extractTarball(tgzFile, path.join(destinationDirectory, packageInfo.name));
+            const pluginDirectory = path.join(destinationDirectory, packageInfo.name);
+            yield this.extractTarball(tgzFile, pluginDirectory);
             fs.removeSync(tgzFile);
-            return packageInfo;
+            return pluginDirectory;
         });
     }
     extractTarball(tgzFile, destinationDirectory) {

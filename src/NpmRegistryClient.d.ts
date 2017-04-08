@@ -3,7 +3,7 @@ export declare class NpmRegistryClient {
     private readonly registryClient;
     constructor(npmUrl: string, config: any);
     get(name: string, version?: string): Promise<PackageInfo>;
-    download(destinationDirectory: string, packageInfo: PackageInfo): Promise<PackageInfo>;
+    download(destinationDirectory: string, packageInfo: PackageInfo): Promise<string>;
     private extractTarball(tgzFile, destinationDirectory);
     private downloadTarball(url);
 }

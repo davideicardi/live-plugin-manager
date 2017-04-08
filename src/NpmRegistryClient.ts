@@ -9,6 +9,8 @@ const debug = Debug("live-plugin-manager.NpmRegistryClient");
 
 const Targz = require("tar.gz");
 const RegistryClient = require("npm-registry-client");
+const log = require("npmlog");
+log.level = "silent"; // disable log for npm-registry-client
 
 export class NpmRegistryClient {
 	private readonly registryClient: any;
@@ -33,7 +35,7 @@ export class NpmRegistryClient {
 
 	async download(
 		destinationDirectory: string,
-		packageInfo: PackageInfo): Promise<PackageInfo> {
+		packageInfo: PackageInfo): Promise<string> {
 
 		if (!packageInfo.dist.tarball) {
 			throw new Error("Invalid dist.tarball property");
@@ -41,11 +43,12 @@ export class NpmRegistryClient {
 
 		const tgzFile = await this.downloadTarball(packageInfo.dist.tarball);
 
-		await this.extractTarball(tgzFile, path.join(destinationDirectory, packageInfo.name));
+		const pluginDirectory = path.join(destinationDirectory, packageInfo.name);
+		await this.extractTarball(tgzFile, pluginDirectory);
 
 		fs.removeSync(tgzFile);
 
-		return packageInfo;
+		return pluginDirectory;
 	}
 
 	private async extractTarball(tgzFile: string, destinationDirectory: string) {

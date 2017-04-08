@@ -6,8 +6,12 @@ const manager = new PluginManager({
 });
 
 async function run() {
-	await manager.install("forge-nodejs-sdk");
-	await manager.install("jquery", "1.5.1");
+	await manager.installFromNpm("moment");
+	await manager.installFromNpm("jquery", "1.5.1");
+
+
+	await manager.uninstall("moment");
+	await manager.uninstall("jquery");
 }
 
 run();

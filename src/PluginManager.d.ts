@@ -1,21 +1,26 @@
+/// <reference types="node" />
+import { PluginInfo } from "./PluginInfo";
 export interface PluginManagerOptions {
     pluginsPath: string;
+    sandbox: any;
     npmRegistryUrl: string;
     npmRegistryConfig: any;
+    requireCoreModules: boolean;
+    requireFallback?: NodeRequire;
 }
 export declare class PluginManager {
-    private readonly options;
+    readonly options: PluginManagerOptions;
+    private readonly vm;
     private readonly installedPlugins;
-    private readonly registryClient;
+    private readonly npmRegistry;
     constructor(options?: Partial<PluginManagerOptions>);
-    install(name: string, version?: string): Promise<any>;
-    uninstall(name: string): Promise<any>;
+    installFromNpm(name: string, version?: string): Promise<PluginInfo>;
+    installFromPath(location: string): Promise<PluginInfo>;
+    uninstall(name: string): Promise<void>;
     list(): Promise<PluginInfo[]>;
-    get(name: string): Promise<any>;
+    require(name: string): any;
     getInfo(name: string): PluginInfo | undefined;
-}
-export declare class PluginInfo {
-    source: string;
-    name: string;
-    version: string;
+    private load(plugin);
+    private unload(plugin);
+    private install(pluginInfo);
 }
