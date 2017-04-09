@@ -45,6 +45,15 @@ describe("PluginManager suite", function () {
             chai_1.assert.equal(pluginInstance.myVariable, "value1");
         });
     });
+    it("installing a plugin with just required info", function () {
+        return __awaiter(this, void 0, void 0, function* () {
+            const pluginPath = path.join(__dirname, "my-minimal-plugin");
+            const pluginInfo = yield manager.installFromPath(pluginPath);
+            const pluginInstance = manager.require("my-minimal-plugin");
+            chai_1.assert.isDefined(pluginInstance, "Plugin is not loaded");
+            chai_1.assert.equal(pluginInstance.myVariable, "value1");
+        });
+    });
     it("installing a plugin using npm", function () {
         return __awaiter(this, void 0, void 0, function* () {
             const pluginInfo = yield manager.installFromNpm("lodash", "4.17.4");
@@ -139,8 +148,18 @@ describe("PluginManager suite", function () {
             chai_1.assert.equal(pluginInstance.myVariableFromSubFile, "value3");
             chai_1.assert.equal(pluginInstance.myVariableFromSubFolder, "value4");
             chai_1.assert.equal(pluginInstance.myVariableDifferentStyleOfRequire, "value5");
+            chai_1.assert.equal(pluginInstance.myJsonRequire.loaded, "yes");
             chai_1.assert.equal(pluginInstance.myGlobals.__filename, path.join(pluginsPath, "my-test-plugin", "index.js"));
             chai_1.assert.equal(pluginInstance.myGlobals.__dirname, path.join(pluginsPath, "my-test-plugin"));
+            chai_1.assert.equal(pluginInstance.myGlobals.process, process);
+            chai_1.assert.equal(pluginInstance.myGlobals.console, console);
+            chai_1.assert.equal(pluginInstance.myGlobals.clearImmediate, clearImmediate);
+            chai_1.assert.equal(pluginInstance.myGlobals.clearInterval, clearInterval);
+            chai_1.assert.equal(pluginInstance.myGlobals.clearTimeout, clearTimeout);
+            chai_1.assert.equal(pluginInstance.myGlobals.setImmediate, setImmediate);
+            chai_1.assert.equal(pluginInstance.myGlobals.setInterval, setInterval);
+            chai_1.assert.equal(pluginInstance.myGlobals.setTimeout, setTimeout);
+            chai_1.assert.equal(pluginInstance.myGlobals.Buffer, Buffer);
         });
     });
 });

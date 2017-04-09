@@ -22,7 +22,7 @@ const DefaultOptions = {
     npmRegistryConfig: {},
     pluginsPath: path.join(cwd, "plugins"),
     requireCoreModules: true,
-    requireFallback: undefined
+    hostRequire: require
 };
 class PluginManager {
     constructor(options) {
@@ -103,20 +103,23 @@ class PluginManager {
             for (const key in packageInfo.dependencies) {
                 if (packageInfo.dependencies.hasOwnProperty(key)) {
                     const version = packageInfo.dependencies[key].toString();
-                    if (this.isModuleAvailable(key)) {
-                        debug(`Skipping dependency ${key} of ${packageInfo.name}, is already installed`);
+                    if (this.isModuleAvailableFromHost(key)) {
+                        debug(`Installing dependencies of ${packageInfo.name}: ${key} is already installed`);
                     }
                     else {
-                        debug(`Installing dependency ${key} of ${packageInfo.name}, is already installed`);
+                        debug(`Installing dependencies of ${packageInfo.name}: ${key} ...`);
                         yield this.installFromNpm(key, version);
                     }
                 }
             }
         });
     }
-    isModuleAvailable(name) {
+    isModuleAvailableFromHost(name) {
+        if (!this.options.hostRequire) {
+            return false;
+        }
         try {
-            require.resolve(name);
+            this.options.hostRequire.resolve(name);
             return true;
         }
         catch (e) {
@@ -170,13 +173,19 @@ class PluginManager {
     install(packageInfo) {
         return __awaiter(this, void 0, void 0, function* () {
             yield this.installDependencies(packageInfo);
+            const DefaultMainFile = "index.js";
+            const DefaultMainFileExtension = ".js";
             const location = this.getPluginLocation(packageInfo.name);
             const pluginInfo = {
                 name: packageInfo.name,
                 version: packageInfo.version,
                 location,
-                mainFile: path.normalize(path.join(location, packageInfo.main || "index.js"))
+                mainFile: path.normalize(path.join(location, packageInfo.main || DefaultMainFile))
             };
+            // If no extensions for main file is used, just default to .js
+            if (!path.extname(pluginInfo.mainFile)) {
+                pluginInfo.mainFile += DefaultMainFileExtension;
+            }
             yield this.load(pluginInfo);
             this.installedPlugins.push(pluginInfo);
             return pluginInfo;

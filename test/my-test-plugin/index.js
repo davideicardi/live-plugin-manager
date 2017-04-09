@@ -3,13 +3,24 @@
 
 exports.myGlobals = {
   __dirname,
-  __filename
+  __filename,
+  process,
+  Buffer,
+  console,
+
+  clearImmediate,
+  clearInterval,
+  clearTimeout,
+  setImmediate,
+  setInterval,
+  setTimeout
 };
 
 exports.myVariable = "value1";
 module.exports.myVariable2 = "value2";
 exports.myVariableFromSubFile = require("./subFolder/b.js");
 exports.myVariableFromSubFolder = require("./subFolder");
+exports.myJsonRequire = require("./aJsonFile.json");
 
 // try to load the same module in different ways
 const myVariableDifferentStyleOfRequire = require("./subFolder2");

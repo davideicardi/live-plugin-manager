@@ -8,10 +8,10 @@ export declare class PluginVm {
     private getCache(pluginContext, filePath);
     private setCache(pluginContext, filePath, instance);
     private createModuleSandbox(pluginContext, filePath);
-    private sandboxResolve(pluginContext, name);
-    private sandboxRequire(pluginContext, name);
+    private sandboxResolve(pluginContext, moduleDirName, name);
+    private sandboxRequire(pluginContext, moduleDirName, name);
     private isCoreModule(name);
     private isPlugin(name);
-    private tryLoadAsFile(pluginContext, fullPath);
-    private tryLoadAsDirectory(pluginContext, fullPath);
+    private tryResolveAsFile(fullPath);
+    private tryResolveAsDirectory(fullPath);
 }

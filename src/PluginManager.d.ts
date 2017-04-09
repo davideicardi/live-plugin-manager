@@ -6,7 +6,7 @@ export interface PluginManagerOptions {
     npmRegistryUrl: string;
     npmRegistryConfig: any;
     requireCoreModules: boolean;
-    requireFallback?: NodeRequire;
+    hostRequire?: NodeRequire;
 }
 export declare class PluginManager {
     readonly options: PluginManagerOptions;
@@ -21,7 +21,7 @@ export declare class PluginManager {
     require(name: string): any;
     getInfo(name: string): PluginInfo | undefined;
     private installDependencies(packageInfo);
-    private isModuleAvailable(name);
+    private isModuleAvailableFromHost(name);
     private getPluginLocation(name);
     private removeDownloaded(name);
     private isAlreadyDownloaded(name, version);

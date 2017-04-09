@@ -26,5 +26,6 @@ function run() {
         });
     });
 }
-run();
+run()
+    .catch(console.error.bind(console));
 //# sourceMappingURL=express.js.map
