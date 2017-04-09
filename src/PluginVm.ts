@@ -29,7 +29,9 @@ export class PluginVm {
 			const code = fs.readFileSync(filePath, "utf8");
 			// For performance reasons wrap code in a Immediately-invoked function expression
 			// https://60devs.com/executing-js-code-with-nodes-vm-module.html
-			const iifeCode = `(function () {${code}}());`;
+			// I have also declared the exports variable to support the
+			//  `var app = exports = module.exports = {};` notation
+			const iifeCode = `(function () {let exports = module.exports;${code}}());`;
 
 			const vmOptions = { displayErrors: true, filename: filePath };
 			const script = new vm.Script(iifeCode, vmOptions);
@@ -72,7 +74,7 @@ export class PluginVm {
 		const moduleSandbox = Object.assign({}, this.manager.options.sandbox);
 
 		// see https://nodejs.org/api/globals.html
-		moduleSandbox.global = global; // TODO this is the real global object, it is fine to do this?
+		moduleSandbox.global = moduleSandbox;
 		moduleSandbox.Buffer = Buffer;
 		moduleSandbox.console = console; // TODO Maybe I can override the console ??
 		moduleSandbox.clearImmediate = clearImmediate;
@@ -83,7 +85,7 @@ export class PluginVm {
 		moduleSandbox.setTimeout = setTimeout;
 		moduleSandbox.process = process;
 		moduleSandbox.module = { exports: {} };
-		moduleSandbox.exports = moduleSandbox.module.exports;
+		// moduleSandbox.exports = moduleSandbox.module.exports; // I have declared it in the code itself
 		moduleSandbox.__dirname = path.dirname(filePath);
 		moduleSandbox.__filename = filePath;
 
