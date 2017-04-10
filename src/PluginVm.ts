@@ -31,7 +31,7 @@ export class PluginVm {
 			// https://60devs.com/executing-js-code-with-nodes-vm-module.html
 			// I have also declared the exports variable to support the
 			//  `var app = exports = module.exports = {};` notation
-			const iifeCode = `(function () {let exports = module.exports;${code}}());`;
+			const iifeCode = `(function(exports){${code}}(module.exports));`;
 
 			const vmOptions = { displayErrors: true, filename: filePath };
 			const script = new vm.Script(iifeCode, vmOptions);
