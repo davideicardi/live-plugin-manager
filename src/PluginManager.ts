@@ -1,4 +1,4 @@
-import * as fs from "fs-extra";
+import * as fs from "./fileSystem";
 import * as path from "path";
 import * as url from "url";
 import {NpmRegistryClient, PackageInfo} from "./NpmRegistryClient";
@@ -42,7 +42,7 @@ export class PluginManager {
 	}
 
 	async installFromNpm(name: string, version = "latest"): Promise<PluginInfo> {
-		fs.ensureDirSync(this.options.pluginsPath);
+		await fs.ensureDir(this.options.pluginsPath);
 
 		const registryInfo = await this.npmRegistry.get(name, version);
 
@@ -53,10 +53,10 @@ export class PluginManager {
 		}
 
 		// already downloaded
-		if (!this.isAlreadyDownloaded(registryInfo.name, registryInfo.version)) {
-			this.removeDownloaded(registryInfo.name);
+		if (!(await this.isAlreadyDownloaded(registryInfo.name, registryInfo.version))) {
+			await this.removeDownloaded(registryInfo.name);
 
-			const location = await this.npmRegistry.download(
+			await this.npmRegistry.download(
 				this.options.pluginsPath,
 				registryInfo);
 		}
@@ -65,9 +65,9 @@ export class PluginManager {
 	}
 
 	async installFromPath(location: string): Promise<PluginInfo> {
-		fs.ensureDirSync(this.options.pluginsPath);
+		await fs.ensureDir(this.options.pluginsPath);
 
-		const packageJson = this.readPackageJson(location);
+		const packageJson = await this.readPackageJson(location);
 
 		// already installed
 		const installedInfo = this.getInfo(packageJson.name);
@@ -76,19 +76,22 @@ export class PluginManager {
 		}
 
 		// already downloaded
-		if (!this.isAlreadyDownloaded(packageJson.name, packageJson.version)) {
-			this.removeDownloaded(packageJson.name);
+		if (!(await this.isAlreadyDownloaded(packageJson.name, packageJson.version))) {
+			await this.removeDownloaded(packageJson.name);
 
 			debug(`Copy from ${location} to ${this.options.pluginsPath}`);
-			fs.copySync(location, this.getPluginLocation(packageJson.name));
+			await fs.copy(location, this.getPluginLocation(packageJson.name));
 		}
 
 		return await this.install(packageJson);
 	}
 
 	async uninstall(name: string): Promise<void> {
+		debug(`Uninstalling ${name}...`);
+
 		const info = this.getInfo(name);
 		if (!info) {
+			debug(`${name} not installed`);
 			return;
 		}
 
@@ -97,9 +100,15 @@ export class PluginManager {
 			this.installedPlugins.splice(index, 1);
 		}
 
-		await this.unload(info);
+		this.unload(info);
 
-		fs.removeSync(info.location);
+		await fs.remove(info.location);
+	}
+
+	async uninstallAll(): Promise<void> {
+		for (const plugin of this.installedPlugins.slice().reverse()) {
+			await this.uninstall(plugin.name);
+		}
 	}
 
 	async list(): Promise<PluginInfo[]> {
@@ -154,21 +163,21 @@ export class PluginManager {
 		return path.join(this.options.pluginsPath, name);
 	}
 
-	private removeDownloaded(name: string) {
+	private async removeDownloaded(name: string) {
 		const location = this.getPluginLocation(name);
-		if (!fs.existsSync(location)) {
-			fs.removeSync(location);
+		if (!(await fs.exists(location))) {
+			await fs.remove(location);
 		}
 	}
 
-	private isAlreadyDownloaded(name: string, version: string): boolean {
+	private async isAlreadyDownloaded(name: string, version: string): Promise<boolean> {
 		const location = this.getPluginLocation(name);
-		if (!fs.existsSync(location)) {
+		if (!(await fs.exists(location))) {
 			return false;
 		}
 
 		try {
-			const packageJson = this.readPackageJson(location);
+			const packageJson = await this.readPackageJsonFromPath(location);
 
 			return (packageJson.name === name && packageJson.version === version);
 		} catch (e) {
@@ -176,12 +185,12 @@ export class PluginManager {
 		}
 	}
 
-	private readPackageJson(location: string): PackageInfo {
+	private async readPackageJsonFromPath(location: string): Promise<PackageInfo> {
 		const packageJsonFile = path.join(location, "package.json");
-		if (!fs.existsSync(packageJsonFile)) {
+		if (!(await fs.exists(packageJsonFile))) {
 			throw new Error(`Invalid plugin ${location}, package.json is missing`);
 		}
-		const packageJson = JSON.parse(fs.readFileSync(packageJsonFile, "utf8"));
+		const packageJson = JSON.parse(await fs.readFile(packageJsonFile, "utf8"));
 
 		if (!packageJson.name
 			|| !packageJson.version) {
@@ -192,11 +201,11 @@ export class PluginManager {
 		return packageJson;
 	}
 
-	private async load(plugin: PluginInfo): Promise<void> {
+	private load(plugin: PluginInfo) {
 		plugin.instance = this.vm.load(plugin, plugin.mainFile);
 	}
 
-	private async unload(plugin: PluginInfo): Promise<void> {
+	private unload(plugin: PluginInfo) {
 		plugin.instance = undefined;
 	}
 
@@ -219,7 +228,7 @@ export class PluginManager {
 			pluginInfo.mainFile += DefaultMainFileExtension;
 		}
 
-		await this.load(pluginInfo);
+		this.load(pluginInfo);
 		this.installedPlugins.push(pluginInfo);
 
 		return pluginInfo;

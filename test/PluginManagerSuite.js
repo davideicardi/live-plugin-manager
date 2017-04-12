@@ -162,5 +162,13 @@ describe("PluginManager suite", function () {
             chai_1.assert.equal(pluginInstance.myGlobals.Buffer, Buffer);
         });
     });
+    it("dependencies of plugins are installed", function () {
+        return __awaiter(this, void 0, void 0, function* () {
+            const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
+            const pluginInfo = yield manager.installFromPath(pluginSourcePath);
+            const pluginInstance = manager.require("my-plugin-with-dep");
+            chai_1.assert.equal(pluginInstance, "1981/10/06");
+        });
+    });
 });
 //# sourceMappingURL=PluginManagerSuite.js.map

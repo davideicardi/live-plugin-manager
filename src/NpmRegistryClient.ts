@@ -1,9 +1,9 @@
-import * as WebRequest from "web-request";
 import * as urlJoin from "url-join";
 import * as path from "path";
 import * as os from "os";
-import * as uuid from "uuid";
-import * as fs from "fs-extra";
+import * as fs from "./fileSystem";
+import * as http from "http";
+import * as https from "https";
 import * as Debug from "debug";
 const debug = Debug("live-plugin-manager.NpmRegistryClient");
 
@@ -46,7 +46,7 @@ export class NpmRegistryClient {
 		const pluginDirectory = path.join(destinationDirectory, packageInfo.name);
 		await this.extractTarball(tgzFile, pluginDirectory);
 
-		fs.removeSync(tgzFile);
+		await fs.remove(tgzFile);
 
 		return pluginDirectory;
 	}
@@ -62,29 +62,16 @@ export class NpmRegistryClient {
 	}
 
 	private async downloadTarball(url: string): Promise<string> {
-		const destinationFile = path.join(os.tmpdir(), uuid.v4() + ".tgz");
+		const destinationFile = path.join(os.tmpdir(), Date.now().toString() + ".tgz");
 
 		// delete file if exists
-		if (fs.existsSync(destinationFile)) {
-			fs.removeSync(destinationFile);
+		if (await fs.exists(destinationFile)) {
+			await fs.remove(destinationFile);
 		}
 
 		debug(`Downloading ${url} to ${destinationFile} ...`);
 
-		const request = WebRequest.stream(url);
-		const w = fs.createWriteStream(destinationFile);
-
-		request.pipe(w);
-		const response = await request.response;
-
-		await new Promise((resolve, reject) => {
-			w.on("error", (e: any) => {
-				reject(e);
-			});
-			w.on("finish", () => {
-				resolve();
-			});
-		});
+		await httpDownload(url, destinationFile);
 
 		return destinationFile;
 	}
@@ -101,4 +88,23 @@ export interface PackageInfo {
 	dist: {
 		tarball: string
 	};
+}
+
+function httpDownload(sourceUrl: string, destinationFile: string): Promise<void> {
+	return new Promise<void>((resolve, reject) => {
+		const fileStream = fs.createWriteStream(destinationFile);
+		const httpGet = (sourceUrl.toLowerCase().startsWith("https") ? https.get : http.get);
+		const request = httpGet(sourceUrl, function(response) {
+			response.pipe(fileStream);
+			fileStream.on("finish", function() {
+				fileStream.close();
+				resolve();
+			});
+		})
+		.on("error", function(err) {
+			fileStream.close();
+			fs.remove(destinationFile);
+			reject(err);
+		});
+	});
 }

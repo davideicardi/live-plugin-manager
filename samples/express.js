@@ -15,15 +15,21 @@ const manager = new index_1.PluginManager({
 });
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
+        console.log("Installing express..."); // tslint:disable-line
         yield manager.installFromNpm("express");
         const express = manager.require("express");
         const app = express();
         app.get("/", function (req, res) {
             res.send("Hello World!");
         });
-        app.listen(3000, function () {
-            console.log("Example app listening on port 3000!"); // tslint:disable-line
+        const server = app.listen(3000, function () {
+            console.log("Example app listening on port 3000, closing after 20 secs.!"); // tslint:disable-line
         });
+        setTimeout(() => __awaiter(this, void 0, void 0, function* () {
+            server.close();
+            console.log("Uninstalling plugins..."); // tslint:disable-line
+            yield manager.uninstallAll();
+        }), 20000);
     });
 }
 run()

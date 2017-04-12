@@ -8,12 +8,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const WebRequest = require("web-request");
 const urlJoin = require("url-join");
 const path = require("path");
 const os = require("os");
-const uuid = require("uuid");
-const fs = require("fs-extra");
+const fs = require("./fileSystem");
+const http = require("http");
+const https = require("https");
 const Debug = require("debug");
 const debug = Debug("live-plugin-manager.NpmRegistryClient");
 const Targz = require("tar.gz");
@@ -45,7 +45,7 @@ class NpmRegistryClient {
             const tgzFile = yield this.downloadTarball(packageInfo.dist.tarball);
             const pluginDirectory = path.join(destinationDirectory, packageInfo.name);
             yield this.extractTarball(tgzFile, pluginDirectory);
-            fs.removeSync(tgzFile);
+            yield fs.remove(tgzFile);
             return pluginDirectory;
         });
     }
@@ -60,27 +60,34 @@ class NpmRegistryClient {
     }
     downloadTarball(url) {
         return __awaiter(this, void 0, void 0, function* () {
-            const destinationFile = path.join(os.tmpdir(), uuid.v4() + ".tgz");
+            const destinationFile = path.join(os.tmpdir(), Date.now().toString() + ".tgz");
             // delete file if exists
-            if (fs.existsSync(destinationFile)) {
-                fs.removeSync(destinationFile);
+            if (yield fs.exists(destinationFile)) {
+                yield fs.remove(destinationFile);
             }
             debug(`Downloading ${url} to ${destinationFile} ...`);
-            const request = WebRequest.stream(url);
-            const w = fs.createWriteStream(destinationFile);
-            request.pipe(w);
-            const response = yield request.response;
-            yield new Promise((resolve, reject) => {
-                w.on("error", (e) => {
-                    reject(e);
-                });
-                w.on("finish", () => {
-                    resolve();
-                });
-            });
+            yield httpDownload(url, destinationFile);
             return destinationFile;
         });
     }
 }
 exports.NpmRegistryClient = NpmRegistryClient;
+function httpDownload(sourceUrl, destinationFile) {
+    return new Promise((resolve, reject) => {
+        const fileStream = fs.createWriteStream(destinationFile);
+        const httpGet = (sourceUrl.toLowerCase().startsWith("https") ? https.get : http.get);
+        const request = httpGet(sourceUrl, function (response) {
+            response.pipe(fileStream);
+            fileStream.on("finish", function () {
+                fileStream.close();
+                resolve();
+            });
+        })
+            .on("error", function (err) {
+            fileStream.close();
+            fs.remove(destinationFile);
+            reject(err);
+        });
+    });
+}
 //# sourceMappingURL=NpmRegistryClient.js.map

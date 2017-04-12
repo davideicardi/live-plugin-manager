@@ -8,7 +8,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const fs = require("fs-extra");
+const fs = require("./fileSystem");
 const path = require("path");
 const NpmRegistryClient_1 = require("./NpmRegistryClient");
 const PluginVm_1 = require("./PluginVm");
@@ -33,7 +33,7 @@ class PluginManager {
     }
     installFromNpm(name, version = "latest") {
         return __awaiter(this, void 0, void 0, function* () {
-            fs.ensureDirSync(this.options.pluginsPath);
+            yield fs.ensureDir(this.options.pluginsPath);
             const registryInfo = yield this.npmRegistry.get(name, version);
             // already installed
             const installedInfo = this.getInfo(name);
@@ -41,43 +41,52 @@ class PluginManager {
                 return installedInfo;
             }
             // already downloaded
-            if (!this.isAlreadyDownloaded(registryInfo.name, registryInfo.version)) {
-                this.removeDownloaded(registryInfo.name);
-                const location = yield this.npmRegistry.download(this.options.pluginsPath, registryInfo);
+            if (!(yield this.isAlreadyDownloaded(registryInfo.name, registryInfo.version))) {
+                yield this.removeDownloaded(registryInfo.name);
+                yield this.npmRegistry.download(this.options.pluginsPath, registryInfo);
             }
             return yield this.install(registryInfo);
         });
     }
     installFromPath(location) {
         return __awaiter(this, void 0, void 0, function* () {
-            fs.ensureDirSync(this.options.pluginsPath);
-            const packageJson = this.readPackageJson(location);
+            yield fs.ensureDir(this.options.pluginsPath);
+            const packageJson = yield this.readPackageJson(location);
             // already installed
             const installedInfo = this.getInfo(packageJson.name);
             if (installedInfo && installedInfo.version === packageJson.version) {
                 return installedInfo;
             }
             // already downloaded
-            if (!this.isAlreadyDownloaded(packageJson.name, packageJson.version)) {
-                this.removeDownloaded(packageJson.name);
+            if (!(yield this.isAlreadyDownloaded(packageJson.name, packageJson.version))) {
+                yield this.removeDownloaded(packageJson.name);
                 debug(`Copy from ${location} to ${this.options.pluginsPath}`);
-                fs.copySync(location, this.getPluginLocation(packageJson.name));
+                yield fs.copy(location, this.getPluginLocation(packageJson.name));
             }
             return yield this.install(packageJson);
         });
     }
     uninstall(name) {
         return __awaiter(this, void 0, void 0, function* () {
+            debug(`Uninstalling ${name}...`);
             const info = this.getInfo(name);
             if (!info) {
+                debug(`${name} not installed`);
                 return;
             }
             const index = this.installedPlugins.indexOf(info);
             if (index >= 0) {
                 this.installedPlugins.splice(index, 1);
             }
-            yield this.unload(info);
-            fs.removeSync(info.location);
+            this.unload(info);
+            yield fs.remove(info.location);
+        });
+    }
+    uninstallAll() {
+        return __awaiter(this, void 0, void 0, function* () {
+            for (const plugin of this.installedPlugins.slice().reverse()) {
+                yield this.uninstall(plugin.name);
+            }
         });
     }
     list() {
@@ -130,45 +139,47 @@ class PluginManager {
         return path.join(this.options.pluginsPath, name);
     }
     removeDownloaded(name) {
-        const location = this.getPluginLocation(name);
-        if (!fs.existsSync(location)) {
-            fs.removeSync(location);
-        }
+        return __awaiter(this, void 0, void 0, function* () {
+            const location = this.getPluginLocation(name);
+            if (!(yield fs.exists(location))) {
+                yield fs.remove(location);
+            }
+        });
     }
     isAlreadyDownloaded(name, version) {
-        const location = this.getPluginLocation(name);
-        if (!fs.existsSync(location)) {
-            return false;
-        }
-        try {
-            const packageJson = this.readPackageJson(location);
-            return (packageJson.name === name && packageJson.version === version);
-        }
-        catch (e) {
-            return false;
-        }
+        return __awaiter(this, void 0, void 0, function* () {
+            const location = this.getPluginLocation(name);
+            if (!(yield fs.exists(location))) {
+                return false;
+            }
+            try {
+                const packageJson = yield this.readPackageJsonFromPath(location);
+                return (packageJson.name === name && packageJson.version === version);
+            }
+            catch (e) {
+                return false;
+            }
+        });
     }
-    readPackageJson(location) {
-        const packageJsonFile = path.join(location, "package.json");
-        if (!fs.existsSync(packageJsonFile)) {
-            throw new Error(`Invalid plugin ${location}, package.json is missing`);
-        }
-        const packageJson = JSON.parse(fs.readFileSync(packageJsonFile, "utf8"));
-        if (!packageJson.name
-            || !packageJson.version) {
-            throw new Error(`Invalid plugin ${location}, 'main', 'name' and 'version' properties are required in package.json`);
-        }
-        return packageJson;
+    readPackageJsonFromPath(location) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const packageJsonFile = path.join(location, "package.json");
+            if (!(yield fs.exists(packageJsonFile))) {
+                throw new Error(`Invalid plugin ${location}, package.json is missing`);
+            }
+            const packageJson = JSON.parse(yield fs.readFile(packageJsonFile, "utf8"));
+            if (!packageJson.name
+                || !packageJson.version) {
+                throw new Error(`Invalid plugin ${location}, 'main', 'name' and 'version' properties are required in package.json`);
+            }
+            return packageJson;
+        });
     }
     load(plugin) {
-        return __awaiter(this, void 0, void 0, function* () {
-            plugin.instance = this.vm.load(plugin, plugin.mainFile);
-        });
+        plugin.instance = this.vm.load(plugin, plugin.mainFile);
     }
     unload(plugin) {
-        return __awaiter(this, void 0, void 0, function* () {
-            plugin.instance = undefined;
-        });
+        plugin.instance = undefined;
     }
     install(packageInfo) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -186,7 +197,7 @@ class PluginManager {
             if (!path.extname(pluginInfo.mainFile)) {
                 pluginInfo.mainFile += DefaultMainFileExtension;
             }
-            yield this.load(pluginInfo);
+            this.load(pluginInfo);
             this.installedPlugins.push(pluginInfo);
             return pluginInfo;
         });

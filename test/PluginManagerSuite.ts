@@ -158,4 +158,12 @@ describe("PluginManager suite", function() {
 		assert.equal(pluginInstance.myGlobals.setTimeout, setTimeout);
 		assert.equal(pluginInstance.myGlobals.Buffer, Buffer);
 	});
+
+	it("dependencies of plugins are installed", async function() {
+		const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
+		const pluginInfo = await manager.installFromPath(pluginSourcePath);
+
+		const pluginInstance = manager.require("my-plugin-with-dep");
+		assert.equal(pluginInstance, "1981/10/06");
+	});
 });
