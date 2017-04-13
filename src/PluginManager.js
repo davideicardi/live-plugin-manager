@@ -51,7 +51,7 @@ class PluginManager {
     installFromPath(location) {
         return __awaiter(this, void 0, void 0, function* () {
             yield fs.ensureDir(this.options.pluginsPath);
-            const packageJson = yield this.readPackageJson(location);
+            const packageJson = yield this.readPackageJsonFromPath(location);
             // already installed
             const installedInfo = this.getInfo(packageJson.name);
             if (installedInfo && installedInfo.version === packageJson.version) {

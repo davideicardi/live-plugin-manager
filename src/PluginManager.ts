@@ -67,7 +67,7 @@ export class PluginManager {
 	async installFromPath(location: string): Promise<PluginInfo> {
 		await fs.ensureDir(this.options.pluginsPath);
 
-		const packageJson = await this.readPackageJson(location);
+		const packageJson = await this.readPackageJsonFromPath(location);
 
 		// already installed
 		const installedInfo = this.getInfo(packageJson.name);
