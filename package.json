@@ -1,7 +1,7 @@
 {
   "name": "live-plugin-manager",
   "version": "0.1.0",
-  "description": "bla bla",
+  "description": "Install and uninstall any node package at runtime from npm registry",
   "main": "index.js",
   "typings": "index.d.ts",
   "scripts": {
@@ -15,7 +15,7 @@
     "type": "git",
     "url": "git+https://github.com/davideicardi/live-plugin-manager.git"
   },
-  "author": "",
+  "author": "Davide Icardi",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/davideicardi/live-plugin-manager/issues"
@@ -24,10 +24,7 @@
   "devDependencies": {
     "@types/chai": "^3.4.34",
     "@types/mocha": "^2.2.40",
-    "@types/debug": "0.0.29",
-    "@types/fs-extra": "^2.0.0",
     "@types/node": "^7.0.12",
-    "@types/url-join": "^0.8.2",
     "chai": "^3.5.0",
     "mocha": "^3.2.0",
     "nodemon": "^1.11.0",
@@ -35,6 +32,9 @@
     "typescript": "^2.2.2"
   },
   "dependencies": {
+    "@types/debug": "0.0.29",
+    "@types/fs-extra": "^2.0.0",
+    "@types/url-join": "^0.8.2",
     "@types/lockfile": "^0.4.29",
     "debug": "^2.6.0",
     "fs-extra": "^2.1.2",
