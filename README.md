@@ -47,6 +47,31 @@ Plugins are installed inside the directory specified in the `PluginManager` cons
 
 Each time your applicaition start you should reinstall any packages that you need, already downloaded packages are not automatically installed, but installation is faster because no new file is downloaded. Typically I suggest to put the list of the installed packages in a database or any other central repository.
 
+Here another more complex scenario where I install `express` with all it's dependencies, just to demostrate how many possibilities you can have:
+
+    import {PluginManager} from "live-plugin-manager";
+    import * as path from "path";
+
+    const manager = new PluginManager({
+      pluginsPath: path.join(__dirname, "plugins")
+    });
+
+    async function run() {
+      await manager.installFromNpm("express");
+      const express = manager.require("express");
+
+      const app = express();
+      app.get("/", function(req: any, res: any) {
+        res.send("Hello World!");
+      });
+
+      const server = app.listen(3000, function() {
+      });
+    }
+
+    run();
+
+
 ## Load plugins
 
 `live-plugin-manager` doesn't have any special code to load plugins.
