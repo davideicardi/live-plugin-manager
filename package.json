@@ -2,6 +2,12 @@
   "name": "live-plugin-manager",
   "version": "0.1.0",
   "description": "Install and uninstall any node package at runtime from npm registry",
+  "keywords": [
+    "plugin",
+    "package",
+    "npm",
+    "install"
+  ],
   "main": "index.js",
   "typings": "index.d.ts",
   "scripts": {
