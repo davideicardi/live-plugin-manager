@@ -8,6 +8,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+/* tslint:disable no-console */
 const index_1 = require("../index");
 const path = require("path");
 const manager = new index_1.PluginManager({
@@ -15,7 +16,7 @@ const manager = new index_1.PluginManager({
 });
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
-        console.log("Installing express..."); // tslint:disable-line
+        console.log("Installing express...");
         yield manager.installFromNpm("express");
         const express = manager.require("express");
         const app = express();
@@ -23,11 +24,11 @@ function run() {
             res.send("Hello World!");
         });
         const server = app.listen(3000, function () {
-            console.log("Example app listening on port 3000, closing after 20 secs.!"); // tslint:disable-line
+            console.log("Example app listening on port 3000, closing after 20 secs.!");
         });
         setTimeout(() => __awaiter(this, void 0, void 0, function* () {
             server.close();
-            console.log("Uninstalling plugins..."); // tslint:disable-line
+            console.log("Uninstalling plugins...");
             yield manager.uninstallAll();
         }), 20000);
     });

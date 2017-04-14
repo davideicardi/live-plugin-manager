@@ -4,6 +4,7 @@ import * as url from "url";
 import {NpmRegistryClient, PackageInfo} from "./NpmRegistryClient";
 import {PluginVm} from "./PluginVm";
 import {PluginInfo} from "./PluginInfo";
+import * as lockFile from "lockfile";
 import * as Debug from "debug";
 const debug = Debug("live-plugin-manager");
 
@@ -44,6 +45,101 @@ export class PluginManager {
 	async installFromNpm(name: string, version = "latest"): Promise<PluginInfo> {
 		await fs.ensureDir(this.options.pluginsPath);
 
+		await this.syncLock();
+		try {
+			return await this.installFromNpmLockFree(name, version);
+		} finally {
+			await this.syncUnlock();
+		}
+	}
+
+	async installFromPath(location: string): Promise<PluginInfo> {
+		await fs.ensureDir(this.options.pluginsPath);
+
+		await this.syncLock();
+		try {
+			return await this.installFromPathLockFree(location);
+		} finally {
+			await this.syncUnlock();
+		}
+	}
+
+	async uninstall(name: string): Promise<void> {
+		await this.syncLock();
+		try {
+			return await this.uninstallLockFree(name);
+		} finally {
+			await this.syncUnlock();
+		}
+	}
+
+	async uninstallAll(): Promise<void> {
+		await this.syncLock();
+		try {
+			for (const plugin of this.installedPlugins.slice().reverse()) {
+				await this.uninstallLockFree(plugin.name);
+			}
+		} finally {
+			await this.syncUnlock();
+		}
+	}
+
+	async list(): Promise<PluginInfo[]> {
+		return this.installedPlugins;
+	}
+
+	require(name: string): any {
+		const info = this.getInfo(name);
+		if (!info) {
+			throw new Error(`${name} not installed`);
+		}
+		return info.instance;
+	}
+
+	getInfo(name: string): PluginInfo | undefined {
+		return this.installedPlugins.find((p) => p.name === name);
+	}
+
+	private async uninstallLockFree(name: string): Promise<void> {
+		debug(`Uninstalling ${name}...`);
+
+		const info = this.getInfo(name);
+		if (!info) {
+			debug(`${name} not installed`);
+			return;
+		}
+
+		const index = this.installedPlugins.indexOf(info);
+		if (index >= 0) {
+			this.installedPlugins.splice(index, 1);
+		}
+
+		this.unload(info);
+
+		await fs.remove(info.location);
+	}
+
+	private async installFromPathLockFree(location: string): Promise<PluginInfo> {
+		const packageJson = await this.readPackageJsonFromPath(location);
+
+		// already installed
+		const installedInfo = this.getInfo(packageJson.name);
+		if (installedInfo && installedInfo.version === packageJson.version) {
+			return installedInfo;
+		}
+
+		// already downloaded
+		if (!(await this.isAlreadyDownloaded(packageJson.name, packageJson.version))) {
+			await this.removeDownloaded(packageJson.name);
+
+			debug(`Copy from ${location} to ${this.options.pluginsPath}`);
+			await fs.copy(location, this.getPluginLocation(packageJson.name));
+		}
+
+		return await this.install(packageJson);
+	}
+
+	private async installFromNpmLockFree(name: string, version = "latest"): Promise<PluginInfo> {
 		const registryInfo = await this.npmRegistry.get(name, version);
 
 		// already installed
@@ -64,69 +160,6 @@ export class PluginManager {
 		return await this.install(registryInfo);
 	}
 
-	async installFromPath(location: string): Promise<PluginInfo> {
-		await fs.ensureDir(this.options.pluginsPath);
-
-		const packageJson = await this.readPackageJsonFromPath(location);
-
-		// already installed
-		const installedInfo = this.getInfo(packageJson.name);
-		if (installedInfo && installedInfo.version === packageJson.version) {
-			return installedInfo;
-		}
-
-		// already downloaded
-		if (!(await this.isAlreadyDownloaded(packageJson.name, packageJson.version))) {
-			await this.removeDownloaded(packageJson.name);
-
-			debug(`Copy from ${location} to ${this.options.pluginsPath}`);
-			await fs.copy(location, this.getPluginLocation(packageJson.name));
-		}
-
-		return await this.install(packageJson);
-	}
-
-	async uninstall(name: string): Promise<void> {
-		debug(`Uninstalling ${name}...`);
-
-		const info = this.getInfo(name);
-		if (!info) {
-			debug(`${name} not installed`);
-			return;
-		}
-
-		const index = this.installedPlugins.indexOf(info);
-		if (index >= 0) {
-			this.installedPlugins.splice(index, 1);
-		}
-
-		this.unload(info);
-
-		await fs.remove(info.location);
-	}
-
-	async uninstallAll(): Promise<void> {
-		for (const plugin of this.installedPlugins.slice().reverse()) {
-			await this.uninstall(plugin.name);
-		}
-	}
-
-	async list(): Promise<PluginInfo[]> {
-		return this.installedPlugins;
-	}
-
-	require(name: string): any {
-		const info = this.getInfo(name);
-		if (!info) {
-			throw new Error(`${name} not installed`);
-		}
-		return info.instance;
-	}
-
-	getInfo(name: string): PluginInfo | undefined {
-		return this.installedPlugins.find((p) => p.name === name);
-	}
-
 	private async installDependencies(packageInfo: PackageInfo): Promise<void> {
 		if (!packageInfo.dependencies) {
 			return;
@@ -140,7 +173,7 @@ export class PluginManager {
 					debug(`Installing dependencies of ${packageInfo.name}: ${key} is already installed`);
 				} else {
 					debug(`Installing dependencies of ${packageInfo.name}: ${key} ...`);
-					await this.installFromNpm(key, version);
+					await this.installFromNpmLockFree(key, version);
 				}
 			}
 		}
@@ -232,5 +265,37 @@ export class PluginManager {
 		this.installedPlugins.push(pluginInfo);
 
 		return pluginInfo;
+	}
+
+	private syncLock() {
+		debug("Acquiring lock ...");
+
+		const lockLocation = path.join(this.options.pluginsPath, "install.lock");
+		return new Promise<void>((resolve, reject) => {
+			lockFile.lock(lockLocation, { wait: 30000 }, (err) => {
+				if (err) {
+					debug("Failed to acquire lock", err);
+					return reject("Failed to acquire lock");
+				}
+
+				resolve();
+			});
+		});
+	}
+
+	private syncUnlock() {
+		debug("Releasing lock ...");
+
+		const lockLocation = path.join(this.options.pluginsPath, "install.lock");
+		return new Promise<void>((resolve, reject) => {
+			lockFile.unlock(lockLocation, (err) => {
+				if (err) {
+					debug("Failed to release lock", err);
+					return reject("Failed to release lock");
+				}
+
+				resolve();
+			});
+		});
 	}
 }

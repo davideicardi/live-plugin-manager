@@ -12,6 +12,7 @@ const fs = require("./fileSystem");
 const path = require("path");
 const NpmRegistryClient_1 = require("./NpmRegistryClient");
 const PluginVm_1 = require("./PluginVm");
+const lockFile = require("lockfile");
 const Debug = require("debug");
 const debug = Debug("live-plugin-manager");
 const BASE_NPM_URL = "https://registry.npmjs.org";
@@ -34,58 +35,48 @@ class PluginManager {
     installFromNpm(name, version = "latest") {
         return __awaiter(this, void 0, void 0, function* () {
             yield fs.ensureDir(this.options.pluginsPath);
-            const registryInfo = yield this.npmRegistry.get(name, version);
-            // already installed
-            const installedInfo = this.getInfo(name);
-            if (installedInfo && installedInfo.version === registryInfo.version) {
-                return installedInfo;
+            yield this.syncLock();
+            try {
+                return yield this.installFromNpmLockFree(name, version);
             }
-            // already downloaded
-            if (!(yield this.isAlreadyDownloaded(registryInfo.name, registryInfo.version))) {
-                yield this.removeDownloaded(registryInfo.name);
-                yield this.npmRegistry.download(this.options.pluginsPath, registryInfo);
+            finally {
+                yield this.syncUnlock();
             }
-            return yield this.install(registryInfo);
         });
     }
     installFromPath(location) {
         return __awaiter(this, void 0, void 0, function* () {
             yield fs.ensureDir(this.options.pluginsPath);
-            const packageJson = yield this.readPackageJsonFromPath(location);
-            // already installed
-            const installedInfo = this.getInfo(packageJson.name);
-            if (installedInfo && installedInfo.version === packageJson.version) {
-                return installedInfo;
+            yield this.syncLock();
+            try {
+                return yield this.installFromPathLockFree(location);
             }
-            // already downloaded
-            if (!(yield this.isAlreadyDownloaded(packageJson.name, packageJson.version))) {
-                yield this.removeDownloaded(packageJson.name);
-                debug(`Copy from ${location} to ${this.options.pluginsPath}`);
-                yield fs.copy(location, this.getPluginLocation(packageJson.name));
+            finally {
+                yield this.syncUnlock();
             }
-            return yield this.install(packageJson);
         });
     }
     uninstall(name) {
         return __awaiter(this, void 0, void 0, function* () {
-            debug(`Uninstalling ${name}...`);
-            const info = this.getInfo(name);
-            if (!info) {
-                debug(`${name} not installed`);
-                return;
+            yield this.syncLock();
+            try {
+                return yield this.uninstallLockFree(name);
             }
-            const index = this.installedPlugins.indexOf(info);
-            if (index >= 0) {
-                this.installedPlugins.splice(index, 1);
+            finally {
+                yield this.syncUnlock();
             }
-            this.unload(info);
-            yield fs.remove(info.location);
         });
     }
     uninstallAll() {
         return __awaiter(this, void 0, void 0, function* () {
-            for (const plugin of this.installedPlugins.slice().reverse()) {
-                yield this.uninstall(plugin.name);
+            yield this.syncLock();
+            try {
+                for (const plugin of this.installedPlugins.slice().reverse()) {
+                    yield this.uninstallLockFree(plugin.name);
+                }
+            }
+            finally {
+                yield this.syncUnlock();
             }
         });
     }
@@ -104,6 +95,55 @@ class PluginManager {
     getInfo(name) {
         return this.installedPlugins.find((p) => p.name === name);
     }
+    uninstallLockFree(name) {
+        return __awaiter(this, void 0, void 0, function* () {
+            debug(`Uninstalling ${name}...`);
+            const info = this.getInfo(name);
+            if (!info) {
+                debug(`${name} not installed`);
+                return;
+            }
+            const index = this.installedPlugins.indexOf(info);
+            if (index >= 0) {
+                this.installedPlugins.splice(index, 1);
+            }
+            this.unload(info);
+            yield fs.remove(info.location);
+        });
+    }
+    installFromPathLockFree(location) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const packageJson = yield this.readPackageJsonFromPath(location);
+            // already installed
+            const installedInfo = this.getInfo(packageJson.name);
+            if (installedInfo && installedInfo.version === packageJson.version) {
+                return installedInfo;
+            }
+            // already downloaded
+            if (!(yield this.isAlreadyDownloaded(packageJson.name, packageJson.version))) {
+                yield this.removeDownloaded(packageJson.name);
+                debug(`Copy from ${location} to ${this.options.pluginsPath}`);
+                yield fs.copy(location, this.getPluginLocation(packageJson.name));
+            }
+            return yield this.install(packageJson);
+        });
+    }
+    installFromNpmLockFree(name, version = "latest") {
+        return __awaiter(this, void 0, void 0, function* () {
+            const registryInfo = yield this.npmRegistry.get(name, version);
+            // already installed
+            const installedInfo = this.getInfo(name);
+            if (installedInfo && installedInfo.version === registryInfo.version) {
+                return installedInfo;
+            }
+            // already downloaded
+            if (!(yield this.isAlreadyDownloaded(registryInfo.name, registryInfo.version))) {
+                yield this.removeDownloaded(registryInfo.name);
+                yield this.npmRegistry.download(this.options.pluginsPath, registryInfo);
+            }
+            return yield this.install(registryInfo);
+        });
+    }
     installDependencies(packageInfo) {
         return __awaiter(this, void 0, void 0, function* () {
             if (!packageInfo.dependencies) {
@@ -117,7 +157,7 @@ class PluginManager {
                     }
                     else {
                         debug(`Installing dependencies of ${packageInfo.name}: ${key} ...`);
-                        yield this.installFromNpm(key, version);
+                        yield this.installFromNpmLockFree(key, version);
                     }
                 }
             }
@@ -200,6 +240,32 @@ class PluginManager {
             this.load(pluginInfo);
             this.installedPlugins.push(pluginInfo);
             return pluginInfo;
+        });
+    }
+    syncLock() {
+        debug("Acquiring lock ...");
+        const lockLocation = path.join(this.options.pluginsPath, "install.lock");
+        return new Promise((resolve, reject) => {
+            lockFile.lock(lockLocation, { wait: 30000 }, (err) => {
+                if (err) {
+                    debug("Failed to acquire lock", err);
+                    return reject("Failed to acquire lock");
+                }
+                resolve();
+            });
+        });
+    }
+    syncUnlock() {
+        debug("Releasing lock ...");
+        const lockLocation = path.join(this.options.pluginsPath, "install.lock");
+        return new Promise((resolve, reject) => {
+            lockFile.unlock(lockLocation, (err) => {
+                if (err) {
+                    debug("Failed to release lock", err);
+                    return reject("Failed to release lock");
+                }
+                resolve();
+            });
         });
     }
 }

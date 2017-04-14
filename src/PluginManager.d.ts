@@ -21,6 +21,9 @@ export declare class PluginManager {
     list(): Promise<PluginInfo[]>;
     require(name: string): any;
     getInfo(name: string): PluginInfo | undefined;
+    private uninstallLockFree(name);
+    private installFromPathLockFree(location);
+    private installFromNpmLockFree(name, version?);
     private installDependencies(packageInfo);
     private isModuleAvailableFromHost(name);
     private getPluginLocation(name);
@@ -30,4 +33,6 @@ export declare class PluginManager {
     private load(plugin);
     private unload(plugin);
     private install(packageInfo);
+    private syncLock();
+    private syncUnlock();
 }

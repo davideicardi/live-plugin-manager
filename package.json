@@ -35,8 +35,10 @@
     "typescript": "^2.2.2"
   },
   "dependencies": {
+    "@types/lockfile": "^0.4.29",
     "debug": "^2.6.0",
     "fs-extra": "^2.1.2",
+    "lockfile": "^1.0.3",
     "npm-registry-client": "^8.1.0",
     "npmlog": "^4.0.2",
     "tar.gz": "^1.0.5",
