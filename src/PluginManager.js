@@ -81,9 +81,7 @@ class PluginManager {
         });
     }
     list() {
-        return __awaiter(this, void 0, void 0, function* () {
-            return this.installedPlugins;
-        });
+        return this.installedPlugins;
     }
     require(name) {
         const info = this.getInfo(name);

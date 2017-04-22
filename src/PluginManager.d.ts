@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import { PluginInfo } from "./PluginInfo";
+import { PluginInfo, IPluginInfo } from "./PluginInfo";
 export interface PluginManagerOptions {
     pluginsPath: string;
     sandbox: any;
@@ -18,9 +18,9 @@ export declare class PluginManager {
     installFromPath(location: string): Promise<PluginInfo>;
     uninstall(name: string): Promise<void>;
     uninstallAll(): Promise<void>;
-    list(): Promise<PluginInfo[]>;
+    list(): IPluginInfo[];
     require(name: string): any;
-    getInfo(name: string): PluginInfo | undefined;
+    getInfo(name: string): IPluginInfo | undefined;
     private uninstallLockFree(name);
     private installFromPathLockFree(location);
     private installFromNpmLockFree(name, version?);

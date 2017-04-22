@@ -2,7 +2,7 @@ import { assert } from "chai";
 import * as path from "path";
 import * as fs from "fs-extra";
 
-import {PluginManager, PluginInfo} from "../index";
+import {PluginManager, IPluginInfo} from "../index";
 
 const pluginsPath = path.join(__dirname, "plugins");
 
@@ -61,7 +61,7 @@ describe("PluginManager suite", function() {
 	});
 
 	describe("installing a plugin", function() {
-		let pluginInfo: PluginInfo;
+		let pluginInfo: IPluginInfo;
 
 		beforeEach(async function() {
 			pluginInfo = await manager.installFromNpm("lodash", "4.17.4");

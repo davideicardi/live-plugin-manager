@@ -3,7 +3,7 @@ import * as path from "path";
 import * as url from "url";
 import {NpmRegistryClient, PackageInfo} from "./NpmRegistryClient";
 import {PluginVm} from "./PluginVm";
-import {PluginInfo} from "./PluginInfo";
+import {PluginInfo, IPluginInfo} from "./PluginInfo";
 import * as lockFile from "lockfile";
 import * as Debug from "debug";
 const debug = Debug("live-plugin-manager");
@@ -84,19 +84,19 @@ export class PluginManager {
 		}
 	}
 
-	async list(): Promise<PluginInfo[]> {
+	list(): IPluginInfo[] {
 		return this.installedPlugins;
 	}
 
 	require(name: string): any {
-		const info = this.getInfo(name);
+		const info = this.getInfo(name) as PluginInfo;
 		if (!info) {
 			throw new Error(`${name} not installed`);
 		}
 		return info.instance;
 	}
 
-	getInfo(name: string): PluginInfo | undefined {
+	getInfo(name: string): IPluginInfo | undefined {
 		return this.installedPlugins.find((p) => p.name === name);
 	}
 

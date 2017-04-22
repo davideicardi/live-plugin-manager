@@ -4,5 +4,6 @@ function __export(m) {
 }
 Object.defineProperty(exports, "__esModule", { value: true });
 __export(require("./src/PluginManager"));
-__export(require("./src/PluginInfo"));
+var PluginInfo_1 = require("./src/PluginInfo");
+exports.IPluginInfo = PluginInfo_1.IPluginInfo;
 //# sourceMappingURL=index.js.map
