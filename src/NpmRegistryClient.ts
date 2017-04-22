@@ -22,7 +22,7 @@ export class NpmRegistryClient {
 	get(name: string, version = "latest"): Promise<PackageInfo> {
 		return new Promise((resolve, reject) => {
 			const params = {timeout: 5000};
-			const regUrl = urlJoin(this.npmUrl, name, version);
+			const regUrl = urlJoin(this.npmUrl, encodeNpmName(name), normalizeVersion(name, version));
 			this.registryClient.get(regUrl, params, (err: any, data: any) => {
 				if (err) {
 					return reject(err);
@@ -81,7 +81,7 @@ export class NpmRegistryClient {
 export interface PackageInfo {
 	_id: string;
 	name: string;
-	descriptions: string;
+	description: string;
 	version: string;
 	main?: string;
 	dependencies?: any;
@@ -107,4 +107,31 @@ function httpDownload(sourceUrl: string, destinationFile: string): Promise<void>
 			reject(err);
 		});
 	});
+}
+
+function encodeNpmName(name: string) {
+	return name.replace("/", "%2F");
+}
+
+function normalizeVersion(name: string, version: string): string {
+	if (name.startsWith("@")) { // is scoped
+		// npm api seems to have some problems with scoped packages
+		// https://github.com/npm/registry/issues/34
+		// Here I try a workaround
+		if (version === "latest") {
+			return "*"; // TODO I'n not sure it is the same...
+		}
+
+		if (isNumber(version[0])) {
+			return "=" + encodeURIComponent(version);
+		}
+
+		return encodeURIComponent(version);
+	}
+
+	return encodeURIComponent(version);
+}
+
+function isNumber(c: string): boolean {
+	return (c >= "0" && c <= "9");
 }

@@ -2,17 +2,17 @@ import * as vm from "vm";
 import * as fs from "fs-extra";
 import * as path from "path";
 import {PluginManager} from "./PluginManager";
-import {PluginInfo} from "./PluginInfo";
+import {IPluginInfo} from "./PluginInfo";
 import * as Debug from "debug";
 const debug = Debug("live-plugin-manager.PluginVm");
 
 export class PluginVm {
-	private requireCache = new Map<PluginInfo, Map<string, any>>();
+	private requireCache = new Map<IPluginInfo, Map<string, any>>();
 
 	constructor(private readonly manager: PluginManager) {
 	}
 
-	load(pluginContext: PluginInfo, filePath: string): any {
+	load(pluginContext: IPluginInfo, filePath: string): any {
 		let moduleInstance = this.getCache(pluginContext, filePath);
 		if (moduleInstance) {
 			debug(`${filePath} loaded from cache`);
@@ -23,22 +23,9 @@ export class PluginVm {
 
 		const filePathExtension = path.extname(filePath).toLowerCase();
 		if (filePathExtension === ".js") {
-			const sandbox = this.createModuleSandbox(pluginContext, filePath);
-			const moduleContext = vm.createContext(sandbox);
-
 			const code = fs.readFileSync(filePath, "utf8");
-			// For performance reasons wrap code in a Immediately-invoked function expression
-			// https://60devs.com/executing-js-code-with-nodes-vm-module.html
-			// I have also declared the exports variable to support the
-			//  `var app = exports = module.exports = {};` notation
-			const iifeCode = `(function(exports){${code}}(module.exports));`;
 
-			const vmOptions = { displayErrors: true, filename: filePath };
-			const script = new vm.Script(iifeCode, vmOptions);
-
-			script.runInContext(moduleContext, vmOptions);
-
-			moduleInstance = sandbox.module.exports;
+			moduleInstance = this.vmRunScript(pluginContext, filePath, code);
 		} else if (filePathExtension === ".json") {
 			moduleInstance = fs.readJsonSync(filePath);
 		} else {
@@ -50,7 +37,39 @@ export class PluginVm {
 		return moduleInstance;
 	}
 
-	private getCache(pluginContext: PluginInfo, filePath: string): any {
+	runScript(code: string): any {
+		const name = "dynamic-" + Date.now;
+		const filePath = path.join(this.manager.options.pluginsPath, name + ".js");
+		const pluginContext: IPluginInfo = {
+			location: path.join(this.manager.options.pluginsPath, name),
+			mainFile: filePath,
+			name,
+			version: "1.0.0"
+		};
+
+		return this.vmRunScript(pluginContext, filePath, code);
+	}
+
+	private vmRunScript(pluginContext: IPluginInfo, filePath: string, code: string): any {
+		const sandbox = this.createModuleSandbox(pluginContext, filePath);
+		const moduleContext = vm.createContext(sandbox);
+
+		// For performance reasons wrap code in a Immediately-invoked function expression
+		// https://60devs.com/executing-js-code-with-nodes-vm-module.html
+		// I have also declared the exports variable to support the
+		//  `var app = exports = module.exports = {};` notation
+		const newLine = "\r\n";
+		const iifeCode = `(function(exports){${newLine}${code}${newLine}}(module.exports));`;
+
+		const vmOptions = { displayErrors: true, filename: filePath };
+		const script = new vm.Script(iifeCode, vmOptions);
+
+		script.runInContext(moduleContext, vmOptions);
+
+		return sandbox.module.exports;
+	}
+
+	private getCache(pluginContext: IPluginInfo, filePath: string): any {
 		const moduleCache = this.requireCache.get(pluginContext);
 		if (!moduleCache) {
 			return undefined;
@@ -59,7 +78,7 @@ export class PluginVm {
 		return moduleCache.get(filePath);
 	}
 
-	private setCache(pluginContext: PluginInfo, filePath: string, instance: any): void {
+	private setCache(pluginContext: IPluginInfo, filePath: string, instance: any): void {
 		let moduleCache = this.requireCache.get(pluginContext);
 		if (!moduleCache) {
 			moduleCache = new Map<string, any>();
@@ -69,7 +88,7 @@ export class PluginVm {
 		moduleCache.set(filePath, instance);
 	}
 
-	private createModuleSandbox(pluginContext: PluginInfo, filePath: string) {
+	private createModuleSandbox(pluginContext: IPluginInfo, filePath: string) {
 		const me = this;
 		const moduleSandbox = Object.assign({}, this.manager.options.sandbox);
 
@@ -96,7 +115,7 @@ export class PluginVm {
 		return moduleSandbox;
 	}
 
-	private sandboxResolve(pluginContext: PluginInfo, moduleDirName: string, name: string): string {
+	private sandboxResolve(pluginContext: IPluginInfo, moduleDirName: string, name: string): string {
 		// I try to use a similar logic of https://nodejs.org/api/modules.html#modules_modules
 
 		// is a relative module
@@ -133,7 +152,7 @@ export class PluginVm {
 		return name;
 	}
 
-	private sandboxRequire(pluginContext: PluginInfo, moduleDirName: string, name: string) {
+	private sandboxRequire(pluginContext: IPluginInfo, moduleDirName: string, name: string) {
 		// I try to use a similar logic of https://nodejs.org/api/modules.html#modules_modules
 
 		debug(`Requiring ${name}`);

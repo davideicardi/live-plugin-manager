@@ -23,8 +23,10 @@ const DefaultOptions = {
     npmRegistryConfig: {},
     pluginsPath: path.join(cwd, "plugins"),
     requireCoreModules: true,
-    hostRequire: require
+    hostRequire: require,
+    ignoredDependencies: [/^@types\//]
 };
+const NPM_LATEST_TAG = "latest";
 class PluginManager {
     constructor(options) {
         this.installedPlugins = new Array();
@@ -32,7 +34,7 @@ class PluginManager {
         this.vm = new PluginVm_1.PluginVm(this);
         this.npmRegistry = new NpmRegistryClient_1.NpmRegistryClient(this.options.npmRegistryUrl, this.options.npmRegistryConfig);
     }
-    installFromNpm(name, version = "latest") {
+    installFromNpm(name, version = NPM_LATEST_TAG) {
         return __awaiter(this, void 0, void 0, function* () {
             yield fs.ensureDir(this.options.pluginsPath);
             yield this.syncLock();
@@ -93,6 +95,14 @@ class PluginManager {
     getInfo(name) {
         return this.installedPlugins.find((p) => p.name === name);
     }
+    getInfoFromNpm(name, version = NPM_LATEST_TAG) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield this.npmRegistry.get(name, version);
+        });
+    }
+    runScript(code) {
+        return this.vm.runScript(code);
+    }
     uninstallLockFree(name) {
         return __awaiter(this, void 0, void 0, function* () {
             debug(`Uninstalling ${name}...`);
@@ -126,7 +136,7 @@ class PluginManager {
             return yield this.install(packageJson);
         });
     }
-    installFromNpmLockFree(name, version = "latest") {
+    installFromNpmLockFree(name, version = NPM_LATEST_TAG) {
         return __awaiter(this, void 0, void 0, function* () {
             const registryInfo = yield this.npmRegistry.get(name, version);
             // already installed
@@ -148,6 +158,9 @@ class PluginManager {
                 return;
             }
             for (const key in packageInfo.dependencies) {
+                if (this.shouldIgnore(key)) {
+                    continue;
+                }
                 if (packageInfo.dependencies.hasOwnProperty(key)) {
                     const version = packageInfo.dependencies[key].toString();
                     if (this.isModuleAvailableFromHost(key)) {
@@ -174,6 +187,7 @@ class PluginManager {
         }
     }
     getPluginLocation(name) {
+        const safeName = name.replace("/", path.sep).replace("\\", path.sep);
         return path.join(this.options.pluginsPath, name);
     }
     removeDownloaded(name) {
@@ -265,6 +279,15 @@ class PluginManager {
                 resolve();
             });
         });
+    }
+    shouldIgnore(name) {
+        for (const p of this.options.ignoredDependencies) {
+            if (p instanceof RegExp) {
+                return p.test(name);
+            }
+            return new RegExp(p).test(name);
+        }
+        return false;
     }
 }
 exports.PluginManager = PluginManager;

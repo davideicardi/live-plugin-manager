@@ -10,7 +10,7 @@ export declare class NpmRegistryClient {
 export interface PackageInfo {
     _id: string;
     name: string;
-    descriptions: string;
+    description: string;
     version: string;
     main?: string;
     dependencies?: any;

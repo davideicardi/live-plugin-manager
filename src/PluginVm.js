@@ -19,18 +19,8 @@ class PluginVm {
         debug(`Loading ${filePath} ...`);
         const filePathExtension = path.extname(filePath).toLowerCase();
         if (filePathExtension === ".js") {
-            const sandbox = this.createModuleSandbox(pluginContext, filePath);
-            const moduleContext = vm.createContext(sandbox);
             const code = fs.readFileSync(filePath, "utf8");
-            // For performance reasons wrap code in a Immediately-invoked function expression
-            // https://60devs.com/executing-js-code-with-nodes-vm-module.html
-            // I have also declared the exports variable to support the
-            //  `var app = exports = module.exports = {};` notation
-            const iifeCode = `(function(exports){${code}}(module.exports));`;
-            const vmOptions = { displayErrors: true, filename: filePath };
-            const script = new vm.Script(iifeCode, vmOptions);
-            script.runInContext(moduleContext, vmOptions);
-            moduleInstance = sandbox.module.exports;
+            moduleInstance = this.vmRunScript(pluginContext, filePath, code);
         }
         else if (filePathExtension === ".json") {
             moduleInstance = fs.readJsonSync(filePath);
@@ -40,6 +30,31 @@ class PluginVm {
         }
         this.setCache(pluginContext, filePath, moduleInstance);
         return moduleInstance;
+    }
+    runScript(code) {
+        const name = "dynamic-" + Date.now;
+        const filePath = path.join(this.manager.options.pluginsPath, name + ".js");
+        const pluginContext = {
+            location: path.join(this.manager.options.pluginsPath, name),
+            mainFile: filePath,
+            name,
+            version: "1.0.0"
+        };
+        return this.vmRunScript(pluginContext, filePath, code);
+    }
+    vmRunScript(pluginContext, filePath, code) {
+        const sandbox = this.createModuleSandbox(pluginContext, filePath);
+        const moduleContext = vm.createContext(sandbox);
+        // For performance reasons wrap code in a Immediately-invoked function expression
+        // https://60devs.com/executing-js-code-with-nodes-vm-module.html
+        // I have also declared the exports variable to support the
+        //  `var app = exports = module.exports = {};` notation
+        const newLine = "\r\n";
+        const iifeCode = `(function(exports){${newLine}${code}${newLine}}(module.exports));`;
+        const vmOptions = { displayErrors: true, filename: filePath };
+        const script = new vm.Script(iifeCode, vmOptions);
+        script.runInContext(moduleContext, vmOptions);
+        return sandbox.module.exports;
     }
     getCache(pluginContext, filePath) {
         const moduleCache = this.requireCache.get(pluginContext);

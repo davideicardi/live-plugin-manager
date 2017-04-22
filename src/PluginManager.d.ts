@@ -1,4 +1,5 @@
 /// <reference types="node" />
+import { PackageInfo } from "./NpmRegistryClient";
 import { PluginInfo, IPluginInfo } from "./PluginInfo";
 export interface PluginManagerOptions {
     pluginsPath: string;
@@ -7,6 +8,7 @@ export interface PluginManagerOptions {
     npmRegistryConfig: any;
     requireCoreModules: boolean;
     hostRequire?: NodeRequire;
+    ignoredDependencies: Array<string | RegExp>;
 }
 export declare class PluginManager {
     readonly options: PluginManagerOptions;
@@ -21,6 +23,8 @@ export declare class PluginManager {
     list(): IPluginInfo[];
     require(name: string): any;
     getInfo(name: string): IPluginInfo | undefined;
+    getInfoFromNpm(name: string, version?: string): Promise<PackageInfo>;
+    runScript(code: string): any;
     private uninstallLockFree(name);
     private installFromPathLockFree(location);
     private installFromNpmLockFree(name, version?);
@@ -35,4 +39,5 @@ export declare class PluginManager {
     private install(packageInfo);
     private syncLock();
     private syncUnlock();
+    private shouldIgnore(name);
 }

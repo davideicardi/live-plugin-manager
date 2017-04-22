@@ -17,6 +17,7 @@ export interface PluginManagerOptions {
 	npmRegistryConfig: any;
 	requireCoreModules: boolean;
 	hostRequire?: NodeRequire;
+	ignoredDependencies: Array<string|RegExp>;
 }
 
 const cwd = process.cwd();
@@ -26,9 +27,11 @@ const DefaultOptions: PluginManagerOptions = {
 	npmRegistryConfig: {},
 	pluginsPath: path.join(cwd, "plugins"),
 	requireCoreModules: true,
-	hostRequire: require
+	hostRequire: require,
+	ignoredDependencies: [/^@types\//]
 };
 
+const NPM_LATEST_TAG = "latest";
 
 export class PluginManager {
 	readonly options: PluginManagerOptions;
@@ -42,7 +45,7 @@ export class PluginManager {
 		this.npmRegistry = new NpmRegistryClient(this.options.npmRegistryUrl, this.options.npmRegistryConfig);
 	}
 
-	async installFromNpm(name: string, version = "latest"): Promise<PluginInfo> {
+	async installFromNpm(name: string, version = NPM_LATEST_TAG): Promise<PluginInfo> {
 		await fs.ensureDir(this.options.pluginsPath);
 
 		await this.syncLock();
@@ -100,6 +103,14 @@ export class PluginManager {
 		return this.installedPlugins.find((p) => p.name === name);
 	}
 
+	async getInfoFromNpm(name: string, version = NPM_LATEST_TAG): Promise<PackageInfo> {
+		return await this.npmRegistry.get(name, version);
+	}
+
+	runScript(code: string): any {
+		return this.vm.runScript(code);
+	}
+
 	private async uninstallLockFree(name: string): Promise<void> {
 		debug(`Uninstalling ${name}...`);
 
@@ -139,7 +150,7 @@ export class PluginManager {
 		return await this.install(packageJson);
 	}
 
-	private async installFromNpmLockFree(name: string, version = "latest"): Promise<PluginInfo> {
+	private async installFromNpmLockFree(name: string, version = NPM_LATEST_TAG): Promise<PluginInfo> {
 		const registryInfo = await this.npmRegistry.get(name, version);
 
 		// already installed
@@ -166,6 +177,10 @@ export class PluginManager {
 		}
 
 		for (const key in packageInfo.dependencies) {
+			if (this.shouldIgnore(key)) {
+				continue;
+			}
+
 			if (packageInfo.dependencies.hasOwnProperty(key)) {
 				const version = packageInfo.dependencies[key].toString();
 
@@ -193,6 +208,7 @@ export class PluginManager {
 	}
 
 	private getPluginLocation(name: string) {
+		const safeName = name.replace("/", path.sep).replace("\\", path.sep);
 		return path.join(this.options.pluginsPath, name);
 	}
 
@@ -297,5 +313,17 @@ export class PluginManager {
 				resolve();
 			});
 		});
+	}
+
+	private shouldIgnore(name: string): boolean {
+		for (const p of this.options.ignoredDependencies) {
+			if (p instanceof RegExp) {
+				return p.test(name);
+			}
+
+			return new RegExp(p).test(name);
+		}
+
+		return false;
 	}
 }

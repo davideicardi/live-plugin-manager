@@ -1,6 +1,7 @@
 import { assert } from "chai";
 import * as path from "path";
 import * as fs from "fs-extra";
+import * as os from "os";
 
 import {PluginManager, IPluginInfo} from "../index";
 
@@ -48,6 +49,16 @@ describe("PluginManager suite", function() {
 		assert.equal(pluginInstance.myVariable, "value1");
 	});
 
+	it("installing a not existing plugin using npm", async function() {
+		try {
+			const pluginInfo = await manager.installFromNpm("this-does-not-exists", "9.9.9");
+		} catch (e) {
+			return;
+		}
+
+		throw new Error("Expected to fail");
+	});
+
 	it("installing a plugin using npm", async function() {
 		const pluginInfo = await manager.installFromNpm("lodash", "4.17.4");
 
@@ -58,6 +69,43 @@ describe("PluginManager suite", function() {
 		const result = _.defaults({ a: 1 }, { a: 3, b: 2 });
 		assert.equal(result.a, 1);
 		assert.equal(result.b, 2);
+	});
+
+	describe("dynamic script", function() {
+		it("simple script", async function() {
+			const code = `
+			const a = 1;
+			const b = 3;
+
+			module.exports = a + b;
+			`;
+
+			const result = manager.runScript(code);
+			assert.equal(result, 4);
+		});
+
+		it("script with comment at the end", async function() {
+			const code = `
+			const a = 1;
+			const b = 3;
+
+			module.exports = a + b;
+			// some content`;
+
+			const result = manager.runScript(code);
+			assert.equal(result, 4);
+		});
+
+		it("require system module", async function() {
+			const code = `
+			const os = require("os");
+
+			module.exports = os.hostname();
+			`;
+
+			const result = manager.runScript(code);
+			assert.equal(result, os.hostname());
+		});
 	});
 
 	describe("installing a plugin", function() {
@@ -87,6 +135,19 @@ describe("PluginManager suite", function() {
 			const instance2 = manager.require("lodash");
 
 			assert.equal(instance1, instance2);
+		});
+
+		it("dynamic script can require a plugin", async function() {
+			const code = `
+			const _ = require("lodash");
+
+			module.exports = _;
+			`;
+
+			const result = manager.runScript(code);
+			const instance = manager.require("lodash");
+
+			assert.equal(instance, result);
 		});
 
 		describe("uninstalling", function() {
@@ -159,11 +220,72 @@ describe("PluginManager suite", function() {
 		assert.equal(pluginInstance.myGlobals.Buffer, Buffer);
 	});
 
-	it("dependencies of plugins are installed", async function() {
-		const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
-		const pluginInfo = await manager.installFromPath(pluginSourcePath);
+	describe("plugins dependencies", function() {
+		it("dependencies are installed", async function() {
+			const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
+			const pluginInfo = await manager.installFromPath(pluginSourcePath);
 
-		const pluginInstance = manager.require("my-plugin-with-dep");
-		assert.equal(pluginInstance, "1981/10/06");
+			assert.equal(manager.list()[0].name, "moment");
+			assert.equal(manager.list()[1].name, "my-plugin-with-dep");
+
+			const pluginInstance = manager.require("my-plugin-with-dep");
+			assert.equal(pluginInstance, "1981/10/06");
+		});
+
+		it("ignored dependencies are not installed (@types)", async function() {
+			const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
+			const pluginInfo = await manager.installFromPath(pluginSourcePath);
+
+			assert.equal(manager.list().length, 2);
+
+			assert.equal(manager.list()[0].name, "moment");
+			assert.equal(manager.list()[1].name, "my-plugin-with-dep");
+		});
+	});
+
+	describe("npm registry", function() {
+		it("get latest version info", async function() {
+			const info = await manager.getInfoFromNpm("lodash");
+			assert.equal("lodash", info.name);
+			assert.isDefined(info.version);
+		});
+
+		it("get specific verison info", async function() {
+			let info = await manager.getInfoFromNpm("lodash", "4.17.4");
+			assert.equal("lodash", info.name);
+			assert.equal("4.17.4", info.version);
+
+			info = await manager.getInfoFromNpm("lodash", "=4.17.4");
+			assert.equal("lodash", info.name);
+			assert.equal("4.17.4", info.version);
+		});
+
+		it("get caret verison range info", async function() {
+			const info = await manager.getInfoFromNpm("lodash", "^3.0.0");
+			assert.equal("lodash", info.name);
+			assert.equal("3.10.1", info.version); // this test can fail if lodash publish a 3.x version
+		});
+
+		it("get latest version info for scoped packages", async function() {
+			const info = await manager.getInfoFromNpm("@types/node");
+			assert.equal("@types/node", info.name);
+			assert.isDefined(info.version);
+		});
+
+		it("get specific version info for scoped packages", async function() {
+			let info = await manager.getInfoFromNpm("@types/node", "7.0.13");
+			assert.equal("@types/node", info.name);
+			assert.equal("7.0.13", info.version);
+
+			info = await manager.getInfoFromNpm("@types/node", "=7.0.13");
+			assert.equal("@types/node", info.name);
+			assert.equal("7.0.13", info.version);
+		});
+
+		it("get caret verison range info for scoped packages", async function() {
+			const info = await manager.getInfoFromNpm("@types/node", "^6.0.0");
+			assert.equal("@types/node", info.name);
+			assert.equal("6.0.70", info.version); // this test can fail if @types/node publish a 6.x version
+		});
 	});
 });

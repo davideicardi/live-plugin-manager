@@ -1,10 +1,12 @@
 import { PluginManager } from "./PluginManager";
-import { PluginInfo } from "./PluginInfo";
+import { IPluginInfo } from "./PluginInfo";
 export declare class PluginVm {
     private readonly manager;
     private requireCache;
     constructor(manager: PluginManager);
-    load(pluginContext: PluginInfo, filePath: string): any;
+    load(pluginContext: IPluginInfo, filePath: string): any;
+    runScript(code: string): any;
+    private vmRunScript(pluginContext, filePath, code);
     private getCache(pluginContext, filePath);
     private setCache(pluginContext, filePath, instance);
     private createModuleSandbox(pluginContext, filePath);

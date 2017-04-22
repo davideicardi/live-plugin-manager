@@ -28,7 +28,7 @@ class NpmRegistryClient {
     get(name, version = "latest") {
         return new Promise((resolve, reject) => {
             const params = { timeout: 5000 };
-            const regUrl = urlJoin(this.npmUrl, name, version);
+            const regUrl = urlJoin(this.npmUrl, encodeNpmName(name), normalizeVersion(name, version));
             this.registryClient.get(regUrl, params, (err, data) => {
                 if (err) {
                     return reject(err);
@@ -89,5 +89,26 @@ function httpDownload(sourceUrl, destinationFile) {
             reject(err);
         });
     });
+}
+function encodeNpmName(name) {
+    return name.replace("/", "%2F");
+}
+function normalizeVersion(name, version) {
+    if (name.startsWith("@")) {
+        // npm api seems to have some problems with scoped packages
+        // https://github.com/npm/registry/issues/34
+        // Here I try a workaround
+        if (version === "latest") {
+            return "*"; // TODO I'n not sure it is the same...
+        }
+        if (isNumber(version[0])) {
+            return "=" + encodeURIComponent(version);
+        }
+        return encodeURIComponent(version);
+    }
+    return encodeURIComponent(version);
+}
+function isNumber(c) {
+    return (c >= "0" && c <= "9");
 }
 //# sourceMappingURL=NpmRegistryClient.js.map
