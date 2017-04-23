@@ -16,6 +16,7 @@ Main features are:
 - Support for concurrency operation on filesystem (cloud/webfarm scenario where file system is shared)
   - A filesystem lock is used to prevent multiple instances to work on the same filesystem in the same moment
 - Implementated in Typescript
+- Fully tested (mocha tests)
 
 ## Installation
 
@@ -45,7 +46,7 @@ In the above code I install `moment` package at runtime, load and execute it.
 
 Plugins are installed inside the directory specified in the `PluginManager` constructor or in the `plugins` directory if not specified.
 
-Each time your applicaition start you should reinstall any packages that you need, already downloaded packages are not automatically installed, but installation is faster because no new file is downloaded. Typically I suggest to put the list of the installed packages in a database or any other central repository.
+Each time your applicaition start you should reinstall any packages that you need; already downloaded packages are not automatically installed, but installation is faster because no new file is downloaded. Typically I suggest to put the list of the installed packages in a database or any other central repository.
 
 Here another more complex scenario where I install `express` with all it's dependencies, just to demostrate how many possibilities you can have:
 
@@ -74,7 +75,7 @@ Here another more complex scenario where I install `express` with all it's depen
 
 ## Load plugins
 
-`live-plugin-manager` doesn't have any special code to load plugins.
+`live-plugin-manager` doesn't have any special code or convention to load plugins.
 When you require a plugin it just load the main file (taken from `package.json`) and execute it, exactly like standard node.js `require`.
 Often when working with plugins you need some extension point or convention to actually integrate your plugins inside your host application. Here are some possible solutions:
 
@@ -83,7 +84,7 @@ Often when working with plugins you need some extension point or convention to a
 
 Another solution is to load your plugins inside a Dependency Injection container. 
 
-I'm working also on [shelf-depenency](https://www.npmjs.com/package/shelf-dependency), a simple dependency injection/inversion of control container that can use loaded plugins.
+I'm working also on [shelf-depenency](https://www.npmjs.com/package/shelf-dependency), a simple dependency injection/inversion of control container that can be used to load plugins.
 
 ## Samples
 
@@ -138,15 +139,16 @@ I suggest usually to allow to install only a limited sets of plugins or only all
 
 This project use the following dependencies to do it's job:
 
-- npm-registry-client: npm registry handling
-- lockfile: file system locking to prevent concurrent operations
-- tar.gz: extract package file
-- fs-extra: file system operations
-- debug: debug informations
+- [npm-registry-client](https://github.com/npm/npm-registry-client): npm registry handling
+- [vm](https://nodejs.org/api/vm.html): compiling and running plugin code within V8 Virtual Machine contexts
+- [lockfile](https://github.com/npm/lockfile): file system locking to prevent concurrent operations
+- [tar.gz](https://github.com/alanhoff/node-tar.gz): extract package file
+- [fs-extra](https://github.com/jprichardson/node-fs-extra): file system operations
+- [debug](https://github.com/visionmedia/debug): debug informations
 
 ## Known limitations
 
-Some limitations when installing a package:
+There are some known limitations when installing a package:
 
 - No `pre/post-install` scripts are executed (for now)
 - C/C++ packages (`.node`) are not supported
