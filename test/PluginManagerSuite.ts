@@ -112,47 +112,47 @@ describe("PluginManager suite", function() {
 		let pluginInfo: IPluginInfo;
 
 		beforeEach(async function() {
-			pluginInfo = await manager.installFromNpm("lodash", "4.17.4");
+			pluginInfo = await manager.installFromNpm("moment", "2.18.1");
 		});
 
 		it("should be available", async function() {
 			const plugins = await manager.list();
 			assert.equal(plugins.length, 1);
-			assert.equal(plugins[0].name, "lodash");
-			assert.equal(plugins[0].version, "4.17.4");
-			assert.equal(plugins[0].location, path.join(pluginsPath, "lodash"));
+			assert.equal(plugins[0].name, "moment");
+			assert.equal(plugins[0].version, "2.18.1");
+			assert.equal(plugins[0].location, path.join(pluginsPath, "moment"));
 
 			assert.isTrue(fs.existsSync(pluginInfo.location));
 
-			const _ = manager.require("lodash");
-			assert.isDefined(_, "Plugin is not loaded");
+			const moment = manager.require("moment");
+			assert.isDefined(moment, "Plugin is not loaded");
 
-			assert.equal(manager.getInfo("lodash"), pluginInfo);
+			assert.equal(manager.getInfo("moment"), pluginInfo);
 		});
 
 		it("require always return the same instance", async function() {
-			const instance1 = manager.require("lodash");
-			const instance2 = manager.require("lodash");
+			const instance1 = manager.require("moment");
+			const instance2 = manager.require("moment");
 
 			assert.equal(instance1, instance2);
 		});
 
 		it("dynamic script can require a plugin", async function() {
 			const code = `
-			const _ = require("lodash");
+			const m = require("moment");
 
-			module.exports = _;
+			module.exports = m;
 			`;
 
 			const result = manager.runScript(code);
-			const instance = manager.require("lodash");
+			const instance = manager.require("moment");
 
 			assert.equal(instance, result);
 		});
 
 		describe("uninstalling", function() {
 			beforeEach(async function() {
-				await manager.uninstall("lodash");
+				await manager.uninstall("moment");
 			});
 
 			it("should not be available anymore", async function() {
@@ -162,7 +162,7 @@ describe("PluginManager suite", function() {
 				assert.isFalse(fs.existsSync(pluginInfo.location), "Directory still exits");
 
 				try {
-					manager.require("lodash");
+					manager.require("moment");
 				} catch (e) {
 					return;
 				}
@@ -172,7 +172,7 @@ describe("PluginManager suite", function() {
 
 			it("requiring a not installed plugin", async function() {
 				try {
-					require("lodash");
+					require("moment");
 				} catch (e) {
 					return;
 				}
@@ -282,10 +282,10 @@ describe("PluginManager suite", function() {
 			assert.equal("7.0.13", info.version);
 		});
 
-		it("get caret verison range info for scoped packages", async function() {
+		it("get caret version range info for scoped packages", async function() {
 			const info = await manager.getInfoFromNpm("@types/node", "^6.0.0");
 			assert.equal("@types/node", info.name);
-			assert.equal("6.0.70", info.version); // this test can fail if @types/node publish a 6.x version
+			assert.equal("6.0.71", info.version); // this test can fail if @types/node publish a 6.x version
 		});
 	});
 });

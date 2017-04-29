@@ -118,45 +118,45 @@ describe("PluginManager suite", function () {
         let pluginInfo;
         beforeEach(function () {
             return __awaiter(this, void 0, void 0, function* () {
-                pluginInfo = yield manager.installFromNpm("lodash", "4.17.4");
+                pluginInfo = yield manager.installFromNpm("moment", "2.18.1");
             });
         });
         it("should be available", function () {
             return __awaiter(this, void 0, void 0, function* () {
                 const plugins = yield manager.list();
                 chai_1.assert.equal(plugins.length, 1);
-                chai_1.assert.equal(plugins[0].name, "lodash");
-                chai_1.assert.equal(plugins[0].version, "4.17.4");
-                chai_1.assert.equal(plugins[0].location, path.join(pluginsPath, "lodash"));
+                chai_1.assert.equal(plugins[0].name, "moment");
+                chai_1.assert.equal(plugins[0].version, "2.18.1");
+                chai_1.assert.equal(plugins[0].location, path.join(pluginsPath, "moment"));
                 chai_1.assert.isTrue(fs.existsSync(pluginInfo.location));
-                const _ = manager.require("lodash");
-                chai_1.assert.isDefined(_, "Plugin is not loaded");
-                chai_1.assert.equal(manager.getInfo("lodash"), pluginInfo);
+                const moment = manager.require("moment");
+                chai_1.assert.isDefined(moment, "Plugin is not loaded");
+                chai_1.assert.equal(manager.getInfo("moment"), pluginInfo);
             });
         });
         it("require always return the same instance", function () {
             return __awaiter(this, void 0, void 0, function* () {
-                const instance1 = manager.require("lodash");
-                const instance2 = manager.require("lodash");
+                const instance1 = manager.require("moment");
+                const instance2 = manager.require("moment");
                 chai_1.assert.equal(instance1, instance2);
             });
         });
         it("dynamic script can require a plugin", function () {
             return __awaiter(this, void 0, void 0, function* () {
                 const code = `
-			const _ = require("lodash");
+			const m = require("moment");
 
-			module.exports = _;
+			module.exports = m;
 			`;
                 const result = manager.runScript(code);
-                const instance = manager.require("lodash");
+                const instance = manager.require("moment");
                 chai_1.assert.equal(instance, result);
             });
         });
         describe("uninstalling", function () {
             beforeEach(function () {
                 return __awaiter(this, void 0, void 0, function* () {
-                    yield manager.uninstall("lodash");
+                    yield manager.uninstall("moment");
                 });
             });
             it("should not be available anymore", function () {
@@ -165,7 +165,7 @@ describe("PluginManager suite", function () {
                     chai_1.assert.equal(plugins.length, 0);
                     chai_1.assert.isFalse(fs.existsSync(pluginInfo.location), "Directory still exits");
                     try {
-                        manager.require("lodash");
+                        manager.require("moment");
                     }
                     catch (e) {
                         return;
@@ -176,7 +176,7 @@ describe("PluginManager suite", function () {
             it("requiring a not installed plugin", function () {
                 return __awaiter(this, void 0, void 0, function* () {
                     try {
-                        require("lodash");
+                        require("moment");
                     }
                     catch (e) {
                         return;
@@ -286,11 +286,11 @@ describe("PluginManager suite", function () {
                 chai_1.assert.equal("7.0.13", info.version);
             });
         });
-        it("get caret verison range info for scoped packages", function () {
+        it("get caret version range info for scoped packages", function () {
             return __awaiter(this, void 0, void 0, function* () {
                 const info = yield manager.getInfoFromNpm("@types/node", "^6.0.0");
                 chai_1.assert.equal("@types/node", info.name);
-                chai_1.assert.equal("6.0.70", info.version); // this test can fail if @types/node publish a 6.x version
+                chai_1.assert.equal("6.0.71", info.version); // this test can fail if @types/node publish a 6.x version
             });
         });
     });

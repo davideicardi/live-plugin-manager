@@ -2,8 +2,7 @@ import * as urlJoin from "url-join";
 import * as path from "path";
 import * as os from "os";
 import * as fs from "./fileSystem";
-import * as http from "http";
-import * as https from "https";
+import * as request from "request";
 import * as Debug from "debug";
 const debug = Debug("live-plugin-manager.NpmRegistryClient");
 
@@ -93,20 +92,38 @@ export interface PackageInfo {
 function httpDownload(sourceUrl: string, destinationFile: string): Promise<void> {
 	return new Promise<void>((resolve, reject) => {
 		const fileStream = fs.createWriteStream(destinationFile);
-		const httpGet = (sourceUrl.toLowerCase().startsWith("https") ? https.get : http.get);
-		const request = httpGet(sourceUrl, function(response) {
-			response.pipe(fileStream);
-			fileStream.on("finish", function() {
+		request
+			.get(sourceUrl)
+			.on("error", (err) => {
 				fileStream.close();
-				resolve();
-			});
-		})
-		.on("error", function(err) {
+				fs.remove(destinationFile);
+				reject(err);
+			})
+			.pipe(fileStream);
+
+		fileStream.on("finish", function() {
 			fileStream.close();
-			fs.remove(destinationFile);
-			reject(err);
+			resolve();
 		});
 	});
+
+	// code without using request...
+	// return new Promise<void>((resolve, reject) => {
+	// 	const fileStream = fs.createWriteStream(destinationFile);
+	// 	const httpGet = (sourceUrl.toLowerCase().startsWith("https") ? https.get : http.get);
+	// 	const request = httpGet(sourceUrl, function(response) {
+	// 		response.pipe(fileStream);
+	// 		fileStream.on("finish", function() {
+	// 			fileStream.close();
+	// 			resolve();
+	// 		});
+	// 	})
+	// 	.on("error", function(err) {
+	// 		fileStream.close();
+	// 		fs.remove(destinationFile);
+	// 		reject(err);
+	// 	});
+	// });
 }
 
 function encodeNpmName(name: string) {

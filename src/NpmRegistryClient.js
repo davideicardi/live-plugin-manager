@@ -12,8 +12,7 @@ const urlJoin = require("url-join");
 const path = require("path");
 const os = require("os");
 const fs = require("./fileSystem");
-const http = require("http");
-const https = require("https");
+const request = require("request");
 const Debug = require("debug");
 const debug = Debug("live-plugin-manager.NpmRegistryClient");
 const Targz = require("tar.gz");
@@ -75,20 +74,36 @@ exports.NpmRegistryClient = NpmRegistryClient;
 function httpDownload(sourceUrl, destinationFile) {
     return new Promise((resolve, reject) => {
         const fileStream = fs.createWriteStream(destinationFile);
-        const httpGet = (sourceUrl.toLowerCase().startsWith("https") ? https.get : http.get);
-        const request = httpGet(sourceUrl, function (response) {
-            response.pipe(fileStream);
-            fileStream.on("finish", function () {
-                fileStream.close();
-                resolve();
-            });
-        })
-            .on("error", function (err) {
+        request
+            .get(sourceUrl)
+            .on("error", (err) => {
             fileStream.close();
             fs.remove(destinationFile);
             reject(err);
+        })
+            .pipe(fileStream);
+        fileStream.on("finish", function () {
+            fileStream.close();
+            resolve();
         });
     });
+    // code without using request...
+    // return new Promise<void>((resolve, reject) => {
+    // 	const fileStream = fs.createWriteStream(destinationFile);
+    // 	const httpGet = (sourceUrl.toLowerCase().startsWith("https") ? https.get : http.get);
+    // 	const request = httpGet(sourceUrl, function(response) {
+    // 		response.pipe(fileStream);
+    // 		fileStream.on("finish", function() {
+    // 			fileStream.close();
+    // 			resolve();
+    // 		});
+    // 	})
+    // 	.on("error", function(err) {
+    // 		fileStream.close();
+    // 		fs.remove(destinationFile);
+    // 		reject(err);
+    // 	});
+    // });
 }
 function encodeNpmName(name) {
     return name.replace("/", "%2F");
