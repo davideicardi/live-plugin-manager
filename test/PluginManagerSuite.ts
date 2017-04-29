@@ -27,6 +27,9 @@ describe("PluginManager suite", function() {
 	it("should not have any installed plugins", async function() {
 		const plugins = await manager.list();
 		assert.equal(plugins.length, 0);
+
+		assert.isUndefined(manager.alreadyInstalled("moment"));
+		assert.isUndefined(manager.alreadyInstalled("my-basic-plugin"));
 	});
 
 	it("installing a plugin from path", async function() {
@@ -113,6 +116,23 @@ describe("PluginManager suite", function() {
 
 		beforeEach(async function() {
 			pluginInfo = await manager.installFromNpm("moment", "2.18.1");
+		});
+
+		it("alreadyInstalled should respect semver", function() {
+			assert.isDefined(manager.alreadyInstalled("moment"));
+			assert.isDefined(manager.alreadyInstalled("moment", "2.18.1"));
+			assert.isDefined(manager.alreadyInstalled("moment", "v2.18.1"));
+			assert.isDefined(manager.alreadyInstalled("moment", "=2.18.1"));
+			assert.isDefined(manager.alreadyInstalled("moment", ">=2.18.1"));
+			assert.isDefined(manager.alreadyInstalled("moment", "^2.18.1"));
+			assert.isDefined(manager.alreadyInstalled("moment", "^2.0.0"));
+			assert.isDefined(manager.alreadyInstalled("moment", ">=1.0.0"));
+
+			assert.isUndefined(manager.alreadyInstalled("moment", "2.17.0"));
+			assert.isUndefined(manager.alreadyInstalled("moment", "2.19.0"));
+			assert.isUndefined(manager.alreadyInstalled("moment", "3.0.0"));
+			assert.isUndefined(manager.alreadyInstalled("moment", "=3.0.0"));
+			assert.isUndefined(manager.alreadyInstalled("moment", "^3.0.0"));
 		});
 
 		it("should be available", async function() {
@@ -240,6 +260,34 @@ describe("PluginManager suite", function() {
 
 			assert.equal(manager.list()[0].name, "moment");
 			assert.equal(manager.list()[1].name, "my-plugin-with-dep");
+		});
+	});
+
+	describe("plugins updates", function() {
+
+		beforeEach(async function() {
+			await manager.installFromPath(path.join(__dirname, "my-plugin-a@v1"));
+			await manager.installFromPath(path.join(__dirname, "my-plugin-b"));
+		});
+
+		it("specified version are installed", async function() {
+			assert.equal(manager.list()[0].name, "my-plugin-a");
+			assert.equal(manager.list()[0].version, "1.0.0");
+			assert.equal(manager.list()[1].name, "my-plugin-b");
+
+			const pluginInstance = manager.require("my-plugin-b");
+			assert.equal(pluginInstance, "a = v1");
+		});
+
+		it("updating a dependency will reload dependents", async function() {
+			await manager.installFromPath(path.join(__dirname, "my-plugin-a@v2"));
+
+			assert.equal(manager.list().length, 2);
+			assert.isDefined(manager.alreadyInstalled("my-plugin-b", "=1.0.0"));
+			assert.isDefined(manager.alreadyInstalled("my-plugin-a", "=2.0.0"));
+
+			const pluginInstance = manager.require("my-plugin-b");
+			assert.equal(pluginInstance, "a = v2");
 		});
 	});
 

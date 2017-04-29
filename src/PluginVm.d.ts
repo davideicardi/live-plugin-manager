@@ -4,6 +4,7 @@ export declare class PluginVm {
     private readonly manager;
     private requireCache;
     constructor(manager: PluginManager);
+    unload(pluginContext: IPluginInfo): void;
     load(pluginContext: IPluginInfo, filePath: string): any;
     runScript(code: string): any;
     private vmRunScript(pluginContext, filePath, code);

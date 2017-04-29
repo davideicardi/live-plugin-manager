@@ -22,6 +22,7 @@ export declare class PluginManager {
     uninstallAll(): Promise<void>;
     list(): IPluginInfo[];
     require(name: string): any;
+    alreadyInstalled(name: string, version?: string): IPluginInfo | undefined;
     getInfo(name: string): IPluginInfo | undefined;
     getInfoFromNpm(name: string, version?: string): Promise<PackageInfo>;
     runScript(code: string): any;
@@ -36,7 +37,8 @@ export declare class PluginManager {
     private readPackageJsonFromPath(location);
     private load(plugin);
     private unload(plugin);
-    private install(packageInfo);
+    private loadAndAddPlugin(packageInfo);
+    private deleteAndUnloadPlugin(plugin);
     private syncLock();
     private syncUnlock();
     private shouldIgnore(name);

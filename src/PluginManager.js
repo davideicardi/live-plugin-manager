@@ -13,6 +13,7 @@ const path = require("path");
 const NpmRegistryClient_1 = require("./NpmRegistryClient");
 const PluginVm_1 = require("./PluginVm");
 const lockFile = require("lockfile");
+const semver = require("semver");
 const Debug = require("debug");
 const debug = Debug("live-plugin-manager");
 const BASE_NPM_URL = "https://registry.npmjs.org";
@@ -92,6 +93,18 @@ class PluginManager {
         }
         return info.instance;
     }
+    alreadyInstalled(name, version) {
+        const installedInfo = this.getInfo(name);
+        if (installedInfo) {
+            if (!version) {
+                return installedInfo;
+            }
+            if (semver.satisfies(installedInfo.version, version)) {
+                return installedInfo;
+            }
+        }
+        return undefined;
+    }
     getInfo(name) {
         return this.installedPlugins.find((p) => p.name === name);
     }
@@ -111,21 +124,20 @@ class PluginManager {
                 debug(`${name} not installed`);
                 return;
             }
-            const index = this.installedPlugins.indexOf(info);
-            if (index >= 0) {
-                this.installedPlugins.splice(index, 1);
-            }
-            this.unload(info);
-            yield fs.remove(info.location);
+            yield this.deleteAndUnloadPlugin(info);
         });
     }
     installFromPathLockFree(location) {
         return __awaiter(this, void 0, void 0, function* () {
             const packageJson = yield this.readPackageJsonFromPath(location);
-            // already installed
-            const installedInfo = this.getInfo(packageJson.name);
-            if (installedInfo && installedInfo.version === packageJson.version) {
+            // already installed satisfied version
+            const installedInfo = this.alreadyInstalled(packageJson.name, packageJson.version);
+            if (installedInfo) {
                 return installedInfo;
+            }
+            // already installed not satisfied version
+            if (this.alreadyInstalled(packageJson.name)) {
+                yield this.uninstallLockFree(packageJson.name);
             }
             // already downloaded
             if (!(yield this.isAlreadyDownloaded(packageJson.name, packageJson.version))) {
@@ -133,23 +145,27 @@ class PluginManager {
                 debug(`Copy from ${location} to ${this.options.pluginsPath}`);
                 yield fs.copy(location, this.getPluginLocation(packageJson.name));
             }
-            return yield this.install(packageJson);
+            return yield this.loadAndAddPlugin(packageJson);
         });
     }
     installFromNpmLockFree(name, version = NPM_LATEST_TAG) {
         return __awaiter(this, void 0, void 0, function* () {
             const registryInfo = yield this.npmRegistry.get(name, version);
-            // already installed
-            const installedInfo = this.getInfo(name);
-            if (installedInfo && installedInfo.version === registryInfo.version) {
+            // already installed satisfied version
+            const installedInfo = this.alreadyInstalled(registryInfo.name, registryInfo.version);
+            if (installedInfo) {
                 return installedInfo;
+            }
+            // already installed not satisfied version
+            if (this.alreadyInstalled(registryInfo.name)) {
+                yield this.uninstallLockFree(registryInfo.name);
             }
             // already downloaded
             if (!(yield this.isAlreadyDownloaded(registryInfo.name, registryInfo.version))) {
                 yield this.removeDownloaded(registryInfo.name);
                 yield this.npmRegistry.download(this.options.pluginsPath, registryInfo);
             }
-            return yield this.install(registryInfo);
+            return yield this.loadAndAddPlugin(registryInfo);
         });
     }
     installDependencies(packageInfo) {
@@ -164,6 +180,9 @@ class PluginManager {
                 if (packageInfo.dependencies.hasOwnProperty(key)) {
                     const version = packageInfo.dependencies[key].toString();
                     if (this.isModuleAvailableFromHost(key)) {
+                        debug(`Installing dependencies of ${packageInfo.name}: ${key} is already available on host`);
+                    }
+                    else if (this.alreadyInstalled(key, version)) {
                         debug(`Installing dependencies of ${packageInfo.name}: ${key} is already installed`);
                     }
                     else {
@@ -232,8 +251,9 @@ class PluginManager {
     }
     unload(plugin) {
         plugin.instance = undefined;
+        this.vm.unload(plugin);
     }
-    install(packageInfo) {
+    loadAndAddPlugin(packageInfo) {
         return __awaiter(this, void 0, void 0, function* () {
             yield this.installDependencies(packageInfo);
             const DefaultMainFile = "index.js";
@@ -252,6 +272,16 @@ class PluginManager {
             this.load(pluginInfo);
             this.installedPlugins.push(pluginInfo);
             return pluginInfo;
+        });
+    }
+    deleteAndUnloadPlugin(plugin) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const index = this.installedPlugins.indexOf(plugin);
+            if (index >= 0) {
+                this.installedPlugins.splice(index, 1);
+            }
+            this.unload(plugin);
+            yield fs.remove(plugin.location);
         });
     }
     syncLock() {

@@ -10,6 +10,9 @@ class PluginVm {
         this.manager = manager;
         this.requireCache = new Map();
     }
+    unload(pluginContext) {
+        this.requireCache.delete(pluginContext);
+    }
     load(pluginContext, filePath) {
         let moduleInstance = this.getCache(pluginContext, filePath);
         if (moduleInstance) {

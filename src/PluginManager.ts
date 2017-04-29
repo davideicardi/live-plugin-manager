@@ -5,6 +5,7 @@ import {NpmRegistryClient, PackageInfo} from "./NpmRegistryClient";
 import {PluginVm} from "./PluginVm";
 import {PluginInfo, IPluginInfo} from "./PluginInfo";
 import * as lockFile from "lockfile";
+import * as semver from "semver";
 import * as Debug from "debug";
 const debug = Debug("live-plugin-manager");
 
@@ -99,6 +100,21 @@ export class PluginManager {
 		return info.instance;
 	}
 
+	alreadyInstalled(name: string, version?: string): IPluginInfo | undefined {
+		const installedInfo = this.getInfo(name);
+		if (installedInfo) {
+			if (!version) {
+				return installedInfo;
+			}
+
+			if (semver.satisfies(installedInfo.version, version)) {
+				return installedInfo;
+			}
+		}
+
+		return undefined;
+	}
+
 	getInfo(name: string): IPluginInfo | undefined {
 		return this.installedPlugins.find((p) => p.name === name);
 	}
@@ -120,23 +136,21 @@ export class PluginManager {
 			return;
 		}
 
-		const index = this.installedPlugins.indexOf(info);
-		if (index >= 0) {
-			this.installedPlugins.splice(index, 1);
-		}
-
-		this.unload(info);
-
-		await fs.remove(info.location);
+		await this.deleteAndUnloadPlugin(info);
 	}
 
 	private async installFromPathLockFree(location: string): Promise<PluginInfo> {
 		const packageJson = await this.readPackageJsonFromPath(location);
 
-		// already installed
-		const installedInfo = this.getInfo(packageJson.name);
-		if (installedInfo && installedInfo.version === packageJson.version) {
+		// already installed satisfied version
+		const installedInfo = this.alreadyInstalled(packageJson.name, packageJson.version);
+		if (installedInfo) {
 			return installedInfo;
+		}
+
+		// already installed not satisfied version
+		if (this.alreadyInstalled(packageJson.name)) {
+			await this.uninstallLockFree(packageJson.name);
 		}
 
 		// already downloaded
@@ -147,16 +161,21 @@ export class PluginManager {
 			await fs.copy(location, this.getPluginLocation(packageJson.name));
 		}
 
-		return await this.install(packageJson);
+		return await this.loadAndAddPlugin(packageJson);
 	}
 
 	private async installFromNpmLockFree(name: string, version = NPM_LATEST_TAG): Promise<PluginInfo> {
 		const registryInfo = await this.npmRegistry.get(name, version);
 
-		// already installed
-		const installedInfo = this.getInfo(name);
-		if (installedInfo && installedInfo.version === registryInfo.version) {
+		// already installed satisfied version
+		const installedInfo = this.alreadyInstalled(registryInfo.name, registryInfo.version);
+		if (installedInfo) {
 			return installedInfo;
+		}
+
+		// already installed not satisfied version
+		if (this.alreadyInstalled(registryInfo.name)) {
+			await this.uninstallLockFree(registryInfo.name);
 		}
 
 		// already downloaded
@@ -168,7 +187,7 @@ export class PluginManager {
 				registryInfo);
 		}
 
-		return await this.install(registryInfo);
+		return await this.loadAndAddPlugin(registryInfo);
 	}
 
 	private async installDependencies(packageInfo: PackageInfo): Promise<void> {
@@ -185,6 +204,8 @@ export class PluginManager {
 				const version = packageInfo.dependencies[key].toString();
 
 				if (this.isModuleAvailableFromHost(key)) {
+					debug(`Installing dependencies of ${packageInfo.name}: ${key} is already available on host`);
+				} else if (this.alreadyInstalled(key, version)) {
 					debug(`Installing dependencies of ${packageInfo.name}: ${key} is already installed`);
 				} else {
 					debug(`Installing dependencies of ${packageInfo.name}: ${key} ...`);
@@ -256,9 +277,10 @@ export class PluginManager {
 
 	private unload(plugin: PluginInfo) {
 		plugin.instance = undefined;
+		this.vm.unload(plugin);
 	}
 
-	private async install(packageInfo: PackageInfo): Promise<PluginInfo> {
+	private async loadAndAddPlugin(packageInfo: PackageInfo): Promise<PluginInfo> {
 		await this.installDependencies(packageInfo);
 
 		const DefaultMainFile = "index.js";
@@ -281,6 +303,17 @@ export class PluginManager {
 		this.installedPlugins.push(pluginInfo);
 
 		return pluginInfo;
+	}
+
+	private async deleteAndUnloadPlugin(plugin: PluginInfo): Promise<void> {
+		const index = this.installedPlugins.indexOf(plugin);
+		if (index >= 0) {
+			this.installedPlugins.splice(index, 1);
+		}
+
+		this.unload(plugin);
+
+		await fs.remove(plugin.location);
 	}
 
 	private syncLock() {

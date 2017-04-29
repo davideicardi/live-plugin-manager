@@ -35,6 +35,8 @@ describe("PluginManager suite", function () {
         return __awaiter(this, void 0, void 0, function* () {
             const plugins = yield manager.list();
             chai_1.assert.equal(plugins.length, 0);
+            chai_1.assert.isUndefined(manager.alreadyInstalled("moment"));
+            chai_1.assert.isUndefined(manager.alreadyInstalled("my-basic-plugin"));
         });
     });
     it("installing a plugin from path", function () {
@@ -120,6 +122,21 @@ describe("PluginManager suite", function () {
             return __awaiter(this, void 0, void 0, function* () {
                 pluginInfo = yield manager.installFromNpm("moment", "2.18.1");
             });
+        });
+        it("alreadyInstalled should respect semver", function () {
+            chai_1.assert.isDefined(manager.alreadyInstalled("moment"));
+            chai_1.assert.isDefined(manager.alreadyInstalled("moment", "2.18.1"));
+            chai_1.assert.isDefined(manager.alreadyInstalled("moment", "v2.18.1"));
+            chai_1.assert.isDefined(manager.alreadyInstalled("moment", "=2.18.1"));
+            chai_1.assert.isDefined(manager.alreadyInstalled("moment", ">=2.18.1"));
+            chai_1.assert.isDefined(manager.alreadyInstalled("moment", "^2.18.1"));
+            chai_1.assert.isDefined(manager.alreadyInstalled("moment", "^2.0.0"));
+            chai_1.assert.isDefined(manager.alreadyInstalled("moment", ">=1.0.0"));
+            chai_1.assert.isUndefined(manager.alreadyInstalled("moment", "2.17.0"));
+            chai_1.assert.isUndefined(manager.alreadyInstalled("moment", "2.19.0"));
+            chai_1.assert.isUndefined(manager.alreadyInstalled("moment", "3.0.0"));
+            chai_1.assert.isUndefined(manager.alreadyInstalled("moment", "=3.0.0"));
+            chai_1.assert.isUndefined(manager.alreadyInstalled("moment", "^3.0.0"));
         });
         it("should be available", function () {
             return __awaiter(this, void 0, void 0, function* () {
@@ -241,6 +258,33 @@ describe("PluginManager suite", function () {
                 chai_1.assert.equal(manager.list().length, 2);
                 chai_1.assert.equal(manager.list()[0].name, "moment");
                 chai_1.assert.equal(manager.list()[1].name, "my-plugin-with-dep");
+            });
+        });
+    });
+    describe("plugins updates", function () {
+        beforeEach(function () {
+            return __awaiter(this, void 0, void 0, function* () {
+                yield manager.installFromPath(path.join(__dirname, "my-plugin-a@v1"));
+                yield manager.installFromPath(path.join(__dirname, "my-plugin-b"));
+            });
+        });
+        it("specified version are installed", function () {
+            return __awaiter(this, void 0, void 0, function* () {
+                chai_1.assert.equal(manager.list()[0].name, "my-plugin-a");
+                chai_1.assert.equal(manager.list()[0].version, "1.0.0");
+                chai_1.assert.equal(manager.list()[1].name, "my-plugin-b");
+                const pluginInstance = manager.require("my-plugin-b");
+                chai_1.assert.equal(pluginInstance, "a = v1");
+            });
+        });
+        it("updating a dependency will reload dependents", function () {
+            return __awaiter(this, void 0, void 0, function* () {
+                yield manager.installFromPath(path.join(__dirname, "my-plugin-a@v2"));
+                chai_1.assert.equal(manager.list().length, 2);
+                chai_1.assert.isDefined(manager.alreadyInstalled("my-plugin-b", "=1.0.0"));
+                chai_1.assert.isDefined(manager.alreadyInstalled("my-plugin-a", "=2.0.0"));
+                const pluginInstance = manager.require("my-plugin-b");
+                chai_1.assert.equal(pluginInstance, "a = v2");
             });
         });
     });

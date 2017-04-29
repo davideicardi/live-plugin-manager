@@ -12,6 +12,10 @@ export class PluginVm {
 	constructor(private readonly manager: PluginManager) {
 	}
 
+	unload(pluginContext: IPluginInfo): void {
+		this.requireCache.delete(pluginContext);
+	}
+
 	load(pluginContext: IPluginInfo, filePath: string): any {
 		let moduleInstance = this.getCache(pluginContext, filePath);
 		if (moduleInstance) {
