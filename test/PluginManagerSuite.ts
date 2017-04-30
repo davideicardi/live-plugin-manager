@@ -42,7 +42,7 @@ describe("PluginManager suite", function() {
 		assert.equal(pluginInstance.myVariable, "value1");
 	});
 
-	it("installing a plugin with just required info", async function() {
+	it("installing a plugin with minimal info", async function() {
 		const pluginPath = path.join(__dirname, "my-minimal-plugin");
 		const pluginInfo = await manager.installFromPath(pluginPath);
 
@@ -261,34 +261,35 @@ describe("PluginManager suite", function() {
 			assert.equal(manager.list()[0].name, "moment");
 			assert.equal(manager.list()[1].name, "my-plugin-with-dep");
 		});
-	});
 
-	describe("plugins updates", function() {
+		describe("handling updates", function() {
 
-		beforeEach(async function() {
-			await manager.installFromPath(path.join(__dirname, "my-plugin-a@v1"));
-			await manager.installFromPath(path.join(__dirname, "my-plugin-b"));
+			beforeEach(async function() {
+				await manager.installFromPath(path.join(__dirname, "my-plugin-a@v1"));
+				await manager.installFromPath(path.join(__dirname, "my-plugin-b")); // depend on my-plugin-a@1.0.0
+			});
+
+			it("updating a dependency will reload dependents", async function() {
+				// load the plugin before installing the new version
+				//  to ensure that the starting condition is valid
+				assert.equal(manager.list().length, 2);
+				assert.equal(manager.list()[0].name, "my-plugin-a");
+				assert.equal(manager.list()[0].version, "1.0.0");
+				assert.equal(manager.list()[1].name, "my-plugin-b");
+				const initialPluginInstance = manager.require("my-plugin-b");
+				assert.equal(initialPluginInstance, "a = v1");
+
+				await manager.installFromPath(path.join(__dirname, "my-plugin-a@v2"));
+
+				assert.equal(manager.list().length, 2);
+				assert.isDefined(manager.alreadyInstalled("my-plugin-b", "=1.0.0"));
+				assert.isDefined(manager.alreadyInstalled("my-plugin-a", "=2.0.0"));
+
+				const pluginInstance = manager.require("my-plugin-b");
+				assert.equal(pluginInstance, "a = v2");
+			});
 		});
 
-		it("specified version are installed", async function() {
-			assert.equal(manager.list()[0].name, "my-plugin-a");
-			assert.equal(manager.list()[0].version, "1.0.0");
-			assert.equal(manager.list()[1].name, "my-plugin-b");
-
-			const pluginInstance = manager.require("my-plugin-b");
-			assert.equal(pluginInstance, "a = v1");
-		});
-
-		it("updating a dependency will reload dependents", async function() {
-			await manager.installFromPath(path.join(__dirname, "my-plugin-a@v2"));
-
-			assert.equal(manager.list().length, 2);
-			assert.isDefined(manager.alreadyInstalled("my-plugin-b", "=1.0.0"));
-			assert.isDefined(manager.alreadyInstalled("my-plugin-a", "=2.0.0"));
-
-			const pluginInstance = manager.require("my-plugin-b");
-			assert.equal(pluginInstance, "a = v2");
-		});
 	});
 
 	describe("npm registry", function() {

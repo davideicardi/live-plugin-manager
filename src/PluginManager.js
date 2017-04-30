@@ -74,6 +74,7 @@ class PluginManager {
         return __awaiter(this, void 0, void 0, function* () {
             yield this.syncLock();
             try {
+                // TODO First I should install dependents plugins??
                 for (const plugin of this.installedPlugins.slice().reverse()) {
                     yield this.uninstallLockFree(plugin.name);
                 }
@@ -84,12 +85,15 @@ class PluginManager {
         });
     }
     list() {
-        return this.installedPlugins;
+        return this.installedPlugins.map((p) => p);
     }
     require(name) {
-        const info = this.getInfo(name);
+        const info = this.getFullInfo(name);
         if (!info) {
             throw new Error(`${name} not installed`);
+        }
+        if (!info.loaded) {
+            this.load(info);
         }
         return info.instance;
     }
@@ -106,7 +110,7 @@ class PluginManager {
         return undefined;
     }
     getInfo(name) {
-        return this.installedPlugins.find((p) => p.name === name);
+        return this.getFullInfo(name);
     }
     getInfoFromNpm(name, version = NPM_LATEST_TAG) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -116,10 +120,13 @@ class PluginManager {
     runScript(code) {
         return this.vm.runScript(code);
     }
+    getFullInfo(name) {
+        return this.installedPlugins.find((p) => p.name === name);
+    }
     uninstallLockFree(name) {
         return __awaiter(this, void 0, void 0, function* () {
             debug(`Uninstalling ${name}...`);
-            const info = this.getInfo(name);
+            const info = this.getFullInfo(name);
             if (!info) {
                 debug(`${name} not installed`);
                 return;
@@ -145,7 +152,7 @@ class PluginManager {
                 debug(`Copy from ${location} to ${this.options.pluginsPath}`);
                 yield fs.copy(location, this.getPluginLocation(packageJson.name));
             }
-            return yield this.loadAndAddPlugin(packageJson);
+            return yield this.addPlugin(packageJson);
         });
     }
     installFromNpmLockFree(name, version = NPM_LATEST_TAG) {
@@ -165,14 +172,15 @@ class PluginManager {
                 yield this.removeDownloaded(registryInfo.name);
                 yield this.npmRegistry.download(this.options.pluginsPath, registryInfo);
             }
-            return yield this.loadAndAddPlugin(registryInfo);
+            return yield this.addPlugin(registryInfo);
         });
     }
     installDependencies(packageInfo) {
         return __awaiter(this, void 0, void 0, function* () {
             if (!packageInfo.dependencies) {
-                return;
+                return [];
             }
+            const dependencies = new Array();
             for (const key in packageInfo.dependencies) {
                 if (this.shouldIgnore(key)) {
                     continue;
@@ -189,9 +197,19 @@ class PluginManager {
                         debug(`Installing dependencies of ${packageInfo.name}: ${key} ...`);
                         yield this.installFromNpmLockFree(key, version);
                     }
+                    dependencies.push(key);
                 }
             }
+            return dependencies;
         });
+    }
+    unloadWithDependents(plugin) {
+        this.unload(plugin);
+        for (const dependent of this.installedPlugins) {
+            if (dependent.dependencies.indexOf(plugin.name) >= 0) {
+                this.unloadWithDependents(dependent);
+            }
+        }
     }
     isModuleAvailableFromHost(name) {
         if (!this.options.hostRequire) {
@@ -247,15 +265,19 @@ class PluginManager {
         });
     }
     load(plugin) {
+        debug(`Loading ${plugin.name}...`);
         plugin.instance = this.vm.load(plugin, plugin.mainFile);
+        plugin.loaded = true;
     }
     unload(plugin) {
+        debug(`Unloading ${plugin.name}...`);
+        plugin.loaded = false;
         plugin.instance = undefined;
         this.vm.unload(plugin);
     }
-    loadAndAddPlugin(packageInfo) {
+    addPlugin(packageInfo) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.installDependencies(packageInfo);
+            const dependencies = yield this.installDependencies(packageInfo);
             const DefaultMainFile = "index.js";
             const DefaultMainFileExtension = ".js";
             const location = this.getPluginLocation(packageInfo.name);
@@ -263,13 +285,14 @@ class PluginManager {
                 name: packageInfo.name,
                 version: packageInfo.version,
                 location,
-                mainFile: path.normalize(path.join(location, packageInfo.main || DefaultMainFile))
+                mainFile: path.normalize(path.join(location, packageInfo.main || DefaultMainFile)),
+                loaded: false,
+                dependencies
             };
             // If no extensions for main file is used, just default to .js
             if (!path.extname(pluginInfo.mainFile)) {
                 pluginInfo.mainFile += DefaultMainFileExtension;
             }
-            this.load(pluginInfo);
             this.installedPlugins.push(pluginInfo);
             return pluginInfo;
         });
@@ -280,7 +303,7 @@ class PluginManager {
             if (index >= 0) {
                 this.installedPlugins.splice(index, 1);
             }
-            this.unload(plugin);
+            this.unloadWithDependents(plugin);
             yield fs.remove(plugin.location);
         });
     }

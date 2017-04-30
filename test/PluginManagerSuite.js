@@ -48,7 +48,7 @@ describe("PluginManager suite", function () {
             chai_1.assert.equal(pluginInstance.myVariable, "value1");
         });
     });
-    it("installing a plugin with just required info", function () {
+    it("installing a plugin with minimal info", function () {
         return __awaiter(this, void 0, void 0, function* () {
             const pluginPath = path.join(__dirname, "my-minimal-plugin");
             const pluginInfo = yield manager.installFromPath(pluginPath);
@@ -260,31 +260,30 @@ describe("PluginManager suite", function () {
                 chai_1.assert.equal(manager.list()[1].name, "my-plugin-with-dep");
             });
         });
-    });
-    describe("plugins updates", function () {
-        beforeEach(function () {
-            return __awaiter(this, void 0, void 0, function* () {
-                yield manager.installFromPath(path.join(__dirname, "my-plugin-a@v1"));
-                yield manager.installFromPath(path.join(__dirname, "my-plugin-b"));
+        describe("handling updates", function () {
+            beforeEach(function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    yield manager.installFromPath(path.join(__dirname, "my-plugin-a@v1"));
+                    yield manager.installFromPath(path.join(__dirname, "my-plugin-b")); // depend on my-plugin-a@1.0.0
+                });
             });
-        });
-        it("specified version are installed", function () {
-            return __awaiter(this, void 0, void 0, function* () {
-                chai_1.assert.equal(manager.list()[0].name, "my-plugin-a");
-                chai_1.assert.equal(manager.list()[0].version, "1.0.0");
-                chai_1.assert.equal(manager.list()[1].name, "my-plugin-b");
-                const pluginInstance = manager.require("my-plugin-b");
-                chai_1.assert.equal(pluginInstance, "a = v1");
-            });
-        });
-        it("updating a dependency will reload dependents", function () {
-            return __awaiter(this, void 0, void 0, function* () {
-                yield manager.installFromPath(path.join(__dirname, "my-plugin-a@v2"));
-                chai_1.assert.equal(manager.list().length, 2);
-                chai_1.assert.isDefined(manager.alreadyInstalled("my-plugin-b", "=1.0.0"));
-                chai_1.assert.isDefined(manager.alreadyInstalled("my-plugin-a", "=2.0.0"));
-                const pluginInstance = manager.require("my-plugin-b");
-                chai_1.assert.equal(pluginInstance, "a = v2");
+            it("updating a dependency will reload dependents", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    // load the plugin before installing the new version
+                    //  to ensure that the starting condition is valid
+                    chai_1.assert.equal(manager.list().length, 2);
+                    chai_1.assert.equal(manager.list()[0].name, "my-plugin-a");
+                    chai_1.assert.equal(manager.list()[0].version, "1.0.0");
+                    chai_1.assert.equal(manager.list()[1].name, "my-plugin-b");
+                    const initialPluginInstance = manager.require("my-plugin-b");
+                    chai_1.assert.equal(initialPluginInstance, "a = v1");
+                    yield manager.installFromPath(path.join(__dirname, "my-plugin-a@v2"));
+                    chai_1.assert.equal(manager.list().length, 2);
+                    chai_1.assert.isDefined(manager.alreadyInstalled("my-plugin-b", "=1.0.0"));
+                    chai_1.assert.isDefined(manager.alreadyInstalled("my-plugin-a", "=2.0.0"));
+                    const pluginInstance = manager.require("my-plugin-b");
+                    chai_1.assert.equal(pluginInstance, "a = v2");
+                });
             });
         });
     });

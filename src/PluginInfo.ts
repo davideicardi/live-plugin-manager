@@ -4,7 +4,10 @@ export class PluginInfo implements IPluginInfo {
 	readonly location: string;
 	readonly name: string;
 	readonly version: string;
+
 	instance?: any;
+	loaded: boolean;
+	dependencies: string[];
 }
 
 export class IPluginInfo {

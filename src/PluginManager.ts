@@ -46,7 +46,7 @@ export class PluginManager {
 		this.npmRegistry = new NpmRegistryClient(this.options.npmRegistryUrl, this.options.npmRegistryConfig);
 	}
 
-	async installFromNpm(name: string, version = NPM_LATEST_TAG): Promise<PluginInfo> {
+	async installFromNpm(name: string, version = NPM_LATEST_TAG): Promise<IPluginInfo> {
 		await fs.ensureDir(this.options.pluginsPath);
 
 		await this.syncLock();
@@ -57,7 +57,7 @@ export class PluginManager {
 		}
 	}
 
-	async installFromPath(location: string): Promise<PluginInfo> {
+	async installFromPath(location: string): Promise<IPluginInfo> {
 		await fs.ensureDir(this.options.pluginsPath);
 
 		await this.syncLock();
@@ -80,6 +80,7 @@ export class PluginManager {
 	async uninstallAll(): Promise<void> {
 		await this.syncLock();
 		try {
+			// TODO First I should install dependents plugins??
 			for (const plugin of this.installedPlugins.slice().reverse()) {
 				await this.uninstallLockFree(plugin.name);
 			}
@@ -89,14 +90,19 @@ export class PluginManager {
 	}
 
 	list(): IPluginInfo[] {
-		return this.installedPlugins;
+		return this.installedPlugins.map((p) => p);
 	}
 
 	require(name: string): any {
-		const info = this.getInfo(name) as PluginInfo;
+		const info = this.getFullInfo(name);
 		if (!info) {
 			throw new Error(`${name} not installed`);
 		}
+
+		if (!info.loaded) {
+			this.load(info);
+		}
+
 		return info.instance;
 	}
 
@@ -116,7 +122,7 @@ export class PluginManager {
 	}
 
 	getInfo(name: string): IPluginInfo | undefined {
-		return this.installedPlugins.find((p) => p.name === name);
+		return this.getFullInfo(name);
 	}
 
 	async getInfoFromNpm(name: string, version = NPM_LATEST_TAG): Promise<PackageInfo> {
@@ -127,10 +133,14 @@ export class PluginManager {
 		return this.vm.runScript(code);
 	}
 
+	getFullInfo(name: string): PluginInfo | undefined {
+		return this.installedPlugins.find((p) => p.name === name);
+	}
+
 	private async uninstallLockFree(name: string): Promise<void> {
 		debug(`Uninstalling ${name}...`);
 
-		const info = this.getInfo(name);
+		const info = this.getFullInfo(name);
 		if (!info) {
 			debug(`${name} not installed`);
 			return;
@@ -139,7 +149,7 @@ export class PluginManager {
 		await this.deleteAndUnloadPlugin(info);
 	}
 
-	private async installFromPathLockFree(location: string): Promise<PluginInfo> {
+	private async installFromPathLockFree(location: string): Promise<IPluginInfo> {
 		const packageJson = await this.readPackageJsonFromPath(location);
 
 		// already installed satisfied version
@@ -161,10 +171,10 @@ export class PluginManager {
 			await fs.copy(location, this.getPluginLocation(packageJson.name));
 		}
 
-		return await this.loadAndAddPlugin(packageJson);
+		return await this.addPlugin(packageJson);
 	}
 
-	private async installFromNpmLockFree(name: string, version = NPM_LATEST_TAG): Promise<PluginInfo> {
+	private async installFromNpmLockFree(name: string, version = NPM_LATEST_TAG): Promise<IPluginInfo> {
 		const registryInfo = await this.npmRegistry.get(name, version);
 
 		// already installed satisfied version
@@ -187,13 +197,15 @@ export class PluginManager {
 				registryInfo);
 		}
 
-		return await this.loadAndAddPlugin(registryInfo);
+		return await this.addPlugin(registryInfo);
 	}
 
-	private async installDependencies(packageInfo: PackageInfo): Promise<void> {
+	private async installDependencies(packageInfo: PackageInfo): Promise<string[]> {
 		if (!packageInfo.dependencies) {
-			return;
+			return [];
 		}
+
+		const dependencies = new Array<string>();
 
 		for (const key in packageInfo.dependencies) {
 			if (this.shouldIgnore(key)) {
@@ -211,6 +223,20 @@ export class PluginManager {
 					debug(`Installing dependencies of ${packageInfo.name}: ${key} ...`);
 					await this.installFromNpmLockFree(key, version);
 				}
+
+				dependencies.push(key);
+			}
+		}
+
+		return dependencies;
+	}
+
+	private unloadWithDependents(plugin: PluginInfo) {
+		this.unload(plugin);
+
+		for (const dependent of this.installedPlugins) {
+			if (dependent.dependencies.indexOf(plugin.name) >= 0) {
+				this.unloadWithDependents(dependent);
 			}
 		}
 	}
@@ -272,16 +298,20 @@ export class PluginManager {
 	}
 
 	private load(plugin: PluginInfo) {
+		debug(`Loading ${plugin.name}...`);
 		plugin.instance = this.vm.load(plugin, plugin.mainFile);
+		plugin.loaded = true;
 	}
 
 	private unload(plugin: PluginInfo) {
+		debug(`Unloading ${plugin.name}...`);
+		plugin.loaded = false;
 		plugin.instance = undefined;
 		this.vm.unload(plugin);
 	}
 
-	private async loadAndAddPlugin(packageInfo: PackageInfo): Promise<PluginInfo> {
-		await this.installDependencies(packageInfo);
+	private async addPlugin(packageInfo: PackageInfo): Promise<PluginInfo> {
+		const dependencies = await this.installDependencies(packageInfo);
 
 		const DefaultMainFile = "index.js";
 		const DefaultMainFileExtension = ".js";
@@ -291,7 +321,9 @@ export class PluginManager {
 			name: packageInfo.name,
 			version: packageInfo.version,
 			location,
-			mainFile: path.normalize(path.join(location, packageInfo.main || DefaultMainFile))
+			mainFile: path.normalize(path.join(location, packageInfo.main || DefaultMainFile)),
+			loaded: false,
+			dependencies
 		};
 
 		// If no extensions for main file is used, just default to .js
@@ -299,7 +331,6 @@ export class PluginManager {
 			pluginInfo.mainFile += DefaultMainFileExtension;
 		}
 
-		this.load(pluginInfo);
 		this.installedPlugins.push(pluginInfo);
 
 		return pluginInfo;
@@ -311,7 +342,7 @@ export class PluginManager {
 			this.installedPlugins.splice(index, 1);
 		}
 
-		this.unload(plugin);
+		this.unloadWithDependents(plugin);
 
 		await fs.remove(plugin.location);
 	}

@@ -16,8 +16,8 @@ export declare class PluginManager {
     private readonly installedPlugins;
     private readonly npmRegistry;
     constructor(options?: Partial<PluginManagerOptions>);
-    installFromNpm(name: string, version?: string): Promise<PluginInfo>;
-    installFromPath(location: string): Promise<PluginInfo>;
+    installFromNpm(name: string, version?: string): Promise<IPluginInfo>;
+    installFromPath(location: string): Promise<IPluginInfo>;
     uninstall(name: string): Promise<void>;
     uninstallAll(): Promise<void>;
     list(): IPluginInfo[];
@@ -26,10 +26,12 @@ export declare class PluginManager {
     getInfo(name: string): IPluginInfo | undefined;
     getInfoFromNpm(name: string, version?: string): Promise<PackageInfo>;
     runScript(code: string): any;
+    getFullInfo(name: string): PluginInfo | undefined;
     private uninstallLockFree(name);
     private installFromPathLockFree(location);
     private installFromNpmLockFree(name, version?);
     private installDependencies(packageInfo);
+    private unloadWithDependents(plugin);
     private isModuleAvailableFromHost(name);
     private getPluginLocation(name);
     private removeDownloaded(name);
@@ -37,7 +39,7 @@ export declare class PluginManager {
     private readPackageJsonFromPath(location);
     private load(plugin);
     private unload(plugin);
-    private loadAndAddPlugin(packageInfo);
+    private addPlugin(packageInfo);
     private deleteAndUnloadPlugin(plugin);
     private syncLock();
     private syncUnlock();
