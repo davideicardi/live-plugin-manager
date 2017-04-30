@@ -9,10 +9,13 @@ Main features are:
 
 - Install plugins from npm registry (private or public)
 - Install plugins from filesystem
+- Update plugins
 - Most Node.js packages can be installed
   - No special configuration are required extension points
   - See Known limitations
-- Plugins can have dependencies that are automatically installed
+- Plugins can have dependencies 
+  - dependencies are automatically installed
+  - when updating a dependencies all dependents are reloaded
 - Support for concurrency operation on filesystem (cloud/webfarm scenario where file system is shared)
   - A filesystem lock is used to prevent multiple instances to work on the same filesystem in the same moment
 - Implementated in Typescript
@@ -101,11 +104,11 @@ Create a new instance of `PluginManager`. Takes an optional `options` parameter 
 - `npmRegistryUrl`: npm registry to use (default to https://registry.npmjs.org)
 - `npmRegistryConfig`: npm registry configuration see [npm-registry-client config](https://github.com/npm/npm-registry-client)
 
-### pluginManager.installFromNpm(name: string, version = "latest"): Promise\<PluginInfo\>)
+### pluginManager.installFromNpm(name: string, version = "latest"): Promise\<IPluginInfo\>)
 
 Install the specified package from npm registry. Dependencies are automatically installed (not devDependencies).
 
-### installFromPath(location: string): Promise\<PluginInfo\>
+### installFromPath(location: string): Promise\<IPluginInfo\>
 
 Install the specified package from a filesystem location. Dependencies are automatically installed from npm.
 
@@ -117,17 +120,26 @@ Uninstall the package. Dependencies are not uninstalled automatically.
 
 Uninstall all installed packages.
 
-### list(): Promise\<PluginInfo[]\>
+### list(): Promise\<IPluginInfo[]\>
 
 Get the list of installed packages.
 
 ### require(name: string): any
 
-Get the instance of the plugin. Node.js `require` rules are used to load modules.
+Load and get the instance of the plugin. Node.js `require` rules are used to load modules.
+Calling require multiple times gives always the same instance until plugins changes.
 
-### getInfo(name: string): PluginInfo | undefined
+### getInfo(name: string): IPluginInfo | undefined
 
 Get information about an installed package.
+
+### runScript(code: string): any
+
+Run the specified Node.js javascript code with the same context of plugins. Script are executed using `vm` as with each plugin.
+
+### async getInfoFromNpm(name: string, version = NPM_LATEST_TAG): Promise<PackageInfo>
+
+Get package/module info from npm registry.
 
 ## Security
 
@@ -146,6 +158,8 @@ This project use the following dependencies to do it's job:
 - [fs-extra](https://github.com/jprichardson/node-fs-extra): file system operations
 - [debug](https://github.com/visionmedia/debug): debug informations
 
+While I have tried to mimic the standard Node.js module and package architecture tare are some changes. First of all is the fact that plugins by definition are installed at runtime in contrast with a standard Node.js application where modules are installed before executin the node.js proccess.
+
 ## Known limitations
 
 There are some known limitations when installing a package:
@@ -153,7 +167,7 @@ There are some known limitations when installing a package:
 - No `pre/post-install` scripts are executed (for now)
 - C/C++ packages (`.node`) are not supported
 
-If you found other problems please open an issue.
+If you find other problems please open an issue.
 
 ## License (MIT)
 
