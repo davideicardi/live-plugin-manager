@@ -15,7 +15,7 @@
     "src-build-w": "tsc -w",
     "start-demo": "nodemon ./demo/index.js -e js",
     "develop": "npm run src-build-w",
-    "test": "mocha"
+    "test": "mocha --require source-map-support/register"
   },
   "repository": {
     "type": "git",
@@ -28,30 +28,31 @@
   },
   "homepage": "https://github.com/davideicardi/live-plugin-manager#readme",
   "devDependencies": {
-    "@types/chai": "^3.4.34",
-    "@types/mocha": "^2.2.40",
-    "@types/node": "^7.0.12",
-    "chai": "^3.5.0",
-    "mocha": "^3.2.0",
-    "nodemon": "^1.11.0",
-    "tslint": "^4.3.1",
-    "typescript": "^2.2.2"
+    "@types/chai": "3.4.34",
+    "@types/mocha": "2.2.40",
+    "@types/node": "7.0.12",
+    "chai": "3.5.0",
+    "mocha": "3.2.0",
+    "nodemon": "1.11.0",
+    "source-map-support": "0.4.15",
+    "tslint": "4.3.1",
+    "typescript": "2.2.2"
   },
   "dependencies": {
     "@types/debug": "0.0.29",
-    "@types/fs-extra": "^2.0.0",
-    "@types/lockfile": "^0.4.29",
+    "@types/fs-extra": "2.0.0",
+    "@types/lockfile": "0.4.29",
     "@types/request": "0.0.42",
-    "@types/semver": "^5.3.31",
-    "@types/url-join": "^0.8.2",
-    "debug": "^2.6.0",
-    "fs-extra": "^2.1.2",
-    "lockfile": "^1.0.3",
-    "npm-registry-client": "^8.1.0",
-    "npmlog": "^4.0.2",
-    "request": "^2.81.0",
-    "semver": "^5.3.0",
-    "tar.gz": "^1.0.5",
-    "url-join": "^1.1.0"
+    "@types/semver": "5.3.31",
+    "@types/url-join": "0.8.2",
+    "debug": "2.6.0",
+    "fs-extra": "2.1.2",
+    "lockfile": "1.0.3",
+    "npm-registry-client": "8.1.0",
+    "npmlog": "4.0.2",
+    "request": "2.81.0",
+    "semver": "5.3.0",
+    "tar.gz": "1.0.5",
+    "url-join": "1.1.0"
   }
 }
