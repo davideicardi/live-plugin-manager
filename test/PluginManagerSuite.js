@@ -333,7 +333,7 @@ describe("PluginManager suite", function () {
             return __awaiter(this, void 0, void 0, function* () {
                 const info = yield manager.getInfoFromNpm("@types/node", "^6.0.0");
                 chai_1.assert.equal("@types/node", info.name);
-                chai_1.assert.equal("6.0.85", info.version); // this test can fail if @types/node publish a 6.x version
+                chai_1.assert.equal("6.0.87", info.version); // this test can fail if @types/node publish a 6.x version
             });
         });
     });

@@ -334,7 +334,7 @@ describe("PluginManager suite", function() {
 		it("get caret version range info for scoped packages", async function() {
 			const info = await manager.getInfoFromNpm("@types/node", "^6.0.0");
 			assert.equal("@types/node", info.name);
-			assert.equal("6.0.85", info.version); // this test can fail if @types/node publish a 6.x version
+			assert.equal("6.0.87", info.version); // this test can fail if @types/node publish a 6.x version
 		});
 	});
 });
