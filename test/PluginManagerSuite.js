@@ -245,19 +245,41 @@ describe("PluginManager suite", function () {
             return __awaiter(this, void 0, void 0, function* () {
                 const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
                 const pluginInfo = yield manager.installFromPath(pluginSourcePath);
+                chai_1.assert.equal(manager.list().length, 2);
                 chai_1.assert.equal(manager.list()[0].name, "moment");
                 chai_1.assert.equal(manager.list()[1].name, "my-plugin-with-dep");
                 const pluginInstance = manager.require("my-plugin-with-dep");
                 chai_1.assert.equal(pluginInstance, "1981/10/06");
             });
         });
-        it("ignored dependencies are not installed (@types)", function () {
+        it("by default @types dependencies are not installed", function () {
             return __awaiter(this, void 0, void 0, function* () {
                 const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
                 const pluginInfo = yield manager.installFromPath(pluginSourcePath);
                 chai_1.assert.equal(manager.list().length, 2);
                 chai_1.assert.equal(manager.list()[0].name, "moment");
                 chai_1.assert.equal(manager.list()[1].name, "my-plugin-with-dep");
+            });
+        });
+        describe("Given some ignored dependencies", function () {
+            beforeEach(function () {
+                manager.options.ignoredDependencies = [/^@types\//, "moment"];
+            });
+            it("ignored dependencies are not installed", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
+                    const pluginInfo = yield manager.installFromPath(pluginSourcePath);
+                    chai_1.assert.equal(manager.list().length, 1);
+                    chai_1.assert.equal(manager.list()[0].name, "my-plugin-with-dep");
+                    try {
+                        const pluginInstance = manager.require("my-plugin-with-dep");
+                    }
+                    catch (err) {
+                        chai_1.assert.equal(err.message, "Cannot find module 'moment'");
+                        return;
+                    }
+                    throw new Error("Expected to fail");
+                });
             });
         });
         describe("handling updates", function () {
@@ -283,6 +305,26 @@ describe("PluginManager suite", function () {
                     chai_1.assert.isDefined(manager.alreadyInstalled("my-plugin-a", "=2.0.0"));
                     const pluginInstance = manager.require("my-plugin-b");
                     chai_1.assert.equal(pluginInstance, "a = v2");
+                });
+            });
+        });
+        describe("Given a static dependencies", function () {
+            beforeEach(function () {
+                const momentStub = () => {
+                    return {
+                        format: () => "this is moment stub"
+                    };
+                };
+                manager.options.staticDependencies = { moment: momentStub };
+            });
+            it("static dependencies are not installed but resolved correctly", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
+                    const pluginInfo = yield manager.installFromPath(pluginSourcePath);
+                    chai_1.assert.equal(manager.list().length, 1);
+                    chai_1.assert.equal(manager.list()[0].name, "my-plugin-with-dep");
+                    const pluginInstance = manager.require("my-plugin-with-dep");
+                    chai_1.assert.equal(pluginInstance, "this is moment stub");
                 });
             });
         });
@@ -333,7 +375,7 @@ describe("PluginManager suite", function () {
             return __awaiter(this, void 0, void 0, function* () {
                 const info = yield manager.getInfoFromNpm("@types/node", "^6.0.0");
                 chai_1.assert.equal("@types/node", info.name);
-                chai_1.assert.equal("6.0.87", info.version); // this test can fail if @types/node publish a 6.x version
+                chai_1.assert.equal("6.0.88", info.version); // this test can fail if @types/node publish a 6.x version
             });
         });
     });

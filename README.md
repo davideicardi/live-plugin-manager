@@ -3,13 +3,15 @@
 `live-plugin-manager` is a Node.js module that allows you to 
 install, uninstall and load any node package at runtime from npm registry.
 
-My main goal is to allow a Node.js application to be extensible at runtime by installing plugins. For example you can recreate a Wordpress like experience and allow your users to extend your application with custom modules.
+My main goal is to allow any application to be easily extensible by 
+installing and running any node package at runtime, without deployments or server customization. You can basically allow your users to decide what plugin/extension to install.
 
 Main features are:
 
-- Install plugins from npm registry (private or public)
-- Install plugins from filesystem
-- Update plugins
+- Install and run Node packages at runtime (no deployment)
+- Install from npm registry (private or public)
+- Install from filesystem
+- Update/uninstall
 - Most Node.js packages can be installed
   - No special configuration are required extension points
   - See Known limitations
@@ -92,7 +94,7 @@ I'm working also on [shelf-depenency](https://www.npmjs.com/package/shelf-depend
 ## Samples
 
 - See `./samples` and `./test` directories
-- Real world scenario: TODO 
+- Sample of an extensible web application: [lpm-admin](https://github.com/davideicardi/lpm-admin)
 
 ## Reference
 
@@ -103,6 +105,8 @@ Create a new instance of `PluginManager`. Takes an optional `options` parameter 
 - `pluginsPath`: plugins installation directory (default to .\plugins)
 - `npmRegistryUrl`: npm registry to use (default to https://registry.npmjs.org)
 - `npmRegistryConfig`: npm registry configuration see [npm-registry-client config](https://github.com/npm/npm-registry-client)
+- `ignoredDependencies`: array of string or RegExp with the list of dependencies to ignore, default to `@types/*`
+- `staticDependencies`: object with an optional list of static dependencies that can be used to force a dependencies to be ignored and loaded from this list
 
 ### pluginManager.installFromNpm(name: string, version = "latest"): Promise\<IPluginInfo\>)
 
@@ -158,7 +162,9 @@ This project use the following dependencies to do it's job:
 - [fs-extra](https://github.com/jprichardson/node-fs-extra): file system operations
 - [debug](https://github.com/visionmedia/debug): debug informations
 
-While I have tried to mimic the standard Node.js module and package architecture tare are some changes. First of all is the fact that plugins by definition are installed at runtime in contrast with a standard Node.js application where modules are installed before executin the node.js proccess.
+While I have tried to mimic the standard Node.js module and package architecture there are some differences.
+First of all is the fact that plugins by definition are installed at runtime in contrast with a standard Node.js application where modules are installed before executin the node.js proccess.
+Modules can be loaded one or more times, instead in standard Node.js they are loaded only the first time that you `require` it.
 
 ## Known limitations
 

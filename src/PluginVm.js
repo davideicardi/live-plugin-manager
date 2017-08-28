@@ -75,6 +75,7 @@ class PluginVm {
         moduleCache.set(filePath, instance);
     }
     createModuleSandbox(pluginContext, filePath) {
+        // tslint:disable-next-line:no-this-assignment
         const me = this;
         const moduleSandbox = Object.assign({}, this.manager.options.sandbox);
         // see https://nodejs.org/api/globals.html
@@ -120,6 +121,10 @@ class PluginVm {
         if (this.isPlugin(name)) {
             return name;
         }
+        if (this.manager.options.staticDependencies[name]) {
+            return name;
+        }
+        // this will fail if module is unknown
         if (this.isCoreModule(name)) {
             return name;
         }
@@ -127,12 +132,16 @@ class PluginVm {
     }
     sandboxRequire(pluginContext, moduleDirName, name) {
         // I try to use a similar logic of https://nodejs.org/api/modules.html#modules_modules
-        debug(`Requiring ${name}`);
+        debug(`Requiring '${name}'...`);
         const fullName = this.sandboxResolve(pluginContext, moduleDirName, name);
         // is a file or directory
         if (fullName.indexOf(path.sep) >= 0) {
             debug(`Resolved ${name} as ${fullName} file`);
             return this.load(pluginContext, fullName);
+        }
+        if (this.manager.options.staticDependencies[name]) {
+            debug(`Resolved ${name} as static dependency`);
+            return this.manager.options.staticDependencies[name];
         }
         if (this.isPlugin(name)) {
             debug(`Resolved ${name} as ${fullName} plugin`);

@@ -19,6 +19,7 @@ export interface PluginManagerOptions {
 	requireCoreModules: boolean;
 	hostRequire?: NodeRequire;
 	ignoredDependencies: Array<string|RegExp>;
+	staticDependencies: { [key: string]: any; };
 }
 
 const cwd = process.cwd();
@@ -29,7 +30,8 @@ const DefaultOptions: PluginManagerOptions = {
 	pluginsPath: path.join(cwd, "plugins"),
 	requireCoreModules: true,
 	hostRequire: require,
-	ignoredDependencies: [/^@types\//]
+	ignoredDependencies: [/^@types\//],
+	staticDependencies: {}
 };
 
 const NPM_LATEST_TAG = "latest";
@@ -41,7 +43,7 @@ export class PluginManager {
 	private readonly npmRegistry: NpmRegistryClient;
 
 	constructor(options?: Partial<PluginManagerOptions>) {
-		this.options = Object.assign({}, DefaultOptions, options || {});
+		this.options = {...DefaultOptions, ...(options || {})};
 		this.vm = new PluginVm(this);
 		this.npmRegistry = new NpmRegistryClient(this.options.npmRegistryUrl, this.options.npmRegistryConfig);
 	}
@@ -381,11 +383,28 @@ export class PluginManager {
 
 	private shouldIgnore(name: string): boolean {
 		for (const p of this.options.ignoredDependencies) {
+			let ignoreMe = false;
 			if (p instanceof RegExp) {
-				return p.test(name);
+				ignoreMe = p.test(name);
+				if (ignoreMe) {
+					return true;
+				}
 			}
 
-			return new RegExp(p).test(name);
+			ignoreMe = new RegExp(p).test(name);
+			if (ignoreMe) {
+				return true;
+			}
+		}
+
+		for (const key in this.options.staticDependencies) {
+			if (!this.options.staticDependencies.hasOwnProperty(key)) {
+				continue;
+			}
+
+			if (key === name) {
+				return true;
+			}
 		}
 
 		return false;

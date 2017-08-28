@@ -9,6 +9,9 @@ export interface PluginManagerOptions {
     requireCoreModules: boolean;
     hostRequire?: NodeRequire;
     ignoredDependencies: Array<string | RegExp>;
+    staticDependencies: {
+        [key: string]: any;
+    };
 }
 export declare class PluginManager {
     readonly options: PluginManagerOptions;

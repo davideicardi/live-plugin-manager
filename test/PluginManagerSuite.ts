@@ -245,6 +245,7 @@ describe("PluginManager suite", function() {
 			const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
 			const pluginInfo = await manager.installFromPath(pluginSourcePath);
 
+			assert.equal(manager.list().length, 2);
 			assert.equal(manager.list()[0].name, "moment");
 			assert.equal(manager.list()[1].name, "my-plugin-with-dep");
 
@@ -252,7 +253,7 @@ describe("PluginManager suite", function() {
 			assert.equal(pluginInstance, "1981/10/06");
 		});
 
-		it("ignored dependencies are not installed (@types)", async function() {
+		it("by default @types dependencies are not installed", async function() {
 			const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
 			const pluginInfo = await manager.installFromPath(pluginSourcePath);
 
@@ -260,6 +261,29 @@ describe("PluginManager suite", function() {
 
 			assert.equal(manager.list()[0].name, "moment");
 			assert.equal(manager.list()[1].name, "my-plugin-with-dep");
+		});
+
+		describe("Given some ignored dependencies", function() {
+			beforeEach(function() {
+				manager.options.ignoredDependencies = [/^@types\//, "moment"];
+			});
+
+			it("ignored dependencies are not installed", async function() {
+				const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
+				const pluginInfo = await manager.installFromPath(pluginSourcePath);
+
+				assert.equal(manager.list().length, 1);
+				assert.equal(manager.list()[0].name, "my-plugin-with-dep");
+
+				try {
+					const pluginInstance = manager.require("my-plugin-with-dep");
+				} catch (err) {
+					assert.equal(err.message, "Cannot find module 'moment'");
+					return;
+				}
+
+				throw new Error("Expected to fail");
+			});
 		});
 
 		describe("handling updates", function() {
@@ -290,6 +314,27 @@ describe("PluginManager suite", function() {
 			});
 		});
 
+		describe("Given a static dependencies", function() {
+			beforeEach(function() {
+				const momentStub = () => {
+					return {
+						format: () => "this is moment stub"
+					};
+				};
+				manager.options.staticDependencies = {moment: momentStub};
+			});
+
+			it("static dependencies are not installed but resolved correctly", async function() {
+				const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
+				const pluginInfo = await manager.installFromPath(pluginSourcePath);
+
+				assert.equal(manager.list().length, 1);
+				assert.equal(manager.list()[0].name, "my-plugin-with-dep");
+
+				const pluginInstance = manager.require("my-plugin-with-dep");
+				assert.equal(pluginInstance, "this is moment stub");
+			});
+		});
 	});
 
 	describe("npm registry", function() {
@@ -334,7 +379,7 @@ describe("PluginManager suite", function() {
 		it("get caret version range info for scoped packages", async function() {
 			const info = await manager.getInfoFromNpm("@types/node", "^6.0.0");
 			assert.equal("@types/node", info.name);
-			assert.equal("6.0.87", info.version); // this test can fail if @types/node publish a 6.x version
+			assert.equal("6.0.88", info.version); // this test can fail if @types/node publish a 6.x version
 		});
 	});
 });

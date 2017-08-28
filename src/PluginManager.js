@@ -25,13 +25,14 @@ const DefaultOptions = {
     pluginsPath: path.join(cwd, "plugins"),
     requireCoreModules: true,
     hostRequire: require,
-    ignoredDependencies: [/^@types\//]
+    ignoredDependencies: [/^@types\//],
+    staticDependencies: {}
 };
 const NPM_LATEST_TAG = "latest";
 class PluginManager {
     constructor(options) {
         this.installedPlugins = new Array();
-        this.options = Object.assign({}, DefaultOptions, options || {});
+        this.options = Object.assign({}, DefaultOptions, (options || {}));
         this.vm = new PluginVm_1.PluginVm(this);
         this.npmRegistry = new NpmRegistryClient_1.NpmRegistryClient(this.options.npmRegistryUrl, this.options.npmRegistryConfig);
     }
@@ -335,10 +336,25 @@ class PluginManager {
     }
     shouldIgnore(name) {
         for (const p of this.options.ignoredDependencies) {
+            let ignoreMe = false;
             if (p instanceof RegExp) {
-                return p.test(name);
+                ignoreMe = p.test(name);
+                if (ignoreMe) {
+                    return true;
+                }
             }
-            return new RegExp(p).test(name);
+            ignoreMe = new RegExp(p).test(name);
+            if (ignoreMe) {
+                return true;
+            }
+        }
+        for (const key in this.options.staticDependencies) {
+            if (!this.options.staticDependencies.hasOwnProperty(key)) {
+                continue;
+            }
+            if (key === name) {
+                return true;
+            }
         }
         return false;
     }
