@@ -2,6 +2,7 @@
 import { PackageInfo } from "./NpmRegistryClient";
 import { PluginInfo, IPluginInfo } from "./PluginInfo";
 export interface PluginManagerOptions {
+    cwd: string;
     pluginsPath: string;
     sandbox: any;
     npmRegistryUrl: string;

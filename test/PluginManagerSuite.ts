@@ -5,8 +5,6 @@ import * as os from "os";
 
 import {PluginManager, IPluginInfo} from "../index";
 
-const pluginsPath = path.join(__dirname, "plugins");
-
 describe("PluginManager suite", function() {
 	this.timeout(15000);
 	this.slow(3000);
@@ -14,14 +12,18 @@ describe("PluginManager suite", function() {
 	let manager: PluginManager;
 
 	beforeEach(async function() {
-		fs.removeSync(pluginsPath);
-		manager = new PluginManager({
-			pluginsPath
-		});
+		manager = new PluginManager();
+
+		// sanity check to see if the pluginsPath is what we expect to be
+		if (manager.options.pluginsPath !== path.join(__dirname, "../plugin_packages")) {
+			throw new Error("Invalid plugins path " + manager.options.pluginsPath);
+		}
+
+		fs.removeSync(manager.options.pluginsPath);
 	});
 
 	afterEach(async function() {
-		fs.removeSync(pluginsPath);
+		fs.removeSync(manager.options.pluginsPath);
 	});
 
 	it("should not have any installed plugins", async function() {
@@ -140,7 +142,7 @@ describe("PluginManager suite", function() {
 			assert.equal(plugins.length, 1);
 			assert.equal(plugins[0].name, "moment");
 			assert.equal(plugins[0].version, "2.18.1");
-			assert.equal(plugins[0].location, path.join(pluginsPath, "moment"));
+			assert.equal(plugins[0].location, path.join(manager.options.pluginsPath, "moment"));
 
 			assert.isTrue(fs.existsSync(pluginInfo.location));
 
@@ -227,8 +229,10 @@ describe("PluginManager suite", function() {
 		assert.equal(pluginInstance.myVariableDifferentStyleOfRequire, "value5");
 		assert.equal(pluginInstance.myJsonRequire.loaded, "yes");
 
-		assert.equal(pluginInstance.myGlobals.__filename, path.join(pluginsPath, "my-test-plugin", "index.js"));
-		assert.equal(pluginInstance.myGlobals.__dirname, path.join(pluginsPath, "my-test-plugin"));
+		assert.equal(
+			pluginInstance.myGlobals.__filename,
+			path.join(manager.options.pluginsPath, "my-test-plugin", "index.js"));
+		assert.equal(pluginInstance.myGlobals.__dirname, path.join(manager.options.pluginsPath, "my-test-plugin"));
 		assert.equal(pluginInstance.myGlobals.process, process);
 		assert.equal(pluginInstance.myGlobals.console, console);
 		assert.equal(pluginInstance.myGlobals.clearImmediate, clearImmediate);

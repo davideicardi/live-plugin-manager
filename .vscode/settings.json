@@ -4,5 +4,6 @@
         "**/*.js": { "when": "$(basename).ts"},
         "**/*.d.ts": true,
         "**/*.js.map": true
-    }
+    },
+    "tslint.alwaysShowRuleFailuresAsWarnings": true
 }

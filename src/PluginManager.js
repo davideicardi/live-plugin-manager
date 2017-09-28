@@ -19,10 +19,11 @@ const debug = Debug("live-plugin-manager");
 const BASE_NPM_URL = "https://registry.npmjs.org";
 const cwd = process.cwd();
 const DefaultOptions = {
+    cwd,
     npmRegistryUrl: BASE_NPM_URL,
     sandbox: {},
     npmRegistryConfig: {},
-    pluginsPath: path.join(cwd, "plugins"),
+    pluginsPath: path.join(cwd, "plugin_packages"),
     requireCoreModules: true,
     hostRequire: require,
     ignoredDependencies: [/^@types\//],
@@ -32,6 +33,9 @@ const NPM_LATEST_TAG = "latest";
 class PluginManager {
     constructor(options) {
         this.installedPlugins = new Array();
+        if (options && !options.pluginsPath && options.cwd) {
+            options.pluginsPath = path.join(options.cwd, "plugin_packages");
+        }
         this.options = Object.assign({}, DefaultOptions, (options || {}));
         this.vm = new PluginVm_1.PluginVm(this);
         this.npmRegistry = new NpmRegistryClient_1.NpmRegistryClient(this.options.npmRegistryUrl, this.options.npmRegistryConfig);

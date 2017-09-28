@@ -1,4 +1,5 @@
 "use strict";
+// tslint:disable:no-console
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
@@ -8,12 +9,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-/* tslint:disable no-console */
 const index_1 = require("../index");
-const path = require("path");
-const manager = new index_1.PluginManager({
-    pluginsPath: path.join(__dirname, "plugins")
-});
+const manager = new index_1.PluginManager();
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         console.log("Installing express...");

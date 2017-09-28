@@ -13,22 +13,23 @@ const path = require("path");
 const fs = require("fs-extra");
 const os = require("os");
 const index_1 = require("../index");
-const pluginsPath = path.join(__dirname, "plugins");
 describe("PluginManager suite", function () {
     this.timeout(15000);
     this.slow(3000);
     let manager;
     beforeEach(function () {
         return __awaiter(this, void 0, void 0, function* () {
-            fs.removeSync(pluginsPath);
-            manager = new index_1.PluginManager({
-                pluginsPath
-            });
+            manager = new index_1.PluginManager();
+            // sanity check to see if the pluginsPath is what we expect to be
+            if (manager.options.pluginsPath !== path.join(__dirname, "../plugin_packages")) {
+                throw new Error("Invalid plugins path " + manager.options.pluginsPath);
+            }
+            fs.removeSync(manager.options.pluginsPath);
         });
     });
     afterEach(function () {
         return __awaiter(this, void 0, void 0, function* () {
-            fs.removeSync(pluginsPath);
+            fs.removeSync(manager.options.pluginsPath);
         });
     });
     it("should not have any installed plugins", function () {
@@ -144,7 +145,7 @@ describe("PluginManager suite", function () {
                 chai_1.assert.equal(plugins.length, 1);
                 chai_1.assert.equal(plugins[0].name, "moment");
                 chai_1.assert.equal(plugins[0].version, "2.18.1");
-                chai_1.assert.equal(plugins[0].location, path.join(pluginsPath, "moment"));
+                chai_1.assert.equal(plugins[0].location, path.join(manager.options.pluginsPath, "moment"));
                 chai_1.assert.isTrue(fs.existsSync(pluginInfo.location));
                 const moment = manager.require("moment");
                 chai_1.assert.isDefined(moment, "Plugin is not loaded");
@@ -227,8 +228,8 @@ describe("PluginManager suite", function () {
             chai_1.assert.equal(pluginInstance.myVariableFromSubFolder, "value4");
             chai_1.assert.equal(pluginInstance.myVariableDifferentStyleOfRequire, "value5");
             chai_1.assert.equal(pluginInstance.myJsonRequire.loaded, "yes");
-            chai_1.assert.equal(pluginInstance.myGlobals.__filename, path.join(pluginsPath, "my-test-plugin", "index.js"));
-            chai_1.assert.equal(pluginInstance.myGlobals.__dirname, path.join(pluginsPath, "my-test-plugin"));
+            chai_1.assert.equal(pluginInstance.myGlobals.__filename, path.join(manager.options.pluginsPath, "my-test-plugin", "index.js"));
+            chai_1.assert.equal(pluginInstance.myGlobals.__dirname, path.join(manager.options.pluginsPath, "my-test-plugin"));
             chai_1.assert.equal(pluginInstance.myGlobals.process, process);
             chai_1.assert.equal(pluginInstance.myGlobals.console, console);
             chai_1.assert.equal(pluginInstance.myGlobals.clearImmediate, clearImmediate);

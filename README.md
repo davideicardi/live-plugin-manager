@@ -30,11 +30,8 @@ Main features are:
 ## Usage
 
     import {PluginManager} from "live-plugin-manager";
-    import * as path from "path";
 
-    const manager = new PluginManager({
-      pluginsPath: path.join(__dirname, "plugins")
-    });
+    const manager = new PluginManager();
 
     async function run() {
       await manager.installFromNpm("moment");
@@ -56,11 +53,8 @@ Each time your applicaition start you should reinstall any packages that you nee
 Here another more complex scenario where I install `express` with all it's dependencies, just to demostrate how many possibilities you can have:
 
     import {PluginManager} from "live-plugin-manager";
-    import * as path from "path";
 
-    const manager = new PluginManager({
-      pluginsPath: path.join(__dirname, "plugins")
-    });
+    const manager = new PluginManager();
 
     async function run() {
       await manager.installFromNpm("express");
@@ -102,15 +96,16 @@ I'm working also on [shelf-depenency](https://www.npmjs.com/package/shelf-depend
 
 Create a new instance of `PluginManager`. Takes an optional `options` parameter with the following properties:
 
-- `pluginsPath`: plugins installation directory (default to .\plugins)
+- `cwd`: current working directory (default to `process.cwd()`)
+- `pluginsPath`: plugins installation directory (default to `.\plugin_packages`, see `cwd`). Directory is created if not exists
 - `npmRegistryUrl`: npm registry to use (default to https://registry.npmjs.org)
 - `npmRegistryConfig`: npm registry configuration see [npm-registry-client config](https://github.com/npm/npm-registry-client)
 - `ignoredDependencies`: array of string or RegExp with the list of dependencies to ignore, default to `@types/*`
-- `staticDependencies`: object with an optional list of static dependencies that can be used to force a dependencies to be ignored and loaded from this list
+- `staticDependencies`: object with an optional list of static dependencies that can be used to force a dependencies to be ignored (not installed when a plugin depend on it) and loaded from this list
 
 ### pluginManager.installFromNpm(name: string, version = "latest"): Promise\<IPluginInfo\>)
 
-Install the specified package from npm registry. Dependencies are automatically installed (not devDependencies).
+Install the specified package from npm registry. Dependencies are automatically installed (devDependencies are ignored).
 
 ### installFromPath(location: string): Promise\<IPluginInfo\>
 
@@ -141,7 +136,7 @@ Get information about an installed package.
 
 Run the specified Node.js javascript code with the same context of plugins. Script are executed using `vm` as with each plugin.
 
-### async getInfoFromNpm(name: string, version = NPM_LATEST_TAG): Promise<PackageInfo>
+### async getInfoFromNpm(name: string, version = "latest"): Promise<PackageInfo>
 
 Get package/module info from npm registry.
 
@@ -165,6 +160,13 @@ This project use the following dependencies to do it's job:
 While I have tried to mimic the standard Node.js module and package architecture there are some differences.
 First of all is the fact that plugins by definition are installed at runtime in contrast with a standard Node.js application where modules are installed before executin the node.js proccess.
 Modules can be loaded one or more times, instead in standard Node.js they are loaded only the first time that you `require` it.
+
+## Git integration
+
+Remember to git ignore the directory where packages are installed, see `pluginsPath`.
+Usually you should add this to your `.gitignore` file:
+
+    plugin_packages
 
 ## Known limitations
 

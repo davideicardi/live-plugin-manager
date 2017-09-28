@@ -12,6 +12,7 @@ const debug = Debug("live-plugin-manager");
 const BASE_NPM_URL = "https://registry.npmjs.org";
 
 export interface PluginManagerOptions {
+	cwd: string;
 	pluginsPath: string;
 	sandbox: any;
 	npmRegistryUrl: string;
@@ -24,10 +25,11 @@ export interface PluginManagerOptions {
 
 const cwd = process.cwd();
 const DefaultOptions: PluginManagerOptions = {
+	cwd,
 	npmRegistryUrl: BASE_NPM_URL,
 	sandbox: {},
 	npmRegistryConfig: {},
-	pluginsPath: path.join(cwd, "plugins"),
+	pluginsPath: path.join(cwd, "plugin_packages"),
 	requireCoreModules: true,
 	hostRequire: require,
 	ignoredDependencies: [/^@types\//],
@@ -43,6 +45,10 @@ export class PluginManager {
 	private readonly npmRegistry: NpmRegistryClient;
 
 	constructor(options?: Partial<PluginManagerOptions>) {
+		if (options && !options.pluginsPath && options.cwd) {
+			options.pluginsPath = path.join(options.cwd, "plugin_packages");
+		}
+
 		this.options = {...DefaultOptions, ...(options || {})};
 		this.vm = new PluginVm(this);
 		this.npmRegistry = new NpmRegistryClient(this.options.npmRegistryUrl, this.options.npmRegistryConfig);

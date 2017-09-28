@@ -1,4 +1,5 @@
 "use strict";
+// tslint:disable:no-console
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
@@ -9,18 +10,15 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const index_1 = require("../index");
-const path = require("path");
-const manager = new index_1.PluginManager({
-    pluginsPath: path.join(__dirname, "plugins")
-});
+const manager = new index_1.PluginManager();
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         yield manager.installFromNpm("moment");
         yield manager.installFromNpm("lodash", "4.17.4");
         const _ = manager.require("lodash");
-        console.log(_.defaults({ a: 1 }, { a: 3, b: 2 })); // tslint:disable-line
+        console.log(_.defaults({ a: 1 }, { a: 3, b: 2 }));
         const moment = manager.require("moment");
-        console.log(moment().format()); // tslint:disable-line
+        console.log(moment().format());
         yield manager.uninstall("moment");
         yield manager.uninstall("lodash");
     });

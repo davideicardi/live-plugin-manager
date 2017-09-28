@@ -1,10 +1,8 @@
-/* tslint:disable no-console */
-import {PluginManager} from "../index";
-import * as path from "path";
+// tslint:disable:no-console
 
-const manager = new PluginManager({
-	pluginsPath: path.join(__dirname, "plugins")
-});
+import {PluginManager} from "../index";
+
+const manager = new PluginManager();
 
 async function run() {
 	console.log("Installing express...");
