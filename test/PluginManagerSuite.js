@@ -32,52 +32,54 @@ describe("PluginManager suite", function () {
             fs.removeSync(manager.options.pluginsPath);
         });
     });
-    it("should not have any installed plugins", function () {
-        return __awaiter(this, void 0, void 0, function* () {
-            const plugins = yield manager.list();
-            chai_1.assert.equal(plugins.length, 0);
-            chai_1.assert.isUndefined(manager.alreadyInstalled("moment"));
-            chai_1.assert.isUndefined(manager.alreadyInstalled("my-basic-plugin"));
+    describe("installation", function () {
+        it("initially should not have any plugins", function () {
+            return __awaiter(this, void 0, void 0, function* () {
+                const plugins = yield manager.list();
+                chai_1.assert.equal(plugins.length, 0);
+                chai_1.assert.isUndefined(manager.alreadyInstalled("moment"));
+                chai_1.assert.isUndefined(manager.alreadyInstalled("my-basic-plugin"));
+            });
         });
-    });
-    it("installing a plugin from path", function () {
-        return __awaiter(this, void 0, void 0, function* () {
-            const pluginPath = path.join(__dirname, "my-basic-plugin");
-            const pluginInfo = yield manager.installFromPath(pluginPath);
-            const pluginInstance = manager.require("my-basic-plugin");
-            chai_1.assert.isDefined(pluginInstance, "Plugin is not loaded");
-            chai_1.assert.equal(pluginInstance.myVariable, "value1");
+        it("installing a plugin from path", function () {
+            return __awaiter(this, void 0, void 0, function* () {
+                const pluginPath = path.join(__dirname, "my-basic-plugin");
+                const pluginInfo = yield manager.installFromPath(pluginPath);
+                const pluginInstance = manager.require("my-basic-plugin");
+                chai_1.assert.isDefined(pluginInstance, "Plugin is not loaded");
+                chai_1.assert.equal(pluginInstance.myVariable, "value1");
+            });
         });
-    });
-    it("installing a plugin with minimal info", function () {
-        return __awaiter(this, void 0, void 0, function* () {
-            const pluginPath = path.join(__dirname, "my-minimal-plugin");
-            const pluginInfo = yield manager.installFromPath(pluginPath);
-            const pluginInstance = manager.require("my-minimal-plugin");
-            chai_1.assert.isDefined(pluginInstance, "Plugin is not loaded");
-            chai_1.assert.equal(pluginInstance.myVariable, "value1");
+        it("installing a plugin with minimal info", function () {
+            return __awaiter(this, void 0, void 0, function* () {
+                const pluginPath = path.join(__dirname, "my-minimal-plugin");
+                const pluginInfo = yield manager.installFromPath(pluginPath);
+                const pluginInstance = manager.require("my-minimal-plugin");
+                chai_1.assert.isDefined(pluginInstance, "Plugin is not loaded");
+                chai_1.assert.equal(pluginInstance.myVariable, "value1");
+            });
         });
-    });
-    it("installing a not existing plugin using npm", function () {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const pluginInfo = yield manager.installFromNpm("this-does-not-exists", "9.9.9");
-            }
-            catch (e) {
-                return;
-            }
-            throw new Error("Expected to fail");
+        it("installing a not existing plugin using npm", function () {
+            return __awaiter(this, void 0, void 0, function* () {
+                try {
+                    const pluginInfo = yield manager.installFromNpm("this-does-not-exists", "9.9.9");
+                }
+                catch (e) {
+                    return;
+                }
+                throw new Error("Expected to fail");
+            });
         });
-    });
-    it("installing a plugin using npm", function () {
-        return __awaiter(this, void 0, void 0, function* () {
-            const pluginInfo = yield manager.installFromNpm("lodash", "4.17.4");
-            const _ = manager.require("lodash");
-            chai_1.assert.isDefined(_, "Plugin is not loaded");
-            // try to use the plugin
-            const result = _.defaults({ a: 1 }, { a: 3, b: 2 });
-            chai_1.assert.equal(result.a, 1);
-            chai_1.assert.equal(result.b, 2);
+        it("installing a plugin using npm", function () {
+            return __awaiter(this, void 0, void 0, function* () {
+                const pluginInfo = yield manager.installFromNpm("lodash", "4.17.4");
+                const _ = manager.require("lodash");
+                chai_1.assert.isDefined(_, "Plugin is not loaded");
+                // try to use the plugin
+                const result = _.defaults({ a: 1 }, { a: 3, b: 2 });
+                chai_1.assert.equal(result.a, 1);
+                chai_1.assert.equal(result.b, 2);
+            });
         });
     });
     describe("dynamic script", function () {
@@ -117,14 +119,14 @@ describe("PluginManager suite", function () {
             });
         });
     });
-    describe("installing a plugin", function () {
+    describe("given an installed plugin", function () {
         let pluginInfo;
         beforeEach(function () {
             return __awaiter(this, void 0, void 0, function* () {
                 pluginInfo = yield manager.installFromNpm("moment", "2.18.1");
             });
         });
-        it("alreadyInstalled should respect semver", function () {
+        it("alreadyInstalled function should respect semver", function () {
             chai_1.assert.isDefined(manager.alreadyInstalled("moment"));
             chai_1.assert.isDefined(manager.alreadyInstalled("moment", "2.18.1"));
             chai_1.assert.isDefined(manager.alreadyInstalled("moment", "v2.18.1"));
@@ -171,7 +173,7 @@ describe("PluginManager suite", function () {
                 chai_1.assert.equal(instance, result);
             });
         });
-        describe("uninstalling", function () {
+        describe("when uninstalled", function () {
             beforeEach(function () {
                 return __awaiter(this, void 0, void 0, function* () {
                     yield manager.uninstall("moment");
@@ -191,7 +193,7 @@ describe("PluginManager suite", function () {
                     throw new Error("Expected to fail");
                 });
             });
-            it("requiring a not installed plugin", function () {
+            it("requiring a not installed plugin throw an error", function () {
                 return __awaiter(this, void 0, void 0, function* () {
                     try {
                         require("moment");
@@ -202,7 +204,7 @@ describe("PluginManager suite", function () {
                     throw new Error("Expected to fail");
                 });
             });
-            it("requiring a not installed plugin using it's path", function () {
+            it("requiring a not installed plugin using it's path throw an error", function () {
                 return __awaiter(this, void 0, void 0, function* () {
                     // Ensure that the plugin is really unloaded
                     try {
@@ -216,29 +218,31 @@ describe("PluginManager suite", function () {
             });
         });
     });
-    it("plugins respect the same node.js behavior", function () {
-        return __awaiter(this, void 0, void 0, function* () {
-            const pluginSourcePath = path.join(__dirname, "my-test-plugin");
-            const pluginInfo = yield manager.installFromPath(pluginSourcePath);
-            const pluginInstance = manager.require("my-test-plugin");
-            chai_1.assert.isDefined(pluginInstance, "Plugin is not loaded");
-            chai_1.assert.equal(pluginInstance.myVariable, "value1");
-            chai_1.assert.equal(pluginInstance.myVariable2, "value2");
-            chai_1.assert.equal(pluginInstance.myVariableFromSubFile, "value3");
-            chai_1.assert.equal(pluginInstance.myVariableFromSubFolder, "value4");
-            chai_1.assert.equal(pluginInstance.myVariableDifferentStyleOfRequire, "value5");
-            chai_1.assert.equal(pluginInstance.myJsonRequire.loaded, "yes");
-            chai_1.assert.equal(pluginInstance.myGlobals.__filename, path.join(manager.options.pluginsPath, "my-test-plugin", "index.js"));
-            chai_1.assert.equal(pluginInstance.myGlobals.__dirname, path.join(manager.options.pluginsPath, "my-test-plugin"));
-            chai_1.assert.equal(pluginInstance.myGlobals.process, process);
-            chai_1.assert.equal(pluginInstance.myGlobals.console, console);
-            chai_1.assert.equal(pluginInstance.myGlobals.clearImmediate, clearImmediate);
-            chai_1.assert.equal(pluginInstance.myGlobals.clearInterval, clearInterval);
-            chai_1.assert.equal(pluginInstance.myGlobals.clearTimeout, clearTimeout);
-            chai_1.assert.equal(pluginInstance.myGlobals.setImmediate, setImmediate);
-            chai_1.assert.equal(pluginInstance.myGlobals.setInterval, setInterval);
-            chai_1.assert.equal(pluginInstance.myGlobals.setTimeout, setTimeout);
-            chai_1.assert.equal(pluginInstance.myGlobals.Buffer, Buffer);
+    describe("require", function () {
+        it("plugins respect the same node.js behavior", function () {
+            return __awaiter(this, void 0, void 0, function* () {
+                const pluginSourcePath = path.join(__dirname, "my-test-plugin");
+                const pluginInfo = yield manager.installFromPath(pluginSourcePath);
+                const pluginInstance = manager.require("my-test-plugin");
+                chai_1.assert.isDefined(pluginInstance, "Plugin is not loaded");
+                chai_1.assert.equal(pluginInstance.myVariable, "value1");
+                chai_1.assert.equal(pluginInstance.myVariable2, "value2");
+                chai_1.assert.equal(pluginInstance.myVariableFromSubFile, "value3");
+                chai_1.assert.equal(pluginInstance.myVariableFromSubFolder, "value4");
+                chai_1.assert.equal(pluginInstance.myVariableDifferentStyleOfRequire, "value5");
+                chai_1.assert.equal(pluginInstance.myJsonRequire.loaded, "yes");
+                chai_1.assert.equal(pluginInstance.myGlobals.__filename, path.join(manager.options.pluginsPath, "my-test-plugin", "index.js"));
+                chai_1.assert.equal(pluginInstance.myGlobals.__dirname, path.join(manager.options.pluginsPath, "my-test-plugin"));
+                chai_1.assert.equal(pluginInstance.myGlobals.process, process);
+                chai_1.assert.equal(pluginInstance.myGlobals.console, console);
+                chai_1.assert.equal(pluginInstance.myGlobals.clearImmediate, clearImmediate);
+                chai_1.assert.equal(pluginInstance.myGlobals.clearInterval, clearInterval);
+                chai_1.assert.equal(pluginInstance.myGlobals.clearTimeout, clearTimeout);
+                chai_1.assert.equal(pluginInstance.myGlobals.setImmediate, setImmediate);
+                chai_1.assert.equal(pluginInstance.myGlobals.setInterval, setInterval);
+                chai_1.assert.equal(pluginInstance.myGlobals.setTimeout, setTimeout);
+                chai_1.assert.equal(pluginInstance.myGlobals.Buffer, Buffer);
+            });
         });
     });
     describe("plugins dependencies", function () {
@@ -249,17 +253,33 @@ describe("PluginManager suite", function () {
                 chai_1.assert.equal(manager.list().length, 2);
                 chai_1.assert.equal(manager.list()[0].name, "moment");
                 chai_1.assert.equal(manager.list()[1].name, "my-plugin-with-dep");
+            });
+        });
+        it("dependencies are available", function () {
+            return __awaiter(this, void 0, void 0, function* () {
+                const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
+                const pluginInfo = yield manager.installFromPath(pluginSourcePath);
                 const pluginInstance = manager.require("my-plugin-with-dep");
-                chai_1.assert.equal(pluginInstance, "1981/10/06");
+                chai_1.assert.equal(pluginInstance.testMoment, "1981/10/06");
             });
         });
         it("by default @types dependencies are not installed", function () {
             return __awaiter(this, void 0, void 0, function* () {
                 const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
                 const pluginInfo = yield manager.installFromPath(pluginSourcePath);
-                chai_1.assert.equal(manager.list().length, 2);
-                chai_1.assert.equal(manager.list()[0].name, "moment");
-                chai_1.assert.equal(manager.list()[1].name, "my-plugin-with-dep");
+                for (const p of manager.list()) {
+                    chai_1.assert.notEqual(p.name, "@types/express");
+                }
+            });
+        });
+        it("dependencies installed in the host are not installed but are available", function () {
+            return __awaiter(this, void 0, void 0, function* () {
+                // debug package is already available in the host
+                const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
+                const pluginInfo = yield manager.installFromPath(pluginSourcePath);
+                for (const p of manager.list()) {
+                    chai_1.assert.notEqual(p.name, "debug");
+                }
             });
         });
         describe("Given some ignored dependencies", function () {
@@ -270,8 +290,16 @@ describe("PluginManager suite", function () {
                 return __awaiter(this, void 0, void 0, function* () {
                     const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
                     const pluginInfo = yield manager.installFromPath(pluginSourcePath);
-                    chai_1.assert.equal(manager.list().length, 1);
-                    chai_1.assert.equal(manager.list()[0].name, "my-plugin-with-dep");
+                    for (const p of manager.list()) {
+                        chai_1.assert.notEqual(p.name, "moment");
+                    }
+                });
+            });
+            it("if the ignored dependencies is required the plugin will not be loaded", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
+                    const pluginInfo = yield manager.installFromPath(pluginSourcePath);
+                    // expected to fail because moment is missing...
                     try {
                         const pluginInstance = manager.require("my-plugin-with-dep");
                     }
@@ -309,7 +337,7 @@ describe("PluginManager suite", function () {
                 });
             });
         });
-        describe("Given a static dependencies", function () {
+        describe("given a static dependencies", function () {
             beforeEach(function () {
                 const momentStub = () => {
                     return {
@@ -325,7 +353,7 @@ describe("PluginManager suite", function () {
                     chai_1.assert.equal(manager.list().length, 1);
                     chai_1.assert.equal(manager.list()[0].name, "my-plugin-with-dep");
                     const pluginInstance = manager.require("my-plugin-with-dep");
-                    chai_1.assert.equal(pluginInstance, "this is moment stub");
+                    chai_1.assert.equal(pluginInstance.testMoment, "this is moment stub");
                 });
             });
         });

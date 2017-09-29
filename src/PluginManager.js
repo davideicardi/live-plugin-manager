@@ -187,23 +187,24 @@ class PluginManager {
             }
             const dependencies = new Array();
             for (const key in packageInfo.dependencies) {
+                if (!packageInfo.dependencies.hasOwnProperty(key)) {
+                    continue;
+                }
                 if (this.shouldIgnore(key)) {
                     continue;
                 }
-                if (packageInfo.dependencies.hasOwnProperty(key)) {
-                    const version = packageInfo.dependencies[key].toString();
-                    if (this.isModuleAvailableFromHost(key)) {
-                        debug(`Installing dependencies of ${packageInfo.name}: ${key} is already available on host`);
-                    }
-                    else if (this.alreadyInstalled(key, version)) {
-                        debug(`Installing dependencies of ${packageInfo.name}: ${key} is already installed`);
-                    }
-                    else {
-                        debug(`Installing dependencies of ${packageInfo.name}: ${key} ...`);
-                        yield this.installFromNpmLockFree(key, version);
-                    }
-                    dependencies.push(key);
+                const version = packageInfo.dependencies[key].toString();
+                if (this.isModuleAvailableFromHost(key)) {
+                    debug(`Installing dependencies of ${packageInfo.name}: ${key} is already available on host`);
                 }
+                else if (this.alreadyInstalled(key, version)) {
+                    debug(`Installing dependencies of ${packageInfo.name}: ${key} is already installed`);
+                }
+                else {
+                    debug(`Installing dependencies of ${packageInfo.name}: ${key} ...`);
+                    yield this.installFromNpmLockFree(key, version);
+                }
+                dependencies.push(key);
             }
             return dependencies;
         });
