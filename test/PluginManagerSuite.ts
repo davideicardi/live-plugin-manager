@@ -35,46 +35,60 @@ describe("PluginManager suite", function() {
 			assert.isUndefined(manager.alreadyInstalled("my-basic-plugin"));
 		});
 
-		it("installing a plugin from path", async function() {
-			const pluginPath = path.join(__dirname, "my-basic-plugin");
-			const pluginInfo = await manager.installFromPath(pluginPath);
+		describe("from path", function() {
+			it("installing a not existing plugin", async function() {
+				try {
+					const pluginInfo = await manager.installFromPath("/this/path/does-not-exists");
+				} catch (e) {
+					return;
+				}
 
-			const pluginInstance = manager.require("my-basic-plugin");
-			assert.isDefined(pluginInstance, "Plugin is not loaded");
+				throw new Error("Expected to fail");
+			});
 
-			assert.equal(pluginInstance.myVariable, "value1");
+			it("installing a plugin", async function() {
+				const pluginPath = path.join(__dirname, "my-basic-plugin");
+				const pluginInfo = await manager.installFromPath(pluginPath);
+
+				const pluginInstance = manager.require("my-basic-plugin");
+				assert.isDefined(pluginInstance, "Plugin is not loaded");
+
+				assert.equal(pluginInstance.myVariable, "value1");
+			});
+
+			it("installing a plugin with minimal info", async function() {
+				const pluginPath = path.join(__dirname, "my-minimal-plugin");
+				const pluginInfo = await manager.installFromPath(pluginPath);
+
+				const pluginInstance = manager.require("my-minimal-plugin");
+				assert.isDefined(pluginInstance, "Plugin is not loaded");
+
+				assert.equal(pluginInstance.myVariable, "value1");
+			});
 		});
 
-		it("installing a plugin with minimal info", async function() {
-			const pluginPath = path.join(__dirname, "my-minimal-plugin");
-			const pluginInfo = await manager.installFromPath(pluginPath);
+		describe("from npm", function() {
+			it("installing a not existing plugin", async function() {
+				try {
+					const pluginInfo = await manager.installFromNpm("this-does-not-exists", "9.9.9");
+				} catch (e) {
+					return;
+				}
 
-			const pluginInstance = manager.require("my-minimal-plugin");
-			assert.isDefined(pluginInstance, "Plugin is not loaded");
+				throw new Error("Expected to fail");
+			});
 
-			assert.equal(pluginInstance.myVariable, "value1");
-		});
+			it("installing a plugin", async function() {
+				const pluginInfo = await manager.installFromNpm("lodash", "4.17.4");
 
-		it("installing a not existing plugin using npm", async function() {
-			try {
-				const pluginInfo = await manager.installFromNpm("this-does-not-exists", "9.9.9");
-			} catch (e) {
-				return;
-			}
+				const _ = manager.require("lodash");
+				assert.isDefined(_, "Plugin is not loaded");
 
-			throw new Error("Expected to fail");
-		});
-
-		it("installing a plugin using npm", async function() {
-			const pluginInfo = await manager.installFromNpm("lodash", "4.17.4");
-
-			const _ = manager.require("lodash");
-			assert.isDefined(_, "Plugin is not loaded");
-
-			// try to use the plugin
-			const result = _.defaults({ a: 1 }, { a: 3, b: 2 });
-			assert.equal(result.a, 1);
-			assert.equal(result.b, 2);
+				// try to use the plugin
+				const result = _.defaults({ a: 1 }, { a: 3, b: 2 });
+				assert.equal(result.a, 1);
+				assert.equal(result.b, 2);
+			});
 		});
 	});
 
@@ -366,7 +380,7 @@ describe("PluginManager suite", function() {
 		});
 	});
 
-	describe("npm registry", function() {
+	describe("npm registry info", function() {
 		it("get latest version info", async function() {
 			const info = await manager.getInfoFromNpm("lodash");
 			assert.equal("lodash", info.name);

@@ -41,44 +41,59 @@ describe("PluginManager suite", function () {
                 chai_1.assert.isUndefined(manager.alreadyInstalled("my-basic-plugin"));
             });
         });
-        it("installing a plugin from path", function () {
-            return __awaiter(this, void 0, void 0, function* () {
-                const pluginPath = path.join(__dirname, "my-basic-plugin");
-                const pluginInfo = yield manager.installFromPath(pluginPath);
-                const pluginInstance = manager.require("my-basic-plugin");
-                chai_1.assert.isDefined(pluginInstance, "Plugin is not loaded");
-                chai_1.assert.equal(pluginInstance.myVariable, "value1");
+        describe("from path", function () {
+            it("installing a not existing plugin", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    try {
+                        const pluginInfo = yield manager.installFromPath("/this/path/does-not-exists");
+                    }
+                    catch (e) {
+                        return;
+                    }
+                    throw new Error("Expected to fail");
+                });
+            });
+            it("installing a plugin", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    const pluginPath = path.join(__dirname, "my-basic-plugin");
+                    const pluginInfo = yield manager.installFromPath(pluginPath);
+                    const pluginInstance = manager.require("my-basic-plugin");
+                    chai_1.assert.isDefined(pluginInstance, "Plugin is not loaded");
+                    chai_1.assert.equal(pluginInstance.myVariable, "value1");
+                });
+            });
+            it("installing a plugin with minimal info", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    const pluginPath = path.join(__dirname, "my-minimal-plugin");
+                    const pluginInfo = yield manager.installFromPath(pluginPath);
+                    const pluginInstance = manager.require("my-minimal-plugin");
+                    chai_1.assert.isDefined(pluginInstance, "Plugin is not loaded");
+                    chai_1.assert.equal(pluginInstance.myVariable, "value1");
+                });
             });
         });
-        it("installing a plugin with minimal info", function () {
-            return __awaiter(this, void 0, void 0, function* () {
-                const pluginPath = path.join(__dirname, "my-minimal-plugin");
-                const pluginInfo = yield manager.installFromPath(pluginPath);
-                const pluginInstance = manager.require("my-minimal-plugin");
-                chai_1.assert.isDefined(pluginInstance, "Plugin is not loaded");
-                chai_1.assert.equal(pluginInstance.myVariable, "value1");
+        describe("from npm", function () {
+            it("installing a not existing plugin", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    try {
+                        const pluginInfo = yield manager.installFromNpm("this-does-not-exists", "9.9.9");
+                    }
+                    catch (e) {
+                        return;
+                    }
+                    throw new Error("Expected to fail");
+                });
             });
-        });
-        it("installing a not existing plugin using npm", function () {
-            return __awaiter(this, void 0, void 0, function* () {
-                try {
-                    const pluginInfo = yield manager.installFromNpm("this-does-not-exists", "9.9.9");
-                }
-                catch (e) {
-                    return;
-                }
-                throw new Error("Expected to fail");
-            });
-        });
-        it("installing a plugin using npm", function () {
-            return __awaiter(this, void 0, void 0, function* () {
-                const pluginInfo = yield manager.installFromNpm("lodash", "4.17.4");
-                const _ = manager.require("lodash");
-                chai_1.assert.isDefined(_, "Plugin is not loaded");
-                // try to use the plugin
-                const result = _.defaults({ a: 1 }, { a: 3, b: 2 });
-                chai_1.assert.equal(result.a, 1);
-                chai_1.assert.equal(result.b, 2);
+            it("installing a plugin", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    const pluginInfo = yield manager.installFromNpm("lodash", "4.17.4");
+                    const _ = manager.require("lodash");
+                    chai_1.assert.isDefined(_, "Plugin is not loaded");
+                    // try to use the plugin
+                    const result = _.defaults({ a: 1 }, { a: 3, b: 2 });
+                    chai_1.assert.equal(result.a, 1);
+                    chai_1.assert.equal(result.b, 2);
+                });
             });
         });
     });
@@ -358,7 +373,7 @@ describe("PluginManager suite", function () {
             });
         });
     });
-    describe("npm registry", function () {
+    describe("npm registry info", function () {
         it("get latest version info", function () {
             return __awaiter(this, void 0, void 0, function* () {
                 const info = yield manager.getInfoFromNpm("lodash");
