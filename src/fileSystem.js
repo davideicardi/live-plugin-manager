@@ -16,8 +16,8 @@ function remove(path) {
 exports.remove = remove;
 function exists(path) {
     return new Promise((resolve, reject) => {
-        fs.exists(path, (exists) => {
-            resolve(exists);
+        fs.exists(path, (pathExists) => {
+            resolve(pathExists);
         });
     });
 }
@@ -44,6 +44,17 @@ function readFile(path, encoding) {
     });
 }
 exports.readFile = readFile;
+function writeFile(path, content, encoding) {
+    return new Promise((resolve, reject) => {
+        fs.writeFile(path, content, { encoding }, (err) => {
+            if (err) {
+                return reject(err);
+            }
+            resolve();
+        });
+    });
+}
+exports.writeFile = writeFile;
 function copy(src, dest) {
     return new Promise((resolve, reject) => {
         fs.copy(src, dest, (err) => {

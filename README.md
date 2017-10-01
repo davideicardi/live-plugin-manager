@@ -111,6 +111,10 @@ Install the specified package from npm registry. Dependencies are automatically 
 
 Install the specified package from a filesystem location. Dependencies are automatically installed from npm.
 
+### installFromCode(name: string, code: string, version?: string): Promise\<IPluginInfo\>
+
+Install a package by specifiing code directly.
+
 ### uninstall(name: string): Promise\<void\>
 
 Uninstall the package. Dependencies are not uninstalled automatically.

@@ -38,7 +38,7 @@ class NpmRegistryClient {
     }
     download(destinationDirectory, packageInfo) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (!packageInfo.dist.tarball) {
+            if (!packageInfo.dist || !packageInfo.dist.tarball) {
                 throw new Error("Invalid dist.tarball property");
             }
             const tgzFile = yield this.downloadTarball(packageInfo.dist.tarball);

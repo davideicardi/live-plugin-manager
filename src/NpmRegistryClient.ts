@@ -36,7 +36,7 @@ export class NpmRegistryClient {
 		destinationDirectory: string,
 		packageInfo: PackageInfo): Promise<string> {
 
-		if (!packageInfo.dist.tarball) {
+		if (!packageInfo.dist || !packageInfo.dist.tarball) {
 			throw new Error("Invalid dist.tarball property");
 		}
 
@@ -78,13 +78,13 @@ export class NpmRegistryClient {
 }
 
 export interface PackageInfo {
-	_id: string;
+	_id?: string;
 	name: string;
 	description: string;
 	version: string;
 	main?: string;
 	dependencies?: any;
-	dist: {
+	dist?: {
 		tarball: string
 	};
 }

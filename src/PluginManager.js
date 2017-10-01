@@ -17,6 +17,7 @@ const semver = require("semver");
 const Debug = require("debug");
 const debug = Debug("live-plugin-manager");
 const BASE_NPM_URL = "https://registry.npmjs.org";
+const DefaultMainFile = "index.js";
 const cwd = process.cwd();
 const DefaultOptions = {
     cwd,
@@ -58,6 +59,18 @@ class PluginManager {
             yield this.syncLock();
             try {
                 return yield this.installFromPathLockFree(location);
+            }
+            finally {
+                yield this.syncUnlock();
+            }
+        });
+    }
+    installFromCode(name, code, version) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield fs.ensureDir(this.options.pluginsPath);
+            yield this.syncLock();
+            try {
+                return yield this.installFromCodeLockFree(name, code, version);
             }
             finally {
                 yield this.syncUnlock();
@@ -130,6 +143,9 @@ class PluginManager {
     }
     uninstallLockFree(name) {
         return __awaiter(this, void 0, void 0, function* () {
+            if (!this.isValidPluginName(name)) {
+                throw new Error(`Invalid plugin name '${name}'`);
+            }
             debug(`Uninstalling ${name}...`);
             const info = this.getFullInfo(name);
             if (!info) {
@@ -142,6 +158,9 @@ class PluginManager {
     installFromPathLockFree(location) {
         return __awaiter(this, void 0, void 0, function* () {
             const packageJson = yield this.readPackageJsonFromPath(location);
+            if (!this.isValidPluginName(packageJson.name)) {
+                throw new Error(`Invalid plugin name '${packageJson.name}'`);
+            }
             // already installed satisfied version
             const installedInfo = this.alreadyInstalled(packageJson.name, packageJson.version);
             if (installedInfo) {
@@ -162,6 +181,9 @@ class PluginManager {
     }
     installFromNpmLockFree(name, version = NPM_LATEST_TAG) {
         return __awaiter(this, void 0, void 0, function* () {
+            if (!this.isValidPluginName(name)) {
+                throw new Error(`Invalid plugin name '${name}'`);
+            }
             const registryInfo = yield this.npmRegistry.get(name, version);
             // already installed satisfied version
             const installedInfo = this.alreadyInstalled(registryInfo.name, registryInfo.version);
@@ -178,6 +200,43 @@ class PluginManager {
                 yield this.npmRegistry.download(this.options.pluginsPath, registryInfo);
             }
             return yield this.addPlugin(registryInfo);
+        });
+    }
+    installFromCodeLockFree(name, code, version = "0.0.0") {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!this.isValidPluginName(name)) {
+                throw new Error(`Invalid plugin name '${name}'`);
+            }
+            if (!semver.valid(version)) {
+                throw new Error(`Invalid plugin version '${version}'`);
+            }
+            const packageJson = {
+                name,
+                version,
+                dependencies: [],
+                description: name
+            };
+            // already installed satisfied version
+            if (version !== "0.0.0") {
+                const installedInfo = this.alreadyInstalled(packageJson.name, packageJson.version);
+                if (installedInfo) {
+                    return installedInfo;
+                }
+            }
+            // already installed not satisfied version
+            if (this.alreadyInstalled(packageJson.name)) {
+                yield this.uninstallLockFree(packageJson.name);
+            }
+            // already created
+            if (!(yield this.isAlreadyDownloaded(packageJson.name, packageJson.version))) {
+                yield this.removeDownloaded(packageJson.name);
+                debug(`Create plugin ${name} to ${this.options.pluginsPath} from code`);
+                const location = this.getPluginLocation(name);
+                yield fs.ensureDir(location);
+                yield fs.writeFile(path.join(location, DefaultMainFile), code);
+                yield fs.writeFile(path.join(location, "package.json"), JSON.stringify(packageJson));
+            }
+            return yield this.addPlugin(packageJson);
         });
     }
     installDependencies(packageInfo) {
@@ -229,8 +288,21 @@ class PluginManager {
             return false;
         }
     }
+    isValidPluginName(name) {
+        if (typeof name !== "string") {
+            return false;
+        }
+        if (name.length === 0) {
+            return false;
+        }
+        // '/' is permitted to support scoped packages
+        if (name.indexOf(".") >= 0
+            || name.indexOf("\\") >= 0) {
+            return false;
+        }
+        return true;
+    }
     getPluginLocation(name) {
-        const safeName = name.replace("/", path.sep).replace("\\", path.sep);
         return path.join(this.options.pluginsPath, name);
     }
     removeDownloaded(name) {
@@ -284,7 +356,6 @@ class PluginManager {
     addPlugin(packageInfo) {
         return __awaiter(this, void 0, void 0, function* () {
             const dependencies = yield this.installDependencies(packageInfo);
-            const DefaultMainFile = "index.js";
             const DefaultMainFileExtension = ".js";
             const location = this.getPluginLocation(packageInfo.name);
             const pluginInfo = {

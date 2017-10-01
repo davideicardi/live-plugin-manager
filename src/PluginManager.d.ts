@@ -22,6 +22,7 @@ export declare class PluginManager {
     constructor(options?: Partial<PluginManagerOptions>);
     installFromNpm(name: string, version?: string): Promise<IPluginInfo>;
     installFromPath(location: string): Promise<IPluginInfo>;
+    installFromCode(name: string, code: string, version?: string): Promise<IPluginInfo>;
     uninstall(name: string): Promise<void>;
     uninstallAll(): Promise<void>;
     list(): IPluginInfo[];
@@ -34,9 +35,11 @@ export declare class PluginManager {
     private uninstallLockFree(name);
     private installFromPathLockFree(location);
     private installFromNpmLockFree(name, version?);
+    private installFromCodeLockFree(name, code, version?);
     private installDependencies(packageInfo);
     private unloadWithDependents(plugin);
     private isModuleAvailableFromHost(name);
+    private isValidPluginName(name);
     private getPluginLocation(name);
     private removeDownloaded(name);
     private isAlreadyDownloaded(name, version);

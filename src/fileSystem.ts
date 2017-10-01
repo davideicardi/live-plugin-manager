@@ -15,8 +15,8 @@ export function remove(path: string): Promise<void> {
 
 export function exists(path: string): Promise<boolean> {
 	return new Promise<boolean>((resolve, reject) => {
-		fs.exists(path, (exists) => {
-			resolve(exists);
+		fs.exists(path, (pathExists) => {
+			resolve(pathExists);
 		});
 	});
 }
@@ -39,6 +39,17 @@ export function readFile(path: string, encoding: string): Promise<string> {
 				return reject(err);
 			}
 			resolve(data);
+		});
+	});
+}
+
+export function writeFile(path: string, content: string, encoding?: string): Promise<void> {
+	return new Promise<void>((resolve, reject) => {
+		fs.writeFile(path, content, {encoding}, (err) => {
+			if (err) {
+				return reject(err);
+			}
+			resolve();
 		});
 	});
 }

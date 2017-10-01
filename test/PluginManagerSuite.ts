@@ -90,9 +90,67 @@ describe("PluginManager suite", function() {
 				assert.equal(result.b, 2);
 			});
 		});
+
+		describe("from code", function() {
+			for (const invalidName of ["../test", ".\\test", "", undefined, null]) {
+				it(`installing a not valid plugin name "${invalidName}" is not supported`, async function() {
+					try {
+						const n = invalidName as any;
+						const pluginInfo = await manager.installFromNpm(n, "9.9.9");
+					} catch (e) {
+						return;
+					}
+
+					throw new Error("Expected to fail");
+				});
+			}
+
+			it("installing a plugin", async function() {
+				const code = `module.exports = "Hello from code plugin";`;
+				await manager.installFromCode("my-code-plugin", code);
+
+				const myPlugin = manager.require("my-code-plugin");
+				assert.isDefined(myPlugin, "Plugin is not loaded");
+
+				// try to use the plugin
+				assert.equal(myPlugin, "Hello from code plugin");
+			});
+
+			it("update a plugin", async function() {
+				const code = `module.exports = "Hello from code plugin";`;
+				await manager.installFromCode("my-code-plugin", code);
+
+				const myPlugin = manager.require("my-code-plugin");
+				assert.equal(myPlugin, "Hello from code plugin");
+
+				const codeV2 = `module.exports = "V2";`;
+				await manager.installFromCode("my-code-plugin", codeV2);
+
+				const myPluginV2 = manager.require("my-code-plugin");
+				assert.equal(myPluginV2, "V2");
+			});
+
+			it("uninstalling a plugin", async function() {
+				const code = `module.exports = "Hello from code plugin";`;
+				await manager.installFromCode("my-code-plugin", code);
+
+				const myPlugin = manager.require("my-code-plugin");
+				assert.equal(myPlugin, "Hello from code plugin");
+
+				await manager.uninstall("my-code-plugin");
+
+				try {
+					manager.require("my-code-plugin");
+				} catch (e) {
+					return;
+				}
+				throw new Error("Expected to fail");
+			});
+		});
+
 	});
 
-	describe("dynamic script", function() {
+	describe("run script", function() {
 		it("simple script", async function() {
 			const code = `
 			const a = 1;
@@ -183,9 +241,23 @@ describe("PluginManager suite", function() {
 			`;
 
 			const result = manager.runScript(code);
-			const instance = manager.require("moment");
 
-			assert.equal(instance, result);
+			const expectedInstance = manager.require("moment");
+			assert.equal(expectedInstance, result);
+		});
+
+		it("code plugin can require another plugin", async function() {
+			const code = `
+			const m = require("moment");
+
+			module.exports = m;
+			`;
+
+			await manager.installFromCode("myplugin", code);
+			const result = manager.require("myplugin");
+
+			const expectedInstance = manager.require("moment");
+			assert.equal(expectedInstance, result);
 		});
 
 		describe("when uninstalled", function() {
@@ -198,7 +270,9 @@ describe("PluginManager suite", function() {
 				assert.equal(plugins.length, 0);
 
 				assert.isFalse(fs.existsSync(pluginInfo.location), "Directory still exits");
+			});
 
+			it("requiring a not installed plugin throw an error", async function() {
 				try {
 					manager.require("moment");
 				} catch (e) {
@@ -208,7 +282,7 @@ describe("PluginManager suite", function() {
 				throw new Error("Expected to fail");
 			});
 
-			it("requiring a not installed plugin throw an error", async function() {
+			it("directly requiring a not installed plugin throw an error", async function() {
 				try {
 					require("moment");
 				} catch (e) {

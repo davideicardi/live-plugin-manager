@@ -96,8 +96,62 @@ describe("PluginManager suite", function () {
                 });
             });
         });
+        describe("from code", function () {
+            for (const invalidName of ["../test", ".\\test", "", undefined, null]) {
+                it(`installing a not valid plugin name "${invalidName}" is not supported`, function () {
+                    return __awaiter(this, void 0, void 0, function* () {
+                        try {
+                            const n = invalidName;
+                            const pluginInfo = yield manager.installFromNpm(n, "9.9.9");
+                        }
+                        catch (e) {
+                            return;
+                        }
+                        throw new Error("Expected to fail");
+                    });
+                });
+            }
+            it("installing a plugin", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    const code = `module.exports = "Hello from code plugin";`;
+                    yield manager.installFromCode("my-code-plugin", code);
+                    const myPlugin = manager.require("my-code-plugin");
+                    chai_1.assert.isDefined(myPlugin, "Plugin is not loaded");
+                    // try to use the plugin
+                    chai_1.assert.equal(myPlugin, "Hello from code plugin");
+                });
+            });
+            it("update a plugin", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    const code = `module.exports = "Hello from code plugin";`;
+                    yield manager.installFromCode("my-code-plugin", code);
+                    const myPlugin = manager.require("my-code-plugin");
+                    chai_1.assert.equal(myPlugin, "Hello from code plugin");
+                    const codeV2 = `module.exports = "V2";`;
+                    yield manager.installFromCode("my-code-plugin", codeV2);
+                    const myPluginV2 = manager.require("my-code-plugin");
+                    chai_1.assert.equal(myPluginV2, "V2");
+                });
+            });
+            it("uninstalling a plugin", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    const code = `module.exports = "Hello from code plugin";`;
+                    yield manager.installFromCode("my-code-plugin", code);
+                    const myPlugin = manager.require("my-code-plugin");
+                    chai_1.assert.equal(myPlugin, "Hello from code plugin");
+                    yield manager.uninstall("my-code-plugin");
+                    try {
+                        manager.require("my-code-plugin");
+                    }
+                    catch (e) {
+                        return;
+                    }
+                    throw new Error("Expected to fail");
+                });
+            });
+        });
     });
-    describe("dynamic script", function () {
+    describe("run script", function () {
         it("simple script", function () {
             return __awaiter(this, void 0, void 0, function* () {
                 const code = `
@@ -184,8 +238,21 @@ describe("PluginManager suite", function () {
 			module.exports = m;
 			`;
                 const result = manager.runScript(code);
-                const instance = manager.require("moment");
-                chai_1.assert.equal(instance, result);
+                const expectedInstance = manager.require("moment");
+                chai_1.assert.equal(expectedInstance, result);
+            });
+        });
+        it("code plugin can require another plugin", function () {
+            return __awaiter(this, void 0, void 0, function* () {
+                const code = `
+			const m = require("moment");
+
+			module.exports = m;
+			`;
+                yield manager.installFromCode("myplugin", code);
+                const result = manager.require("myplugin");
+                const expectedInstance = manager.require("moment");
+                chai_1.assert.equal(expectedInstance, result);
             });
         });
         describe("when uninstalled", function () {
@@ -199,6 +266,10 @@ describe("PluginManager suite", function () {
                     const plugins = yield manager.list();
                     chai_1.assert.equal(plugins.length, 0);
                     chai_1.assert.isFalse(fs.existsSync(pluginInfo.location), "Directory still exits");
+                });
+            });
+            it("requiring a not installed plugin throw an error", function () {
+                return __awaiter(this, void 0, void 0, function* () {
                     try {
                         manager.require("moment");
                     }
@@ -208,7 +279,7 @@ describe("PluginManager suite", function () {
                     throw new Error("Expected to fail");
                 });
             });
-            it("requiring a not installed plugin throw an error", function () {
+            it("directly requiring a not installed plugin throw an error", function () {
                 return __awaiter(this, void 0, void 0, function* () {
                     try {
                         require("moment");

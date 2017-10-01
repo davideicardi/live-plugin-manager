@@ -8,13 +8,13 @@ export declare class NpmRegistryClient {
     private downloadTarball(url);
 }
 export interface PackageInfo {
-    _id: string;
+    _id?: string;
     name: string;
     description: string;
     version: string;
     main?: string;
     dependencies?: any;
-    dist: {
+    dist?: {
         tarball: string;
     };
 }

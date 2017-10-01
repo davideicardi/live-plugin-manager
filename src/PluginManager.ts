@@ -10,6 +10,7 @@ import * as Debug from "debug";
 const debug = Debug("live-plugin-manager");
 
 const BASE_NPM_URL = "https://registry.npmjs.org";
+const DefaultMainFile = "index.js";
 
 export interface PluginManagerOptions {
 	cwd: string;
@@ -71,6 +72,17 @@ export class PluginManager {
 		await this.syncLock();
 		try {
 			return await this.installFromPathLockFree(location);
+		} finally {
+			await this.syncUnlock();
+		}
+	}
+
+	async installFromCode(name: string, code: string, version?: string): Promise<IPluginInfo> {
+		await fs.ensureDir(this.options.pluginsPath);
+
+		await this.syncLock();
+		try {
+			return await this.installFromCodeLockFree(name, code, version);
 		} finally {
 			await this.syncUnlock();
 		}
@@ -146,6 +158,10 @@ export class PluginManager {
 	}
 
 	private async uninstallLockFree(name: string): Promise<void> {
+		if (!this.isValidPluginName(name)) {
+			throw new Error(`Invalid plugin name '${name}'`);
+		}
+
 		debug(`Uninstalling ${name}...`);
 
 		const info = this.getFullInfo(name);
@@ -159,6 +175,10 @@ export class PluginManager {
 
 	private async installFromPathLockFree(location: string): Promise<IPluginInfo> {
 		const packageJson = await this.readPackageJsonFromPath(location);
+
+		if (!this.isValidPluginName(packageJson.name)) {
+			throw new Error(`Invalid plugin name '${packageJson.name}'`);
+		}
 
 		// already installed satisfied version
 		const installedInfo = this.alreadyInstalled(packageJson.name, packageJson.version);
@@ -183,6 +203,10 @@ export class PluginManager {
 	}
 
 	private async installFromNpmLockFree(name: string, version = NPM_LATEST_TAG): Promise<IPluginInfo> {
+		if (!this.isValidPluginName(name)) {
+			throw new Error(`Invalid plugin name '${name}'`);
+		}
+
 		const registryInfo = await this.npmRegistry.get(name, version);
 
 		// already installed satisfied version
@@ -206,6 +230,50 @@ export class PluginManager {
 		}
 
 		return await this.addPlugin(registryInfo);
+	}
+
+	private async installFromCodeLockFree(name: string, code: string, version: string = "0.0.0"): Promise<IPluginInfo> {
+		if (!this.isValidPluginName(name)) {
+			throw new Error(`Invalid plugin name '${name}'`);
+		}
+
+		if (!semver.valid(version)) {
+			throw new Error(`Invalid plugin version '${version}'`);
+		}
+
+		const packageJson: PackageInfo = {
+			name,
+			version,
+			dependencies: [],
+			description: name
+		};
+
+		// already installed satisfied version
+		if (version !== "0.0.0") {
+			const installedInfo = this.alreadyInstalled(packageJson.name, packageJson.version);
+			if (installedInfo) {
+				return installedInfo;
+			}
+		}
+
+		// already installed not satisfied version
+		if (this.alreadyInstalled(packageJson.name)) {
+			await this.uninstallLockFree(packageJson.name);
+		}
+
+		// already created
+		if (!(await this.isAlreadyDownloaded(packageJson.name, packageJson.version))) {
+			await this.removeDownloaded(packageJson.name);
+
+			debug(`Create plugin ${name} to ${this.options.pluginsPath} from code`);
+
+			const location = this.getPluginLocation(name);
+			await fs.ensureDir(location);
+			await fs.writeFile(path.join(location, DefaultMainFile), code);
+			await fs.writeFile(path.join(location, "package.json"), JSON.stringify(packageJson));
+		}
+
+		return await this.addPlugin(packageJson);
 	}
 
 	private async installDependencies(packageInfo: PackageInfo): Promise<string[]> {
@@ -263,8 +331,25 @@ export class PluginManager {
 		}
 	}
 
+	private isValidPluginName(name: string) {
+		if (typeof name !== "string") {
+			return false;
+		}
+
+		if (name.length === 0) {
+			return false;
+		}
+
+		// '/' is permitted to support scoped packages
+		if (name.indexOf(".") >= 0
+		|| name.indexOf("\\") >= 0) {
+			return false;
+		}
+
+		return true;
+	}
+
 	private getPluginLocation(name: string) {
-		const safeName = name.replace("/", path.sep).replace("\\", path.sep);
 		return path.join(this.options.pluginsPath, name);
 	}
 
@@ -322,7 +407,6 @@ export class PluginManager {
 	private async addPlugin(packageInfo: PackageInfo): Promise<PluginInfo> {
 		const dependencies = await this.installDependencies(packageInfo);
 
-		const DefaultMainFile = "index.js";
 		const DefaultMainFileExtension = ".js";
 
 		const location = this.getPluginLocation(packageInfo.name);
