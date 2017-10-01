@@ -189,7 +189,7 @@ class PluginManager {
                 yield this.uninstallLockFree(packageJson.name);
             }
             // already downloaded
-            if (!(yield this.isAlreadyDownloaded(packageJson.name, packageJson.version))) {
+            if (options.force || !(yield this.isAlreadyDownloaded(packageJson.name, packageJson.version))) {
                 yield this.removeDownloaded(packageJson.name);
                 debug(`Copy from ${location} to ${this.options.pluginsPath}`);
                 yield fs.copy(location, this.getPluginLocation(packageJson.name));

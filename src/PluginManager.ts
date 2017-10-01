@@ -215,7 +215,7 @@ export class PluginManager {
 		}
 
 		// already downloaded
-		if (!(await this.isAlreadyDownloaded(packageJson.name, packageJson.version))) {
+		if (options.force || !(await this.isAlreadyDownloaded(packageJson.name, packageJson.version))) {
 			await this.removeDownloaded(packageJson.name);
 
 			debug(`Copy from ${location} to ${this.options.pluginsPath}`);
