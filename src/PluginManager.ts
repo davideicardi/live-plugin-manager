@@ -39,6 +39,10 @@ const DefaultOptions: PluginManagerOptions = {
 
 const NPM_LATEST_TAG = "latest";
 
+export interface InstallFromPathOptions {
+	force: boolean;
+}
+
 export class PluginManager {
 	readonly options: PluginManagerOptions;
 	private readonly vm: PluginVm;
@@ -55,6 +59,11 @@ export class PluginManager {
 		this.npmRegistry = new NpmRegistryClient(this.options.npmRegistryUrl, this.options.npmRegistryConfig);
 	}
 
+	/**
+	 * Install a package from npm
+	 * @param name name of the package
+	 * @param version version of the package, default to "latest"
+	 */
 	async installFromNpm(name: string, version = NPM_LATEST_TAG): Promise<IPluginInfo> {
 		await fs.ensureDir(this.options.pluginsPath);
 
@@ -66,17 +75,28 @@ export class PluginManager {
 		}
 	}
 
-	async installFromPath(location: string): Promise<IPluginInfo> {
+	/**
+	 * Install a package from a local folder
+	 * @param location package local folder location
+	 * @param options options, if options.force == true then package is always reinstalled without version checking
+	 */
+	async installFromPath(location: string, options: Partial<InstallFromPathOptions> = {}): Promise<IPluginInfo> {
 		await fs.ensureDir(this.options.pluginsPath);
 
 		await this.syncLock();
 		try {
-			return await this.installFromPathLockFree(location);
+			return await this.installFromPathLockFree(location, options);
 		} finally {
 			await this.syncUnlock();
 		}
 	}
 
+	/**
+	 * Install a package by specifiing code directly. If no version is specified it will be always reinstalled.
+	 * @param name plugin name
+	 * @param code code to be loaded, equivalent to index.js
+	 * @param version optional version, if omitted no version check is performed
+	 */
 	async installFromCode(name: string, code: string, version?: string): Promise<IPluginInfo> {
 		await fs.ensureDir(this.options.pluginsPath);
 
@@ -173,7 +193,8 @@ export class PluginManager {
 		await this.deleteAndUnloadPlugin(info);
 	}
 
-	private async installFromPathLockFree(location: string): Promise<IPluginInfo> {
+	private async installFromPathLockFree(
+		location: string, options: Partial<InstallFromPathOptions>): Promise<IPluginInfo> {
 		const packageJson = await this.readPackageJsonFromPath(location);
 
 		if (!this.isValidPluginName(packageJson.name)) {
@@ -181,9 +202,11 @@ export class PluginManager {
 		}
 
 		// already installed satisfied version
-		const installedInfo = this.alreadyInstalled(packageJson.name, packageJson.version);
-		if (installedInfo) {
-			return installedInfo;
+		if (!options.force) {
+			const installedInfo = this.alreadyInstalled(packageJson.name, packageJson.version);
+			if (installedInfo) {
+				return installedInfo;
+			}
 		}
 
 		// already installed not satisfied version

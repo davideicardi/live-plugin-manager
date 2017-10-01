@@ -107,13 +107,13 @@ Create a new instance of `PluginManager`. Takes an optional `options` parameter 
 
 Install the specified package from npm registry. Dependencies are automatically installed (devDependencies are ignored).
 
-### installFromPath(location: string): Promise\<IPluginInfo\>
+### installFromPath(location: string, options: {force: boolean} = {}): Promise\<IPluginInfo\>
 
 Install the specified package from a filesystem location. Dependencies are automatically installed from npm.
 
 ### installFromCode(name: string, code: string, version?: string): Promise\<IPluginInfo\>
 
-Install a package by specifiing code directly.
+Install a package by specifiing code directly. If no version is specified it will be always reinstalled.
 
 ### uninstall(name: string): Promise\<void\>
 

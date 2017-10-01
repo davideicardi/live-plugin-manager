@@ -62,6 +62,28 @@ describe("PluginManager suite", function () {
                     chai_1.assert.equal(pluginInstance.myVariable, "value1");
                 });
             });
+            it("installing a plugin 2 times doesn't have effect", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    const pluginPath = path.join(__dirname, "my-basic-plugin");
+                    yield manager.installFromPath(pluginPath);
+                    const pluginInstance = manager.require("my-basic-plugin");
+                    yield manager.installFromPath(pluginPath);
+                    const pluginInstance2 = manager.require("my-basic-plugin");
+                    chai_1.assert.equal(pluginInstance, pluginInstance2);
+                    chai_1.assert.equal(pluginInstance.installDate, pluginInstance2.installDate);
+                });
+            });
+            it("installing a plugin 2 times with force options allow to force a reinstallation", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    const pluginPath = path.join(__dirname, "my-basic-plugin");
+                    yield manager.installFromPath(pluginPath);
+                    const pluginInstance = manager.require("my-basic-plugin");
+                    yield manager.installFromPath(pluginPath, { force: true });
+                    const pluginInstance2 = manager.require("my-basic-plugin");
+                    chai_1.assert.notEqual(pluginInstance, pluginInstance2);
+                    chai_1.assert.notEqual(pluginInstance.installDate, pluginInstance2.installDate);
+                });
+            });
             it("installing a plugin with minimal info", function () {
                 return __awaiter(this, void 0, void 0, function* () {
                     const pluginPath = path.join(__dirname, "my-minimal-plugin");

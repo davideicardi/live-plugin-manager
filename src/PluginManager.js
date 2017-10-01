@@ -41,6 +41,11 @@ class PluginManager {
         this.vm = new PluginVm_1.PluginVm(this);
         this.npmRegistry = new NpmRegistryClient_1.NpmRegistryClient(this.options.npmRegistryUrl, this.options.npmRegistryConfig);
     }
+    /**
+     * Install a package from npm
+     * @param name name of the package
+     * @param version version of the package, default to "latest"
+     */
     installFromNpm(name, version = NPM_LATEST_TAG) {
         return __awaiter(this, void 0, void 0, function* () {
             yield fs.ensureDir(this.options.pluginsPath);
@@ -53,18 +58,29 @@ class PluginManager {
             }
         });
     }
-    installFromPath(location) {
+    /**
+     * Install a package from a local folder
+     * @param location package local folder location
+     * @param options options, if options.force == true then package is always reinstalled without version checking
+     */
+    installFromPath(location, options = {}) {
         return __awaiter(this, void 0, void 0, function* () {
             yield fs.ensureDir(this.options.pluginsPath);
             yield this.syncLock();
             try {
-                return yield this.installFromPathLockFree(location);
+                return yield this.installFromPathLockFree(location, options);
             }
             finally {
                 yield this.syncUnlock();
             }
         });
     }
+    /**
+     * Install a package by specifiing code directly. If no version is specified it will be always reinstalled.
+     * @param name plugin name
+     * @param code code to be loaded, equivalent to index.js
+     * @param version optional version, if omitted no version check is performed
+     */
     installFromCode(name, code, version) {
         return __awaiter(this, void 0, void 0, function* () {
             yield fs.ensureDir(this.options.pluginsPath);
@@ -155,16 +171,18 @@ class PluginManager {
             yield this.deleteAndUnloadPlugin(info);
         });
     }
-    installFromPathLockFree(location) {
+    installFromPathLockFree(location, options) {
         return __awaiter(this, void 0, void 0, function* () {
             const packageJson = yield this.readPackageJsonFromPath(location);
             if (!this.isValidPluginName(packageJson.name)) {
                 throw new Error(`Invalid plugin name '${packageJson.name}'`);
             }
             // already installed satisfied version
-            const installedInfo = this.alreadyInstalled(packageJson.name, packageJson.version);
-            if (installedInfo) {
-                return installedInfo;
+            if (!options.force) {
+                const installedInfo = this.alreadyInstalled(packageJson.name, packageJson.version);
+                if (installedInfo) {
+                    return installedInfo;
+                }
             }
             // already installed not satisfied version
             if (this.alreadyInstalled(packageJson.name)) {

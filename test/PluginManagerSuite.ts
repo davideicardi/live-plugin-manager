@@ -56,6 +56,32 @@ describe("PluginManager suite", function() {
 				assert.equal(pluginInstance.myVariable, "value1");
 			});
 
+			it("installing a plugin 2 times doesn't have effect", async function() {
+				const pluginPath = path.join(__dirname, "my-basic-plugin");
+
+				await manager.installFromPath(pluginPath);
+				const pluginInstance = manager.require("my-basic-plugin");
+
+				await manager.installFromPath(pluginPath);
+				const pluginInstance2 = manager.require("my-basic-plugin");
+
+				assert.equal(pluginInstance, pluginInstance2);
+				assert.equal(pluginInstance.installDate, pluginInstance2.installDate);
+			});
+
+			it("installing a plugin 2 times with force options allow to force a reinstallation", async function() {
+				const pluginPath = path.join(__dirname, "my-basic-plugin");
+
+				await manager.installFromPath(pluginPath);
+				const pluginInstance = manager.require("my-basic-plugin");
+
+				await manager.installFromPath(pluginPath, {force: true});
+				const pluginInstance2 = manager.require("my-basic-plugin");
+
+				assert.notEqual(pluginInstance, pluginInstance2);
+				assert.notEqual(pluginInstance.installDate, pluginInstance2.installDate);
+			});
+
 			it("installing a plugin with minimal info", async function() {
 				const pluginPath = path.join(__dirname, "my-minimal-plugin");
 				const pluginInfo = await manager.installFromPath(pluginPath);
