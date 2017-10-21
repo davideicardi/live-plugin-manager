@@ -24,6 +24,9 @@ export class NpmRegistryClient {
 			const regUrl = urlJoin(this.npmUrl, encodeNpmName(name), normalizeVersion(name, version));
 			this.registryClient.get(regUrl, params, (err: any, data: any) => {
 				if (err) {
+					if (err.message) {
+						err.message = `Failed to get package '${name}:${version}' ${err.message}`;
+					}
 					return reject(err);
 				}
 

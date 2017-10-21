@@ -45,7 +45,7 @@ export declare class PluginManager {
     uninstall(name: string): Promise<void>;
     uninstallAll(): Promise<void>;
     list(): IPluginInfo[];
-    require(name: string): any;
+    require(fullName: string): any;
     alreadyInstalled(name: string, version?: string): IPluginInfo | undefined;
     getInfo(name: string): IPluginInfo | undefined;
     getInfoFromNpm(name: string, version?: string): Promise<PackageInfo>;
@@ -63,7 +63,7 @@ export declare class PluginManager {
     private removeDownloaded(name);
     private isAlreadyDownloaded(name, version);
     private readPackageJsonFromPath(location);
-    private load(plugin);
+    private load(plugin, filePath?);
     private unload(plugin);
     private addPlugin(packageInfo);
     private deleteAndUnloadPlugin(plugin);

@@ -62,6 +62,15 @@ describe("PluginManager suite", function () {
                     chai_1.assert.equal(pluginInstance.myVariable, "value1");
                 });
             });
+            it("installing a plugin with a special name", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    // name with dot (.)
+                    const pluginPath = path.join(__dirname, "my-plugin.js");
+                    const pluginInfo = yield manager.installFromPath(pluginPath);
+                    const pluginInstance = manager.require("my-plugin.js");
+                    chai_1.assert.isDefined(pluginInstance, "my-plugin.js!");
+                });
+            });
             it("installing a plugin 2 times doesn't have effect", function () {
                 return __awaiter(this, void 0, void 0, function* () {
                     const pluginPath = path.join(__dirname, "my-basic-plugin");
@@ -326,6 +335,29 @@ describe("PluginManager suite", function () {
             });
         });
     });
+    describe("given a plugin x that depend on y", function () {
+        describe("when plugin y is installed", function () {
+            beforeEach(function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    yield manager.installFromPath(path.join(__dirname, "my-plugin-y"));
+                });
+            });
+            it("when plugin x is installed can require plugin y", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    yield manager.installFromPath(path.join(__dirname, "my-plugin-x"));
+                    const x = manager.require("my-plugin-x");
+                    chai_1.assert.equal(x.y, "y!");
+                });
+            });
+            it("when plugin x is installed can require plugin y sub file", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    yield manager.installFromPath(path.join(__dirname, "my-plugin-x"));
+                    const x = manager.require("my-plugin-x");
+                    chai_1.assert.equal(x.y_subFile, "y_subFile!");
+                });
+            });
+        });
+    });
     describe("require", function () {
         it("plugins respect the same node.js behavior", function () {
             return __awaiter(this, void 0, void 0, function* () {
@@ -350,6 +382,33 @@ describe("PluginManager suite", function () {
                 chai_1.assert.equal(pluginInstance.myGlobals.setInterval, setInterval);
                 chai_1.assert.equal(pluginInstance.myGlobals.setTimeout, setTimeout);
                 chai_1.assert.equal(pluginInstance.myGlobals.Buffer, Buffer);
+            });
+        });
+        it("requre a plugin sub folder", function () {
+            return __awaiter(this, void 0, void 0, function* () {
+                const pluginSourcePath = path.join(__dirname, "my-test-plugin");
+                const pluginInfo = yield manager.installFromPath(pluginSourcePath);
+                const result = manager.require("my-test-plugin/subFolder");
+                chai_1.assert.isDefined(result, "value4");
+            });
+        });
+        it("requre a plugin sub file", function () {
+            return __awaiter(this, void 0, void 0, function* () {
+                const pluginSourcePath = path.join(__dirname, "my-test-plugin");
+                const pluginInfo = yield manager.installFromPath(pluginSourcePath);
+                const result = manager.require("my-test-plugin/subFolder/b");
+                chai_1.assert.isDefined(result, "value3");
+            });
+        });
+        it("index file can be required explicitly or implicitly", function () {
+            return __awaiter(this, void 0, void 0, function* () {
+                const pluginSourcePath = path.join(__dirname, "my-test-plugin");
+                const pluginInfo = yield manager.installFromPath(pluginSourcePath);
+                const resultImplicit = manager.require("my-test-plugin");
+                const resultExplicit = manager.require("my-test-plugin/index");
+                const resultExplicit2 = manager.require("my-test-plugin/index.js");
+                chai_1.assert.equal(resultImplicit, resultExplicit);
+                chai_1.assert.equal(resultImplicit, resultExplicit2);
             });
         });
     });
@@ -512,7 +571,7 @@ describe("PluginManager suite", function () {
             return __awaiter(this, void 0, void 0, function* () {
                 const info = yield manager.getInfoFromNpm("@types/node", "^6.0.0");
                 chai_1.assert.equal("@types/node", info.name);
-                chai_1.assert.equal("6.0.88", info.version); // this test can fail if @types/node publish a 6.x version
+                chai_1.assert.equal("6.0.90", info.version); // this test can fail if @types/node publish a 6.x version
             });
         });
     });

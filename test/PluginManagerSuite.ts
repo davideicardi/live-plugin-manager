@@ -56,6 +56,15 @@ describe("PluginManager suite", function() {
 				assert.equal(pluginInstance.myVariable, "value1");
 			});
 
+			it("installing a plugin with a special name", async function() {
+				// name with dot (.)
+				const pluginPath = path.join(__dirname, "my-plugin.js");
+				const pluginInfo = await manager.installFromPath(pluginPath);
+				const pluginInstance = manager.require("my-plugin.js");
+				assert.isDefined(pluginInstance, "my-plugin.js!");
+
+			});
+
 			it("installing a plugin 2 times doesn't have effect", async function() {
 				const pluginPath = path.join(__dirname, "my-basic-plugin");
 
@@ -331,6 +340,28 @@ describe("PluginManager suite", function() {
 		});
 	});
 
+	describe("given a plugin x that depend on y", function() {
+		describe("when plugin y is installed", function() {
+			beforeEach(async function() {
+				await manager.installFromPath(path.join(__dirname, "my-plugin-y"));
+			});
+
+			it("when plugin x is installed can require plugin y", async function() {
+				await manager.installFromPath(path.join(__dirname, "my-plugin-x"));
+
+				const x = manager.require("my-plugin-x");
+				assert.equal(x.y, "y!");
+			});
+
+			it("when plugin x is installed can require plugin y sub file", async function() {
+				await manager.installFromPath(path.join(__dirname, "my-plugin-x"));
+
+				const x = manager.require("my-plugin-x");
+				assert.equal(x.y_subFile, "y_subFile!");
+			});
+		});
+	});
+
 	describe("require", function() {
 		it("plugins respect the same node.js behavior", async function() {
 			const pluginSourcePath = path.join(__dirname, "my-test-plugin");
@@ -359,6 +390,33 @@ describe("PluginManager suite", function() {
 			assert.equal(pluginInstance.myGlobals.setInterval, setInterval);
 			assert.equal(pluginInstance.myGlobals.setTimeout, setTimeout);
 			assert.equal(pluginInstance.myGlobals.Buffer, Buffer);
+		});
+
+		it("requre a plugin sub folder", async function() {
+			const pluginSourcePath = path.join(__dirname, "my-test-plugin");
+			const pluginInfo = await manager.installFromPath(pluginSourcePath);
+
+			const result = manager.require("my-test-plugin/subFolder");
+			assert.isDefined(result, "value4");
+		});
+
+		it("requre a plugin sub file", async function() {
+			const pluginSourcePath = path.join(__dirname, "my-test-plugin");
+			const pluginInfo = await manager.installFromPath(pluginSourcePath);
+
+			const result = manager.require("my-test-plugin/subFolder/b");
+			assert.isDefined(result, "value3");
+		});
+
+		it("index file can be required explicitly or implicitly", async function() {
+			const pluginSourcePath = path.join(__dirname, "my-test-plugin");
+			const pluginInfo = await manager.installFromPath(pluginSourcePath);
+
+			const resultImplicit = manager.require("my-test-plugin");
+			const resultExplicit = manager.require("my-test-plugin/index");
+			const resultExplicit2 = manager.require("my-test-plugin/index.js");
+			assert.equal(resultImplicit, resultExplicit);
+			assert.equal(resultImplicit, resultExplicit2);
 		});
 	});
 
@@ -522,7 +580,7 @@ describe("PluginManager suite", function() {
 		it("get caret version range info for scoped packages", async function() {
 			const info = await manager.getInfoFromNpm("@types/node", "^6.0.0");
 			assert.equal("@types/node", info.name);
-			assert.equal("6.0.88", info.version); // this test can fail if @types/node publish a 6.x version
+			assert.equal("6.0.90", info.version); // this test can fail if @types/node publish a 6.x version
 		});
 	});
 });

@@ -133,17 +133,20 @@ export class PluginManager {
 		return this.installedPlugins.map((p) => p);
 	}
 
-	require(name: string): any {
-		const info = this.getFullInfo(name);
+	require(fullName: string): any {
+		const {pluginName, requiredPath} = this.vm.splitRequire(fullName);
+
+		const info = this.getFullInfo(pluginName);
 		if (!info) {
-			throw new Error(`${name} not installed`);
+			throw new Error(`${pluginName} not installed`);
 		}
 
-		if (!info.loaded) {
-			this.load(info);
+		let filePath: string | undefined;
+		if (requiredPath) {
+			filePath = this.vm.resolve(info, requiredPath);
 		}
 
-		return info.instance;
+		return this.load(info, filePath);
 	}
 
 	alreadyInstalled(name: string, version?: string): IPluginInfo | undefined {
@@ -364,7 +367,7 @@ export class PluginManager {
 		}
 
 		// '/' is permitted to support scoped packages
-		if (name.indexOf(".") >= 0
+		if (name.startsWith(".")
 		|| name.indexOf("\\") >= 0) {
 			return false;
 		}
@@ -414,16 +417,15 @@ export class PluginManager {
 		return packageJson;
 	}
 
-	private load(plugin: PluginInfo) {
-		debug(`Loading ${plugin.name}...`);
-		plugin.instance = this.vm.load(plugin, plugin.mainFile);
-		plugin.loaded = true;
+	private load(plugin: PluginInfo, filePath?: string): any {
+		filePath = filePath || plugin.mainFile;
+
+		debug(`Loading ${plugin.name}${filePath}...`);
+		return this.vm.load(plugin, filePath);
 	}
 
 	private unload(plugin: PluginInfo) {
 		debug(`Unloading ${plugin.name}...`);
-		plugin.loaded = false;
-		plugin.instance = undefined;
 		this.vm.unload(plugin);
 	}
 
@@ -439,7 +441,8 @@ export class PluginManager {
 			location,
 			mainFile: path.normalize(path.join(location, packageInfo.main || DefaultMainFile)),
 			loaded: false,
-			dependencies
+			dependencies,
+			requiredInstances: new Map<string, any>()
 		};
 
 		// If no extensions for main file is used, just default to .js

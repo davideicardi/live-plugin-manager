@@ -34,6 +34,9 @@ class PluginVm {
         this.setCache(pluginContext, filePath, moduleInstance);
         return moduleInstance;
     }
+    resolve(pluginContext, filePath) {
+        return this.sandboxResolve(pluginContext, pluginContext.location, filePath);
+    }
     runScript(code) {
         const name = "dynamic-" + Date.now;
         const filePath = path.join(this.manager.options.pluginsPath, name + ".js");
@@ -44,6 +47,16 @@ class PluginVm {
             version: "1.0.0"
         };
         return this.vmRunScript(pluginContext, filePath, code);
+    }
+    splitRequire(fullName) {
+        const slashPosition = fullName.indexOf("/");
+        let requiredPath;
+        let pluginName = fullName;
+        if (slashPosition > 0) {
+            pluginName = fullName.substring(0, slashPosition);
+            requiredPath = "." + fullName.substring(slashPosition);
+        }
+        return { pluginName, requiredPath };
     }
     vmRunScript(pluginContext, filePath, code) {
         const sandbox = this.createModuleSandbox(pluginContext, filePath);
@@ -93,17 +106,16 @@ class PluginVm {
         // moduleSandbox.exports = moduleSandbox.module.exports; // I have declared it in the code itself
         moduleSandbox.__dirname = path.dirname(filePath);
         moduleSandbox.__filename = filePath;
-        moduleSandbox.require = function (name) {
-            return me.sandboxRequire(pluginContext, moduleSandbox.__dirname, name);
+        moduleSandbox.require = function (requiredName) {
+            return me.sandboxRequire(pluginContext, moduleSandbox.__dirname, requiredName);
         };
         return moduleSandbox;
     }
-    sandboxResolve(pluginContext, moduleDirName, name) {
+    sandboxResolve(pluginContext, moduleDirName, requiredName) {
         // I try to use a similar logic of https://nodejs.org/api/modules.html#modules_modules
         // is a relative module
-        if (name.startsWith(".")
-            || name.startsWith(path.sep)) {
-            const fullPath = path.normalize(path.join(moduleDirName, name));
+        if (requiredName.startsWith(".")) {
+            const fullPath = path.normalize(path.join(moduleDirName, requiredName));
             // for security reason check to not load external files
             if (!fullPath.startsWith(pluginContext.location)) {
                 throw new Error("Cannot require a module outside a plugin");
@@ -116,53 +128,54 @@ class PluginVm {
             if (isDirectory) {
                 return isDirectory;
             }
-            throw new Error(`Cannot find ${name} in plugin ${pluginContext.name}`);
+            throw new Error(`Cannot find ${requiredName} in plugin ${pluginContext.name}`);
         }
-        if (this.isPlugin(name)) {
-            return name;
+        if (this.isPlugin(requiredName)) {
+            return requiredName;
         }
-        if (this.manager.options.staticDependencies[name]) {
-            return name;
+        if (this.manager.options.staticDependencies[requiredName]) {
+            return requiredName;
         }
         // this will fail if module is unknown
-        if (this.isCoreModule(name)) {
-            return name;
+        if (this.isCoreModule(requiredName)) {
+            return requiredName;
         }
-        return name;
+        return requiredName;
     }
-    sandboxRequire(pluginContext, moduleDirName, name) {
+    sandboxRequire(pluginContext, moduleDirName, requiredName) {
         // I try to use a similar logic of https://nodejs.org/api/modules.html#modules_modules
-        debug(`Requiring '${name}'...`);
-        const fullName = this.sandboxResolve(pluginContext, moduleDirName, name);
-        // is a file or directory
-        if (fullName.indexOf(path.sep) >= 0) {
-            debug(`Resolved ${name} as ${fullName} file`);
+        debug(`Requiring '${requiredName}'...`);
+        const fullName = this.sandboxResolve(pluginContext, moduleDirName, requiredName);
+        // is an absolute file or directory that can be loaded
+        if (path.isAbsolute(fullName)) {
+            debug(`Resolved ${requiredName} as file ${fullName}`);
             return this.load(pluginContext, fullName);
         }
-        if (this.manager.options.staticDependencies[name]) {
-            debug(`Resolved ${name} as static dependency`);
-            return this.manager.options.staticDependencies[name];
+        if (this.manager.options.staticDependencies[requiredName]) {
+            debug(`Resolved ${requiredName} as static dependency`);
+            return this.manager.options.staticDependencies[requiredName];
         }
-        if (this.isPlugin(name)) {
-            debug(`Resolved ${name} as ${fullName} plugin`);
-            return this.manager.require(name);
+        if (this.isPlugin(requiredName)) {
+            debug(`Resolved ${requiredName} as plugin`);
+            return this.manager.require(requiredName);
         }
-        if (this.isCoreModule(name)) {
-            debug(`Resolved ${name} as ${fullName} core module`);
-            return require(name);
+        if (this.isCoreModule(requiredName)) {
+            debug(`Resolved ${requiredName} as core module`);
+            return require(requiredName);
         }
         if (this.manager.options.hostRequire) {
-            debug(`Resolved ${name} as ${fullName} host module`);
-            return this.manager.options.hostRequire(name);
+            debug(`Resolved ${requiredName} as host module`);
+            return this.manager.options.hostRequire(requiredName);
         }
-        throw new Error(`Module ${name} not found, failed to load plugin ${pluginContext.name}`);
+        throw new Error(`Module ${requiredName} not found, failed to load plugin ${pluginContext.name}`);
     }
-    isCoreModule(name) {
+    isCoreModule(requiredName) {
         return this.manager.options.requireCoreModules
-            && require.resolve(name) === name;
+            && require.resolve(requiredName) === requiredName;
     }
-    isPlugin(name) {
-        return !!this.manager.getInfo(name);
+    isPlugin(requiredName) {
+        const { pluginName } = this.splitRequire(requiredName);
+        return !!this.manager.getInfo(pluginName);
     }
     tryResolveAsFile(fullPath) {
         if (!fs.existsSync(fullPath)) {

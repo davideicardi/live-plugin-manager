@@ -121,15 +121,17 @@ class PluginManager {
     list() {
         return this.installedPlugins.map((p) => p);
     }
-    require(name) {
-        const info = this.getFullInfo(name);
+    require(fullName) {
+        const { pluginName, requiredPath } = this.vm.splitRequire(fullName);
+        const info = this.getFullInfo(pluginName);
         if (!info) {
-            throw new Error(`${name} not installed`);
+            throw new Error(`${pluginName} not installed`);
         }
-        if (!info.loaded) {
-            this.load(info);
+        let filePath;
+        if (requiredPath) {
+            filePath = this.vm.resolve(info, requiredPath);
         }
-        return info.instance;
+        return this.load(info, filePath);
     }
     alreadyInstalled(name, version) {
         const installedInfo = this.getInfo(name);
@@ -314,7 +316,7 @@ class PluginManager {
             return false;
         }
         // '/' is permitted to support scoped packages
-        if (name.indexOf(".") >= 0
+        if (name.startsWith(".")
             || name.indexOf("\\") >= 0) {
             return false;
         }
@@ -360,15 +362,13 @@ class PluginManager {
             return packageJson;
         });
     }
-    load(plugin) {
-        debug(`Loading ${plugin.name}...`);
-        plugin.instance = this.vm.load(plugin, plugin.mainFile);
-        plugin.loaded = true;
+    load(plugin, filePath) {
+        filePath = filePath || plugin.mainFile;
+        debug(`Loading ${plugin.name}${filePath}...`);
+        return this.vm.load(plugin, filePath);
     }
     unload(plugin) {
         debug(`Unloading ${plugin.name}...`);
-        plugin.loaded = false;
-        plugin.instance = undefined;
         this.vm.unload(plugin);
     }
     addPlugin(packageInfo) {
@@ -382,7 +382,8 @@ class PluginManager {
                 location,
                 mainFile: path.normalize(path.join(location, packageInfo.main || DefaultMainFile)),
                 loaded: false,
-                dependencies
+                dependencies,
+                requiredInstances: new Map()
             };
             // If no extensions for main file is used, just default to .js
             if (!path.extname(pluginInfo.mainFile)) {

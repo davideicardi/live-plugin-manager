@@ -5,8 +5,6 @@ export class PluginInfo implements IPluginInfo {
 	readonly name: string;
 	readonly version: string;
 
-	instance?: any;
-	loaded: boolean;
 	dependencies: string[];
 }
 
