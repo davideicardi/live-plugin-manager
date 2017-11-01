@@ -5,7 +5,7 @@ import * as os from "os";
 
 import {PluginManager, IPluginInfo} from "../index";
 
-describe("PluginManager suite", function() {
+describe("PluginManager:", function() {
 	this.timeout(15000);
 	this.slow(3000);
 
@@ -31,8 +31,29 @@ describe("PluginManager suite", function() {
 			const plugins = await manager.list();
 			assert.equal(plugins.length, 0);
 
+			assert.isUndefined(manager.alreadyInstalled("lodash"));
 			assert.isUndefined(manager.alreadyInstalled("moment"));
 			assert.isUndefined(manager.alreadyInstalled("my-basic-plugin"));
+		});
+
+		it("initially cannot require any plugins", async function() {
+			const isAvaialable = (name: string) => {
+				try {
+					manager.require(name);
+					return true;
+				} catch (e) {
+					try {
+						require(name);
+						return true;
+					} catch (e) {
+						return false;
+					}
+				}
+			};
+
+			assert.isFalse(isAvaialable("lodash"));
+			assert.isFalse(isAvaialable("moment"));
+			assert.isFalse(isAvaialable("my-basic-plugin"));
 		});
 
 		describe("from path", function() {
@@ -113,10 +134,39 @@ describe("PluginManager suite", function() {
 				throw new Error("Expected to fail");
 			});
 
-			it("installing a plugin", async function() {
+			it("installing a plugin (lodash)", async function() {
 				const pluginInfo = await manager.installFromNpm("lodash", "4.17.4");
 
 				const _ = manager.require("lodash");
+				assert.isDefined(_, "Plugin is not loaded");
+
+				// try to use the plugin
+				const result = _.defaults({ a: 1 }, { a: 3, b: 2 });
+				assert.equal(result.a, 1);
+				assert.equal(result.b, 2);
+			});
+		});
+
+		describe("from github", function() {
+			it("installing a not existing plugin", async function() {
+				try {
+					const pluginInfo = await manager.installFromGithub("this/doesnotexists");
+				} catch (e) {
+					return;
+				}
+
+				throw new Error("Expected to fail");
+			});
+
+			it("installing a plugin from master branch (underscore)", async function() {
+				// NOTE: Initially I have tried with lodash but it doesn't have a valid structure
+				// (missing lodash.js, probably need a compilation)
+
+				// https://github.com/jashkenas/underscore/archive/master.zip
+				// https://codeload.github.com/jashkenas/underscore/legacy.tar.gz/master
+				const pluginInfo = await manager.installFromGithub("jashkenas/underscore");
+
+				const _ = manager.require("underscore");
 				assert.isDefined(_, "Plugin is not loaded");
 
 				// try to use the plugin
@@ -545,7 +595,7 @@ describe("PluginManager suite", function() {
 			assert.isDefined(info.version);
 		});
 
-		it("get specific verison info", async function() {
+		it("get specific version info", async function() {
 			let info = await manager.getInfoFromNpm("lodash", "4.17.4");
 			assert.equal("lodash", info.name);
 			assert.equal("4.17.4", info.version);
@@ -555,7 +605,7 @@ describe("PluginManager suite", function() {
 			assert.equal("4.17.4", info.version);
 		});
 
-		it("get caret verison range info", async function() {
+		it("get caret version range info", async function() {
 			const info = await manager.getInfoFromNpm("lodash", "^3.0.0");
 			assert.equal("lodash", info.name);
 			assert.equal("3.10.1", info.version); // this test can fail if lodash publish a 3.x version
@@ -581,6 +631,14 @@ describe("PluginManager suite", function() {
 			const info = await manager.getInfoFromNpm("@types/node", "^6.0.0");
 			assert.equal("@types/node", info.name);
 			assert.equal("6.0.90", info.version); // this test can fail if @types/node publish a 6.x version
+		});
+	});
+
+	describe("github registry info", function() {
+		it("get version info", async function() {
+			const info = await manager.getInfoFromGithub("lodash/lodash");
+			assert.equal("lodash", info.name);
+			assert.isDefined(info.version);
 		});
 	});
 });

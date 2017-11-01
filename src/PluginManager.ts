@@ -7,6 +7,7 @@ import {PluginInfo, IPluginInfo} from "./PluginInfo";
 import * as lockFile from "lockfile";
 import * as semver from "semver";
 import * as Debug from "debug";
+import { GithubRegistryClient } from "./GithubRegistryClient";
 const debug = Debug("live-plugin-manager");
 
 const BASE_NPM_URL = "https://registry.npmjs.org";
@@ -48,6 +49,7 @@ export class PluginManager {
 	private readonly vm: PluginVm;
 	private readonly installedPlugins = new Array<PluginInfo>();
 	private readonly npmRegistry: NpmRegistryClient;
+	private readonly githubRegistry = new GithubRegistryClient();
 
 	constructor(options?: Partial<PluginManagerOptions>) {
 		if (options && !options.pluginsPath && options.cwd) {
@@ -86,6 +88,17 @@ export class PluginManager {
 		await this.syncLock();
 		try {
 			return await this.installFromPathLockFree(location, options);
+		} finally {
+			await this.syncUnlock();
+		}
+	}
+
+	async installFromGithub(repository: string): Promise<IPluginInfo> {
+		await fs.ensureDir(this.options.pluginsPath);
+
+		await this.syncLock();
+		try {
+			return await this.installFromGithubLockFree(repository);
 		} finally {
 			await this.syncUnlock();
 		}
@@ -172,6 +185,10 @@ export class PluginManager {
 		return await this.npmRegistry.get(name, version);
 	}
 
+	async getInfoFromGithub(repository: string): Promise<PackageInfo> {
+		return await this.githubRegistry.get(repository);
+	}
+
 	runScript(code: string): any {
 		return this.vm.runScript(code);
 	}
@@ -251,6 +268,36 @@ export class PluginManager {
 			await this.removeDownloaded(registryInfo.name);
 
 			await this.npmRegistry.download(
+				this.options.pluginsPath,
+				registryInfo);
+		}
+
+		return await this.addPlugin(registryInfo);
+	}
+
+	private async installFromGithubLockFree(repository: string): Promise<IPluginInfo> {
+		const registryInfo = await this.githubRegistry.get(repository);
+
+		if (!this.isValidPluginName(registryInfo.name)) {
+			throw new Error(`Invalid plugin name '${name}'`);
+		}
+
+		// already installed satisfied version
+		const installedInfo = this.alreadyInstalled(registryInfo.name, registryInfo.version);
+		if (installedInfo) {
+			return installedInfo;
+		}
+
+		// already installed not satisfied version
+		if (this.alreadyInstalled(registryInfo.name)) {
+			await this.uninstallLockFree(registryInfo.name);
+		}
+
+		// already downloaded
+		if (!(await this.isAlreadyDownloaded(registryInfo.name, registryInfo.version))) {
+			await this.removeDownloaded(registryInfo.name);
+
+			await this.githubRegistry.download(
 				this.options.pluginsPath,
 				registryInfo);
 		}

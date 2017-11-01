@@ -47,6 +47,7 @@
     "@types/url-join": "0.8.2",
     "debug": "3.0.0",
     "fs-extra": "4.0.1",
+    "github": "12.0.1",
     "lockfile": "1.0.3",
     "npm-registry-client": "8.5.0",
     "npmlog": "4.1.2",

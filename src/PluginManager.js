@@ -15,6 +15,7 @@ const PluginVm_1 = require("./PluginVm");
 const lockFile = require("lockfile");
 const semver = require("semver");
 const Debug = require("debug");
+const GithubRegistryClient_1 = require("./GithubRegistryClient");
 const debug = Debug("live-plugin-manager");
 const BASE_NPM_URL = "https://registry.npmjs.org";
 const DefaultMainFile = "index.js";
@@ -34,6 +35,7 @@ const NPM_LATEST_TAG = "latest";
 class PluginManager {
     constructor(options) {
         this.installedPlugins = new Array();
+        this.githubRegistry = new GithubRegistryClient_1.GithubRegistryClient();
         if (options && !options.pluginsPath && options.cwd) {
             options.pluginsPath = path.join(options.cwd, "plugin_packages");
         }
@@ -69,6 +71,18 @@ class PluginManager {
             yield this.syncLock();
             try {
                 return yield this.installFromPathLockFree(location, options);
+            }
+            finally {
+                yield this.syncUnlock();
+            }
+        });
+    }
+    installFromGithub(repository) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield fs.ensureDir(this.options.pluginsPath);
+            yield this.syncLock();
+            try {
+                return yield this.installFromGithubLockFree(repository);
             }
             finally {
                 yield this.syncUnlock();
@@ -153,6 +167,11 @@ class PluginManager {
             return yield this.npmRegistry.get(name, version);
         });
     }
+    getInfoFromGithub(repository) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield this.githubRegistry.get(repository);
+        });
+    }
     runScript(code) {
         return this.vm.runScript(code);
     }
@@ -218,6 +237,29 @@ class PluginManager {
             if (!(yield this.isAlreadyDownloaded(registryInfo.name, registryInfo.version))) {
                 yield this.removeDownloaded(registryInfo.name);
                 yield this.npmRegistry.download(this.options.pluginsPath, registryInfo);
+            }
+            return yield this.addPlugin(registryInfo);
+        });
+    }
+    installFromGithubLockFree(repository) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const registryInfo = yield this.githubRegistry.get(repository);
+            if (!this.isValidPluginName(registryInfo.name)) {
+                throw new Error(`Invalid plugin name '${name}'`);
+            }
+            // already installed satisfied version
+            const installedInfo = this.alreadyInstalled(registryInfo.name, registryInfo.version);
+            if (installedInfo) {
+                return installedInfo;
+            }
+            // already installed not satisfied version
+            if (this.alreadyInstalled(registryInfo.name)) {
+                yield this.uninstallLockFree(registryInfo.name);
+            }
+            // already downloaded
+            if (!(yield this.isAlreadyDownloaded(registryInfo.name, registryInfo.version))) {
+                yield this.removeDownloaded(registryInfo.name);
+                yield this.githubRegistry.download(this.options.pluginsPath, registryInfo);
             }
             return yield this.addPlugin(registryInfo);
         });

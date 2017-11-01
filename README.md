@@ -1,5 +1,7 @@
 # live-plugin-manager
 
+[![Build Status](https://travis-ci.org/davideicardi/live-plugin-manager.svg?branch=master)](https://travis-ci.org/davideicardi/live-plugin-manager)
+
 `live-plugin-manager` is a Node.js module that allows you to 
 install, uninstall and load any node package at runtime from npm registry.
 

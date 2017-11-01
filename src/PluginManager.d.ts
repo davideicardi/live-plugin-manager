@@ -22,6 +22,7 @@ export declare class PluginManager {
     private readonly vm;
     private readonly installedPlugins;
     private readonly npmRegistry;
+    private readonly githubRegistry;
     constructor(options?: Partial<PluginManagerOptions>);
     /**
      * Install a package from npm
@@ -35,6 +36,7 @@ export declare class PluginManager {
      * @param options options, if options.force == true then package is always reinstalled without version checking
      */
     installFromPath(location: string, options?: Partial<InstallFromPathOptions>): Promise<IPluginInfo>;
+    installFromGithub(repository: string): Promise<IPluginInfo>;
     /**
      * Install a package by specifiing code directly. If no version is specified it will be always reinstalled.
      * @param name plugin name
@@ -49,11 +51,13 @@ export declare class PluginManager {
     alreadyInstalled(name: string, version?: string): IPluginInfo | undefined;
     getInfo(name: string): IPluginInfo | undefined;
     getInfoFromNpm(name: string, version?: string): Promise<PackageInfo>;
+    getInfoFromGithub(repository: string): Promise<PackageInfo>;
     runScript(code: string): any;
     getFullInfo(name: string): PluginInfo | undefined;
     private uninstallLockFree(name);
     private installFromPathLockFree(location, options);
     private installFromNpmLockFree(name, version?);
+    private installFromGithubLockFree(repository);
     private installFromCodeLockFree(name, code, version?);
     private installDependencies(packageInfo);
     private unloadWithDependents(plugin);

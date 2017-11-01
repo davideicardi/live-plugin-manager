@@ -10,10 +10,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 const urlJoin = require("url-join");
 const path = require("path");
-const os = require("os");
 const fs = require("./fileSystem");
-const request = require("request");
 const Debug = require("debug");
+const tarballUtils_1 = require("./tarballUtils");
 const debug = Debug("live-plugin-manager.NpmRegistryClient");
 const Targz = require("tar.gz");
 const RegistryClient = require("npm-registry-client");
@@ -44,70 +43,15 @@ class NpmRegistryClient {
             if (!packageInfo.dist || !packageInfo.dist.tarball) {
                 throw new Error("Invalid dist.tarball property");
             }
-            const tgzFile = yield this.downloadTarball(packageInfo.dist.tarball);
+            const tgzFile = yield tarballUtils_1.downloadTarball(packageInfo.dist.tarball);
             const pluginDirectory = path.join(destinationDirectory, packageInfo.name);
-            yield this.extractTarball(tgzFile, pluginDirectory);
+            yield tarballUtils_1.extractTarball(tgzFile, pluginDirectory);
             yield fs.remove(tgzFile);
             return pluginDirectory;
         });
     }
-    extractTarball(tgzFile, destinationDirectory) {
-        return __awaiter(this, void 0, void 0, function* () {
-            debug(`Extracting ${tgzFile} to ${destinationDirectory} ...`);
-            const targz = new Targz({}, {
-                strip: 1 // strip the first "package" directory
-            });
-            yield targz.extract(tgzFile, destinationDirectory);
-        });
-    }
-    downloadTarball(url) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const destinationFile = path.join(os.tmpdir(), Date.now().toString() + ".tgz");
-            // delete file if exists
-            if (yield fs.exists(destinationFile)) {
-                yield fs.remove(destinationFile);
-            }
-            debug(`Downloading ${url} to ${destinationFile} ...`);
-            yield httpDownload(url, destinationFile);
-            return destinationFile;
-        });
-    }
 }
 exports.NpmRegistryClient = NpmRegistryClient;
-function httpDownload(sourceUrl, destinationFile) {
-    return new Promise((resolve, reject) => {
-        const fileStream = fs.createWriteStream(destinationFile);
-        request
-            .get(sourceUrl)
-            .on("error", (err) => {
-            fileStream.close();
-            fs.remove(destinationFile);
-            reject(err);
-        })
-            .pipe(fileStream);
-        fileStream.on("finish", function () {
-            fileStream.close();
-            resolve();
-        });
-    });
-    // code without using request...
-    // return new Promise<void>((resolve, reject) => {
-    // 	const fileStream = fs.createWriteStream(destinationFile);
-    // 	const httpGet = (sourceUrl.toLowerCase().startsWith("https") ? https.get : http.get);
-    // 	const request = httpGet(sourceUrl, function(response) {
-    // 		response.pipe(fileStream);
-    // 		fileStream.on("finish", function() {
-    // 			fileStream.close();
-    // 			resolve();
-    // 		});
-    // 	})
-    // 	.on("error", function(err) {
-    // 		fileStream.close();
-    // 		fs.remove(destinationFile);
-    // 		reject(err);
-    // 	});
-    // });
-}
 function encodeNpmName(name) {
     return name.replace("/", "%2F");
 }
