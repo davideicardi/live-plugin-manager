@@ -4,12 +4,8 @@
     "target": "es6",
     "moduleResolution": "node",
 
-    "noImplicitAny": true,
-    "strictNullChecks": true,
-    "noUnusedParameters": false,
-    "noImplicitReturns": true,
-    "noImplicitThis": true,
-    "noFallthroughCasesInSwitch": true,
+    "strict": true,
+    "noUnusedLocals": true,
 
     "sourceMap": true,
     "declaration": true

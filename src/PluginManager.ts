@@ -1,6 +1,5 @@
 import * as fs from "./fileSystem";
 import * as path from "path";
-import * as url from "url";
 import {NpmRegistryClient, PackageInfo} from "./NpmRegistryClient";
 import {PluginVm} from "./PluginVm";
 import {PluginInfo, IPluginInfo} from "./PluginInfo";

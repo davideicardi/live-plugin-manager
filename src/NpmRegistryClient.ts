@@ -1,12 +1,8 @@
 import * as urlJoin from "url-join";
 import * as path from "path";
 import * as fs from "./fileSystem";
-import * as Debug from "debug";
-import { httpDownload } from "./httpUtils";
 import { downloadTarball, extractTarball } from "./tarballUtils";
-const debug = Debug("live-plugin-manager.NpmRegistryClient");
 
-const Targz = require("tar.gz");
 const RegistryClient = require("npm-registry-client");
 const log = require("npmlog");
 log.level = "silent"; // disable log for npm-registry-client

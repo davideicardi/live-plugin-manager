@@ -61,7 +61,7 @@ describe("PluginManager:", function() {
 		describe("from path", function() {
 			it("installing a not existing plugin", async function() {
 				try {
-					const pluginInfo = await manager.installFromPath("/this/path/does-not-exists");
+					await manager.installFromPath("/this/path/does-not-exists");
 				} catch (e) {
 					return;
 				}
@@ -71,7 +71,7 @@ describe("PluginManager:", function() {
 
 			it("installing a plugin", async function() {
 				const pluginPath = path.join(__dirname, "my-basic-plugin");
-				const pluginInfo = await manager.installFromPath(pluginPath);
+				await manager.installFromPath(pluginPath);
 
 				const pluginInstance = manager.require("my-basic-plugin");
 				assert.isDefined(pluginInstance, "Plugin is not loaded");
@@ -82,7 +82,7 @@ describe("PluginManager:", function() {
 			it("installing a plugin with a special name", async function() {
 				// name with dot (.)
 				const pluginPath = path.join(__dirname, "my-plugin.js");
-				const pluginInfo = await manager.installFromPath(pluginPath);
+				await manager.installFromPath(pluginPath);
 				const pluginInstance = manager.require("my-plugin.js");
 				assert.isDefined(pluginInstance, "my-plugin.js!");
 
@@ -116,7 +116,7 @@ describe("PluginManager:", function() {
 
 			it("installing a plugin with minimal info", async function() {
 				const pluginPath = path.join(__dirname, "my-minimal-plugin");
-				const pluginInfo = await manager.installFromPath(pluginPath);
+				await manager.installFromPath(pluginPath);
 
 				const pluginInstance = manager.require("my-minimal-plugin");
 				assert.isDefined(pluginInstance, "Plugin is not loaded");
@@ -128,7 +128,7 @@ describe("PluginManager:", function() {
 		describe("from npm", function() {
 			it("installing a not existing plugin", async function() {
 				try {
-					const pluginInfo = await manager.installFromNpm("this-does-not-exists", "9.9.9");
+					await manager.installFromNpm("this-does-not-exists", "9.9.9");
 				} catch (e) {
 					return;
 				}
@@ -137,7 +137,7 @@ describe("PluginManager:", function() {
 			});
 
 			it("installing a plugin (lodash)", async function() {
-				const pluginInfo = await manager.installFromNpm("lodash", "4.17.4");
+				await manager.installFromNpm("lodash", "4.17.4");
 
 				const _ = manager.require("lodash");
 				assert.isDefined(_, "Plugin is not loaded");
@@ -161,7 +161,7 @@ describe("PluginManager:", function() {
 
 			it("installing a not existing plugin", async function() {
 				try {
-					const pluginInfo = await manager.installFromGithub("this/doesnotexists");
+					await manager.installFromGithub("this/doesnotexists");
 				} catch (e) {
 					return;
 				}
@@ -173,7 +173,7 @@ describe("PluginManager:", function() {
 			// (missing lodash.js, probably need a compilation)
 
 			it("installing a plugin from master branch (underscore)", async function() {
-				const pluginInfo = await manager.installFromGithub("jashkenas/underscore");
+				await manager.installFromGithub("jashkenas/underscore");
 
 				const _ = manager.require("underscore");
 				assert.isDefined(_, "Plugin is not loaded");
@@ -216,7 +216,7 @@ describe("PluginManager:", function() {
 				it(`installing a not valid plugin name "${invalidName}" is not supported`, async function() {
 					try {
 						const n = invalidName as any;
-						const pluginInfo = await manager.installFromNpm(n, "9.9.9");
+						await manager.installFromNpm(n, "9.9.9");
 					} catch (e) {
 						return;
 					}
@@ -450,7 +450,7 @@ describe("PluginManager:", function() {
 	describe("require", function() {
 		it("plugins respect the same node.js behavior", async function() {
 			const pluginSourcePath = path.join(__dirname, "my-test-plugin");
-			const pluginInfo = await manager.installFromPath(pluginSourcePath);
+			await manager.installFromPath(pluginSourcePath);
 
 			const pluginInstance = manager.require("my-test-plugin");
 			assert.isDefined(pluginInstance, "Plugin is not loaded");
@@ -479,7 +479,7 @@ describe("PluginManager:", function() {
 
 		it("requre a plugin sub folder", async function() {
 			const pluginSourcePath = path.join(__dirname, "my-test-plugin");
-			const pluginInfo = await manager.installFromPath(pluginSourcePath);
+			await manager.installFromPath(pluginSourcePath);
 
 			const result = manager.require("my-test-plugin/subFolder");
 			assert.isDefined(result, "value4");
@@ -487,7 +487,7 @@ describe("PluginManager:", function() {
 
 		it("requre a plugin sub file", async function() {
 			const pluginSourcePath = path.join(__dirname, "my-test-plugin");
-			const pluginInfo = await manager.installFromPath(pluginSourcePath);
+			await manager.installFromPath(pluginSourcePath);
 
 			const result = manager.require("my-test-plugin/subFolder/b");
 			assert.isDefined(result, "value3");
@@ -495,7 +495,7 @@ describe("PluginManager:", function() {
 
 		it("index file can be required explicitly or implicitly", async function() {
 			const pluginSourcePath = path.join(__dirname, "my-test-plugin");
-			const pluginInfo = await manager.installFromPath(pluginSourcePath);
+			await manager.installFromPath(pluginSourcePath);
 
 			const resultImplicit = manager.require("my-test-plugin");
 			const resultExplicit = manager.require("my-test-plugin/index");
@@ -511,7 +511,7 @@ describe("PluginManager:", function() {
 		describe("Npm dependencies", function() {
 			it("dependencies are installed", async function() {
 				const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
-				const pluginInfo = await manager.installFromPath(pluginSourcePath);
+				await manager.installFromPath(pluginSourcePath);
 
 				assert.equal(manager.list().length, 2);
 				assert.equal(manager.list()[0].name, "moment");
@@ -520,7 +520,7 @@ describe("PluginManager:", function() {
 
 			it("dependencies are available", async function() {
 				const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
-				const pluginInfo = await manager.installFromPath(pluginSourcePath);
+				await manager.installFromPath(pluginSourcePath);
 
 				const pluginInstance = manager.require("my-plugin-with-dep");
 
@@ -530,7 +530,7 @@ describe("PluginManager:", function() {
 
 			it("by default @types dependencies are not installed", async function() {
 				const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
-				const pluginInfo = await manager.installFromPath(pluginSourcePath);
+				await manager.installFromPath(pluginSourcePath);
 
 				for (const p of manager.list()) {
 					assert.notEqual(p.name, "@types/express");
@@ -541,7 +541,7 @@ describe("PluginManager:", function() {
 				// debug package is already available in the host
 
 				const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
-				const pluginInfo = await manager.installFromPath(pluginSourcePath);
+				await manager.installFromPath(pluginSourcePath);
 
 				for (const p of manager.list()) {
 					assert.notEqual(p.name, "debug");
@@ -553,7 +553,7 @@ describe("PluginManager:", function() {
 
 			it("dependencies are installed", async function() {
 				const pluginSourcePath = path.join(__dirname, "my-plugin-with-git-dep");
-				const pluginInfo = await manager.installFromPath(pluginSourcePath);
+				await manager.installFromPath(pluginSourcePath);
 
 				assert.equal(manager.list().length, 2);
 				assert.equal(manager.list()[0].name, "underscore");
@@ -568,7 +568,7 @@ describe("PluginManager:", function() {
 
 			it("ignored dependencies are not installed", async function() {
 				const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
-				const pluginInfo = await manager.installFromPath(pluginSourcePath);
+				await manager.installFromPath(pluginSourcePath);
 
 				for (const p of manager.list()) {
 					assert.notEqual(p.name, "moment");
@@ -577,11 +577,11 @@ describe("PluginManager:", function() {
 
 			it("if the ignored dependencies is required the plugin will not be loaded", async function() {
 				const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
-				const pluginInfo = await manager.installFromPath(pluginSourcePath);
+				await manager.installFromPath(pluginSourcePath);
 
 				// expected to fail because moment is missing...
 				try {
-					const pluginInstance = manager.require("my-plugin-with-dep");
+					manager.require("my-plugin-with-dep");
 				} catch (err) {
 					assert.equal(err.message, "Cannot find module 'moment'");
 					return;
@@ -631,7 +631,7 @@ describe("PluginManager:", function() {
 
 			it("static dependencies are not installed but resolved correctly", async function() {
 				const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
-				const pluginInfo = await manager.installFromPath(pluginSourcePath);
+				await manager.installFromPath(pluginSourcePath);
 
 				assert.equal(manager.list().length, 1);
 				assert.equal(manager.list()[0].name, "my-plugin-with-dep");
@@ -644,7 +644,7 @@ describe("PluginManager:", function() {
 		describe("Not compatible dependencies", function() {
 			it("dependencies are installed", async function() {
 				const pluginSourcePath = path.join(__dirname, "my-plugin-with-diff-dep");
-				const pluginInfo = await manager.installFromPath(pluginSourcePath);
+				await manager.installFromPath(pluginSourcePath);
 
 				assert.equal(manager.list().length, 2);
 				assert.equal(manager.list()[0].name, "debug");
@@ -653,7 +653,7 @@ describe("PluginManager:", function() {
 
 			it("dependencies are available", async function() {
 				const pluginSourcePath = path.join(__dirname, "my-plugin-with-diff-dep");
-				const pluginInfo = await manager.installFromPath(pluginSourcePath);
+				await manager.installFromPath(pluginSourcePath);
 
 				const pluginInstance = manager.require("my-plugin-with-diff-dep");
 

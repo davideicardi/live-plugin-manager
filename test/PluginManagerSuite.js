@@ -70,7 +70,7 @@ describe("PluginManager:", function () {
             it("installing a not existing plugin", function () {
                 return __awaiter(this, void 0, void 0, function* () {
                     try {
-                        const pluginInfo = yield manager.installFromPath("/this/path/does-not-exists");
+                        yield manager.installFromPath("/this/path/does-not-exists");
                     }
                     catch (e) {
                         return;
@@ -81,7 +81,7 @@ describe("PluginManager:", function () {
             it("installing a plugin", function () {
                 return __awaiter(this, void 0, void 0, function* () {
                     const pluginPath = path.join(__dirname, "my-basic-plugin");
-                    const pluginInfo = yield manager.installFromPath(pluginPath);
+                    yield manager.installFromPath(pluginPath);
                     const pluginInstance = manager.require("my-basic-plugin");
                     chai_1.assert.isDefined(pluginInstance, "Plugin is not loaded");
                     chai_1.assert.equal(pluginInstance.myVariable, "value1");
@@ -91,7 +91,7 @@ describe("PluginManager:", function () {
                 return __awaiter(this, void 0, void 0, function* () {
                     // name with dot (.)
                     const pluginPath = path.join(__dirname, "my-plugin.js");
-                    const pluginInfo = yield manager.installFromPath(pluginPath);
+                    yield manager.installFromPath(pluginPath);
                     const pluginInstance = manager.require("my-plugin.js");
                     chai_1.assert.isDefined(pluginInstance, "my-plugin.js!");
                 });
@@ -121,7 +121,7 @@ describe("PluginManager:", function () {
             it("installing a plugin with minimal info", function () {
                 return __awaiter(this, void 0, void 0, function* () {
                     const pluginPath = path.join(__dirname, "my-minimal-plugin");
-                    const pluginInfo = yield manager.installFromPath(pluginPath);
+                    yield manager.installFromPath(pluginPath);
                     const pluginInstance = manager.require("my-minimal-plugin");
                     chai_1.assert.isDefined(pluginInstance, "Plugin is not loaded");
                     chai_1.assert.equal(pluginInstance.myVariable, "value1");
@@ -132,7 +132,7 @@ describe("PluginManager:", function () {
             it("installing a not existing plugin", function () {
                 return __awaiter(this, void 0, void 0, function* () {
                     try {
-                        const pluginInfo = yield manager.installFromNpm("this-does-not-exists", "9.9.9");
+                        yield manager.installFromNpm("this-does-not-exists", "9.9.9");
                     }
                     catch (e) {
                         return;
@@ -142,7 +142,7 @@ describe("PluginManager:", function () {
             });
             it("installing a plugin (lodash)", function () {
                 return __awaiter(this, void 0, void 0, function* () {
-                    const pluginInfo = yield manager.installFromNpm("lodash", "4.17.4");
+                    yield manager.installFromNpm("lodash", "4.17.4");
                     const _ = manager.require("lodash");
                     chai_1.assert.isDefined(_, "Plugin is not loaded");
                     // try to use the plugin
@@ -163,7 +163,7 @@ describe("PluginManager:", function () {
             it("installing a not existing plugin", function () {
                 return __awaiter(this, void 0, void 0, function* () {
                     try {
-                        const pluginInfo = yield manager.installFromGithub("this/doesnotexists");
+                        yield manager.installFromGithub("this/doesnotexists");
                     }
                     catch (e) {
                         return;
@@ -175,7 +175,7 @@ describe("PluginManager:", function () {
             // (missing lodash.js, probably need a compilation)
             it("installing a plugin from master branch (underscore)", function () {
                 return __awaiter(this, void 0, void 0, function* () {
-                    const pluginInfo = yield manager.installFromGithub("jashkenas/underscore");
+                    yield manager.installFromGithub("jashkenas/underscore");
                     const _ = manager.require("underscore");
                     chai_1.assert.isDefined(_, "Plugin is not loaded");
                     // try to use the plugin
@@ -215,7 +215,7 @@ describe("PluginManager:", function () {
                     return __awaiter(this, void 0, void 0, function* () {
                         try {
                             const n = invalidName;
-                            const pluginInfo = yield manager.installFromNpm(n, "9.9.9");
+                            yield manager.installFromNpm(n, "9.9.9");
                         }
                         catch (e) {
                             return;
@@ -444,7 +444,7 @@ describe("PluginManager:", function () {
         it("plugins respect the same node.js behavior", function () {
             return __awaiter(this, void 0, void 0, function* () {
                 const pluginSourcePath = path.join(__dirname, "my-test-plugin");
-                const pluginInfo = yield manager.installFromPath(pluginSourcePath);
+                yield manager.installFromPath(pluginSourcePath);
                 const pluginInstance = manager.require("my-test-plugin");
                 chai_1.assert.isDefined(pluginInstance, "Plugin is not loaded");
                 chai_1.assert.equal(pluginInstance.myVariable, "value1");
@@ -469,7 +469,7 @@ describe("PluginManager:", function () {
         it("requre a plugin sub folder", function () {
             return __awaiter(this, void 0, void 0, function* () {
                 const pluginSourcePath = path.join(__dirname, "my-test-plugin");
-                const pluginInfo = yield manager.installFromPath(pluginSourcePath);
+                yield manager.installFromPath(pluginSourcePath);
                 const result = manager.require("my-test-plugin/subFolder");
                 chai_1.assert.isDefined(result, "value4");
             });
@@ -477,7 +477,7 @@ describe("PluginManager:", function () {
         it("requre a plugin sub file", function () {
             return __awaiter(this, void 0, void 0, function* () {
                 const pluginSourcePath = path.join(__dirname, "my-test-plugin");
-                const pluginInfo = yield manager.installFromPath(pluginSourcePath);
+                yield manager.installFromPath(pluginSourcePath);
                 const result = manager.require("my-test-plugin/subFolder/b");
                 chai_1.assert.isDefined(result, "value3");
             });
@@ -485,7 +485,7 @@ describe("PluginManager:", function () {
         it("index file can be required explicitly or implicitly", function () {
             return __awaiter(this, void 0, void 0, function* () {
                 const pluginSourcePath = path.join(__dirname, "my-test-plugin");
-                const pluginInfo = yield manager.installFromPath(pluginSourcePath);
+                yield manager.installFromPath(pluginSourcePath);
                 const resultImplicit = manager.require("my-test-plugin");
                 const resultExplicit = manager.require("my-test-plugin/index");
                 const resultExplicit2 = manager.require("my-test-plugin/index.js");
@@ -500,7 +500,7 @@ describe("PluginManager:", function () {
             it("dependencies are installed", function () {
                 return __awaiter(this, void 0, void 0, function* () {
                     const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
-                    const pluginInfo = yield manager.installFromPath(pluginSourcePath);
+                    yield manager.installFromPath(pluginSourcePath);
                     chai_1.assert.equal(manager.list().length, 2);
                     chai_1.assert.equal(manager.list()[0].name, "moment");
                     chai_1.assert.equal(manager.list()[1].name, "my-plugin-with-dep");
@@ -509,7 +509,7 @@ describe("PluginManager:", function () {
             it("dependencies are available", function () {
                 return __awaiter(this, void 0, void 0, function* () {
                     const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
-                    const pluginInfo = yield manager.installFromPath(pluginSourcePath);
+                    yield manager.installFromPath(pluginSourcePath);
                     const pluginInstance = manager.require("my-plugin-with-dep");
                     chai_1.assert.equal(pluginInstance.testDebug, require("debug")); // I expect to be exactly the same
                     chai_1.assert.equal(pluginInstance.testMoment, "1981/10/06");
@@ -518,7 +518,7 @@ describe("PluginManager:", function () {
             it("by default @types dependencies are not installed", function () {
                 return __awaiter(this, void 0, void 0, function* () {
                     const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
-                    const pluginInfo = yield manager.installFromPath(pluginSourcePath);
+                    yield manager.installFromPath(pluginSourcePath);
                     for (const p of manager.list()) {
                         chai_1.assert.notEqual(p.name, "@types/express");
                     }
@@ -528,7 +528,7 @@ describe("PluginManager:", function () {
                 return __awaiter(this, void 0, void 0, function* () {
                     // debug package is already available in the host
                     const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
-                    const pluginInfo = yield manager.installFromPath(pluginSourcePath);
+                    yield manager.installFromPath(pluginSourcePath);
                     for (const p of manager.list()) {
                         chai_1.assert.notEqual(p.name, "debug");
                     }
@@ -539,7 +539,7 @@ describe("PluginManager:", function () {
             it("dependencies are installed", function () {
                 return __awaiter(this, void 0, void 0, function* () {
                     const pluginSourcePath = path.join(__dirname, "my-plugin-with-git-dep");
-                    const pluginInfo = yield manager.installFromPath(pluginSourcePath);
+                    yield manager.installFromPath(pluginSourcePath);
                     chai_1.assert.equal(manager.list().length, 2);
                     chai_1.assert.equal(manager.list()[0].name, "underscore");
                     chai_1.assert.equal(manager.list()[1].name, "my-plugin-with-git-dep");
@@ -553,7 +553,7 @@ describe("PluginManager:", function () {
             it("ignored dependencies are not installed", function () {
                 return __awaiter(this, void 0, void 0, function* () {
                     const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
-                    const pluginInfo = yield manager.installFromPath(pluginSourcePath);
+                    yield manager.installFromPath(pluginSourcePath);
                     for (const p of manager.list()) {
                         chai_1.assert.notEqual(p.name, "moment");
                     }
@@ -562,10 +562,10 @@ describe("PluginManager:", function () {
             it("if the ignored dependencies is required the plugin will not be loaded", function () {
                 return __awaiter(this, void 0, void 0, function* () {
                     const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
-                    const pluginInfo = yield manager.installFromPath(pluginSourcePath);
+                    yield manager.installFromPath(pluginSourcePath);
                     // expected to fail because moment is missing...
                     try {
-                        const pluginInstance = manager.require("my-plugin-with-dep");
+                        manager.require("my-plugin-with-dep");
                     }
                     catch (err) {
                         chai_1.assert.equal(err.message, "Cannot find module 'moment'");
@@ -613,7 +613,7 @@ describe("PluginManager:", function () {
             it("static dependencies are not installed but resolved correctly", function () {
                 return __awaiter(this, void 0, void 0, function* () {
                     const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
-                    const pluginInfo = yield manager.installFromPath(pluginSourcePath);
+                    yield manager.installFromPath(pluginSourcePath);
                     chai_1.assert.equal(manager.list().length, 1);
                     chai_1.assert.equal(manager.list()[0].name, "my-plugin-with-dep");
                     const pluginInstance = manager.require("my-plugin-with-dep");
@@ -625,7 +625,7 @@ describe("PluginManager:", function () {
             it("dependencies are installed", function () {
                 return __awaiter(this, void 0, void 0, function* () {
                     const pluginSourcePath = path.join(__dirname, "my-plugin-with-diff-dep");
-                    const pluginInfo = yield manager.installFromPath(pluginSourcePath);
+                    yield manager.installFromPath(pluginSourcePath);
                     chai_1.assert.equal(manager.list().length, 2);
                     chai_1.assert.equal(manager.list()[0].name, "debug");
                     chai_1.assert.equal(manager.list()[1].name, "my-plugin-with-diff-dep");
@@ -634,7 +634,7 @@ describe("PluginManager:", function () {
             it("dependencies are available", function () {
                 return __awaiter(this, void 0, void 0, function* () {
                     const pluginSourcePath = path.join(__dirname, "my-plugin-with-diff-dep");
-                    const pluginInfo = yield manager.installFromPath(pluginSourcePath);
+                    yield manager.installFromPath(pluginSourcePath);
                     const pluginInstance = manager.require("my-plugin-with-diff-dep");
                     chai_1.assert.notEqual(pluginInstance.testDebug, require("debug")); // I expect to be different (v2 vs v3)
                 });

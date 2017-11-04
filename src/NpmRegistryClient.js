@@ -11,10 +11,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const urlJoin = require("url-join");
 const path = require("path");
 const fs = require("./fileSystem");
-const Debug = require("debug");
 const tarballUtils_1 = require("./tarballUtils");
-const debug = Debug("live-plugin-manager.NpmRegistryClient");
-const Targz = require("tar.gz");
 const RegistryClient = require("npm-registry-client");
 const log = require("npmlog");
 log.level = "silent"; // disable log for npm-registry-client
