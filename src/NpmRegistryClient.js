@@ -34,6 +34,7 @@ class NpmRegistryClient {
                     }
                     return reject(err);
                 }
+                // TODO Check if data is valid?
                 resolve(data);
             });
         });
