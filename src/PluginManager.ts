@@ -553,7 +553,7 @@ export class PluginManager {
 			lockFile.lock(lockLocation, { wait: 30000 }, (err) => {
 				if (err) {
 					debug("Failed to acquire lock", err);
-					return reject("Failed to acquire lock");
+					return reject("Failed to acquire lock: " + err.message);
 				}
 
 				resolve();
@@ -569,7 +569,7 @@ export class PluginManager {
 			lockFile.unlock(lockLocation, (err) => {
 				if (err) {
 					debug("Failed to release lock", err);
-					return reject("Failed to release lock");
+					return reject("Failed to release lock: " + err.message);
 				}
 
 				resolve();
