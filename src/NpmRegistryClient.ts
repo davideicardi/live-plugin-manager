@@ -80,6 +80,7 @@ function normalizeVersion(name: string, version: string): string {
 			return "*"; // TODO I'n not sure it is the same...
 		}
 
+		// add = if no other operators are specified
 		if (isNumber(version[0])) {
 			return "=" + encodeURIComponent(version);
 		}

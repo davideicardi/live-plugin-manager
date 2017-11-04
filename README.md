@@ -13,7 +13,8 @@ Main features are:
 - Install and run Node packages at runtime (no deployment)
 - Install from npm registry (private or public)
 - Install from filesystem
-- Update/uninstall
+- Install from github (branch, commit or tag)
+- Update/uninstall packages
 - Most Node.js packages can be installed
   - No special configuration are required extension points
   - See Known limitations
@@ -25,9 +26,11 @@ Main features are:
 - Implementated in Typescript
 - Fully tested (mocha tests)
 
+As usual there are some **known limitations**, see section at the end.
+
 ## Installation
 
-    npm install live-plugin-manager --save
+    npm install live-plugin-manager
 
 ## Usage
 
@@ -59,7 +62,7 @@ Here another more complex scenario where I install `express` with all it's depen
     const manager = new PluginManager();
 
     async function run() {
-      await manager.installFromNpm("express");
+      await manager.install("express");
       const express = manager.require("express");
 
       const app = express();
@@ -105,9 +108,34 @@ Create a new instance of `PluginManager`. Takes an optional `options` parameter 
 - `ignoredDependencies`: array of string or RegExp with the list of dependencies to ignore, default to `@types/*`
 - `staticDependencies`: object with an optional list of static dependencies that can be used to force a dependencies to be ignored (not installed when a plugin depend on it) and loaded from this list
 
-### pluginManager.installFromNpm(name: string, version = "latest"): Promise\<IPluginInfo\>)
+### pluginManager.install(name: string, version?: string): Promise\<IPluginInfo\>
+
+Install the specified package from npm registry or directly from github repository. 
+`version` parameter can be a version like `1.0.3` or a github repository in the format `owner/repository_name#ref` (like `expressjs/express#351396f`).
+If a version is specified package is downloaded from NPM.
+
+Dependencies are automatically installed (devDependencies are ignored).
+
+### pluginManager.installFromNpm(name: string, version = "latest"): Promise\<IPluginInfo\>
 
 Install the specified package from npm registry. Dependencies are automatically installed (devDependencies are ignored).
+
+### pluginManager.installFromGithub(repository: string): Promise\<IPluginInfo\>
+
+Install the specified package from github. `repository` is specified in the format `owner/repository_name#ref` (like `expressjs/express#351396f`).
+Dependencies are automatically installed (devDependencies are ignored).
+
+Note: Github has an API rate limit of 60 calls if not authenticated. To authenticate calls just set the `githubAuthentication` property in the options:
+
+    manager = new PluginManager({
+      githubAuthentication: {
+        "type": "basic",
+        "username": "YOUR_USER",
+        "password": "YOUR_PERSONAL_TOKEN"
+      }
+    });
+
+See [Github api authentication](https://github.com/octokit/node-github#authentication) for more info.
 
 ### installFromPath(location: string, options: {force: boolean} = {}): Promise\<IPluginInfo\>
 
@@ -178,8 +206,10 @@ Usually you should add this to your `.gitignore` file:
 
 There are some known limitations when installing a package:
 
+- Different plugins cannot depends on different/incompatible modules. If plugin A require module x at version 1 and plugin B require modele X at version 2 then plugin A and plugin B cannot be installed simultaneously.
 - No `pre/post-install` scripts are executed (for now)
 - C/C++ packages (`.node`) are not supported
+- Plugin dependencies can be specified only as NPM dependencies (version number) or github dependencies (owner/repo), url or other kind of dependencies are not supported
 
 If you find other problems please open an issue.
 

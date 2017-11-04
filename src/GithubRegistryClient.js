@@ -15,8 +15,12 @@ const Debug = require("debug");
 const tarballUtils_1 = require("./tarballUtils");
 const debug = Debug("live-plugin-manager.GithubRegistryClient");
 class GithubRegistryClient {
-    constructor() {
+    constructor(auth) {
         this.gitHubApi = new GitHubApi({ followRedirects: false });
+        if (auth) {
+            debug(`Authenticating github api with ${auth.type}...`);
+            this.gitHubApi.authenticate(auth);
+        }
     }
     get(repository) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -30,6 +34,8 @@ class GithubRegistryClient {
                 throw new Error("Invalid plugin github repository " + repository);
             }
             debug("Repository package info: ", pkgContent.name, pkgContent.version);
+            // https://github.com/jashkenas/underscore/archive/master.zip
+            // https://codeload.github.com/jashkenas/underscore/legacy.tar.gz/master
             const archiveLinkResponse = yield this.gitHubApi.repos.getArchiveLink(Object.assign({}, repoInfo, { archive_format: "tarball" }));
             const archiveLink = archiveLinkResponse.meta.location;
             if (!(typeof archiveLink === "string")) {
@@ -51,6 +57,9 @@ class GithubRegistryClient {
             yield fs.remove(tgzFile);
             return pluginDirectory;
         });
+    }
+    isGithubRepo(version) {
+        return version.indexOf("/") > 0;
     }
 }
 exports.GithubRegistryClient = GithubRegistryClient;

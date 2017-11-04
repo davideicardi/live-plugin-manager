@@ -1,6 +1,7 @@
 /// <reference types="node" />
 import { PackageInfo } from "./NpmRegistryClient";
 import { PluginInfo, IPluginInfo } from "./PluginInfo";
+import * as GitHubApi from "github";
 export interface PluginManagerOptions {
     cwd: string;
     pluginsPath: string;
@@ -13,6 +14,7 @@ export interface PluginManagerOptions {
     staticDependencies: {
         [key: string]: any;
     };
+    githubAuthentication?: GitHubApi.Auth;
 }
 export interface InstallFromPathOptions {
     force: boolean;
@@ -24,6 +26,7 @@ export declare class PluginManager {
     private readonly npmRegistry;
     private readonly githubRegistry;
     constructor(options?: Partial<PluginManagerOptions>);
+    install(name: string, version?: string): Promise<IPluginInfo>;
     /**
      * Install a package from npm
      * @param name name of the package
@@ -55,6 +58,7 @@ export declare class PluginManager {
     runScript(code: string): any;
     getFullInfo(name: string): PluginInfo | undefined;
     private uninstallLockFree(name);
+    private installLockFree(name, version?);
     private installFromPathLockFree(location, options);
     private installFromNpmLockFree(name, version?);
     private installFromGithubLockFree(repository);

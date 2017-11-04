@@ -35,13 +35,25 @@ const NPM_LATEST_TAG = "latest";
 class PluginManager {
     constructor(options) {
         this.installedPlugins = new Array();
-        this.githubRegistry = new GithubRegistryClient_1.GithubRegistryClient();
         if (options && !options.pluginsPath && options.cwd) {
             options.pluginsPath = path.join(options.cwd, "plugin_packages");
         }
         this.options = Object.assign({}, DefaultOptions, (options || {}));
         this.vm = new PluginVm_1.PluginVm(this);
         this.npmRegistry = new NpmRegistryClient_1.NpmRegistryClient(this.options.npmRegistryUrl, this.options.npmRegistryConfig);
+        this.githubRegistry = new GithubRegistryClient_1.GithubRegistryClient(this.options.githubAuthentication);
+    }
+    install(name, version) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield fs.ensureDir(this.options.pluginsPath);
+            yield this.syncLock();
+            try {
+                return yield this.installLockFree(name, version);
+            }
+            finally {
+                yield this.syncUnlock();
+            }
+        });
     }
     /**
      * Install a package from npm
@@ -192,6 +204,17 @@ class PluginManager {
             yield this.deleteAndUnloadPlugin(info);
         });
     }
+    installLockFree(name, version) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!this.isValidPluginName(name)) {
+                throw new Error(`Invalid plugin name '${name}'`);
+            }
+            if (version && this.githubRegistry.isGithubRepo(version)) {
+                return this.installFromGithubLockFree(version);
+            }
+            return this.installFromNpmLockFree(name, version);
+        });
+    }
     installFromPathLockFree(location, options) {
         return __awaiter(this, void 0, void 0, function* () {
             const packageJson = yield this.readPackageJsonFromPath(location);
@@ -323,7 +346,7 @@ class PluginManager {
                 }
                 else {
                     debug(`Installing dependencies of ${packageInfo.name}: ${key} ...`);
-                    yield this.installFromNpmLockFree(key, version);
+                    yield this.installLockFree(key, version);
                 }
                 dependencies.push(key);
             }
@@ -342,6 +365,11 @@ class PluginManager {
         if (!this.options.hostRequire) {
             return false;
         }
+        // TODO Here I should check also if version is compatible?
+        // I can resolve the module, get the corresponding package.json
+        //  load it and get the version, then use
+        // if (semver.satisfies(installedInfo.version, version))
+        // to check if compatible...
         try {
             this.options.hostRequire.resolve(name);
             return true;

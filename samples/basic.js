@@ -13,8 +13,8 @@ const index_1 = require("../index");
 const manager = new index_1.PluginManager();
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
-        yield manager.installFromNpm("moment");
-        yield manager.installFromNpm("lodash", "4.17.4");
+        yield manager.install("moment");
+        yield manager.install("lodash", "4.17.4");
         const _ = manager.require("lodash");
         console.log(_.defaults({ a: 1 }, { a: 3, b: 2 }));
         const moment = manager.require("moment");

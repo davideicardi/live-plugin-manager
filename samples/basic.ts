@@ -5,8 +5,8 @@ import {PluginManager} from "../index";
 const manager = new PluginManager();
 
 async function run() {
-	await manager.installFromNpm("moment");
-	await manager.installFromNpm("lodash", "4.17.4");
+	await manager.install("moment");
+	await manager.install("lodash", "4.17.4");
 
 	const _ = manager.require("lodash");
 	console.log(_.defaults({ a: 1 }, { a: 3, b: 2 }));

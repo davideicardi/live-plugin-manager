@@ -14,7 +14,7 @@ const manager = new index_1.PluginManager();
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         console.log("Installing express...");
-        yield manager.installFromNpm("express");
+        yield manager.install("express");
         const express = manager.require("express");
         const app = express();
         app.get("/", function (req, res) {

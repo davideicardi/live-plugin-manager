@@ -19,7 +19,9 @@ describe("PluginManager:", function () {
     let manager;
     beforeEach(function () {
         return __awaiter(this, void 0, void 0, function* () {
-            manager = new index_1.PluginManager();
+            manager = new index_1.PluginManager({
+                githubAuthentication: getGithubAuth()
+            });
             // sanity check to see if the pluginsPath is what we expect to be
             if (manager.options.pluginsPath !== path.join(__dirname, "../plugin_packages")) {
                 throw new Error("Invalid plugins path " + manager.options.pluginsPath);
@@ -151,6 +153,7 @@ describe("PluginManager:", function () {
             });
         });
         describe("from github", function () {
+            this.slow(4000);
             it("installing a not existing plugin", function () {
                 return __awaiter(this, void 0, void 0, function* () {
                     try {
@@ -162,13 +165,35 @@ describe("PluginManager:", function () {
                     throw new Error("Expected to fail");
                 });
             });
+            // NOTE: Initially I have tried with lodash but it doesn't have a valid structure
+            // (missing lodash.js, probably need a compilation)
             it("installing a plugin from master branch (underscore)", function () {
                 return __awaiter(this, void 0, void 0, function* () {
-                    // NOTE: Initially I have tried with lodash but it doesn't have a valid structure
-                    // (missing lodash.js, probably need a compilation)
-                    // https://github.com/jashkenas/underscore/archive/master.zip
-                    // https://codeload.github.com/jashkenas/underscore/legacy.tar.gz/master
                     const pluginInfo = yield manager.installFromGithub("jashkenas/underscore");
+                    const _ = manager.require("underscore");
+                    chai_1.assert.isDefined(_, "Plugin is not loaded");
+                    // try to use the plugin
+                    const result = _.defaults({ a: 1 }, { a: 3, b: 2 });
+                    chai_1.assert.equal(result.a, 1);
+                    chai_1.assert.equal(result.b, 2);
+                });
+            });
+            it("installing a plugin from commit (underscore)", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    const pluginInfo = yield manager.installFromGithub("jashkenas/underscore#1aed9ec");
+                    chai_1.assert.equal(pluginInfo.version, "1.8.0");
+                    const _ = manager.require("underscore");
+                    chai_1.assert.isDefined(_, "Plugin is not loaded");
+                    // try to use the plugin
+                    const result = _.defaults({ a: 1 }, { a: 3, b: 2 });
+                    chai_1.assert.equal(result.a, 1);
+                    chai_1.assert.equal(result.b, 2);
+                });
+            });
+            it("installing a plugin from tag (underscore)", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    const pluginInfo = yield manager.installFromGithub("jashkenas/underscore#1.8.0");
+                    chai_1.assert.equal(pluginInfo.version, "1.8.0");
                     const _ = manager.require("underscore");
                     chai_1.assert.isDefined(_, "Plugin is not loaded");
                     // try to use the plugin
@@ -464,13 +489,15 @@ describe("PluginManager:", function () {
         });
     });
     describe("plugins dependencies", function () {
+        this.slow(6000);
         it("dependencies are installed", function () {
             return __awaiter(this, void 0, void 0, function* () {
                 const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
                 const pluginInfo = yield manager.installFromPath(pluginSourcePath);
-                chai_1.assert.equal(manager.list().length, 2);
+                chai_1.assert.equal(manager.list().length, 3);
                 chai_1.assert.equal(manager.list()[0].name, "moment");
-                chai_1.assert.equal(manager.list()[1].name, "my-plugin-with-dep");
+                chai_1.assert.equal(manager.list()[1].name, "underscore");
+                chai_1.assert.equal(manager.list()[2].name, "my-plugin-with-dep");
             });
         });
         it("dependencies are available", function () {
@@ -479,6 +506,7 @@ describe("PluginManager:", function () {
                 const pluginInfo = yield manager.installFromPath(pluginSourcePath);
                 const pluginInstance = manager.require("my-plugin-with-dep");
                 chai_1.assert.equal(pluginInstance.testMoment, "1981/10/06");
+                chai_1.assert.equal(pluginInstance.testUnderscore, "hello underscore!");
             });
         });
         it("by default @types dependencies are not installed", function () {
@@ -502,7 +530,7 @@ describe("PluginManager:", function () {
         });
         describe("Given some ignored dependencies", function () {
             beforeEach(function () {
-                manager.options.ignoredDependencies = [/^@types\//, "moment"];
+                manager.options.ignoredDependencies = [/^@types\//, "moment", "underscore"];
             });
             it("ignored dependencies are not installed", function () {
                 return __awaiter(this, void 0, void 0, function* () {
@@ -555,14 +583,17 @@ describe("PluginManager:", function () {
                 });
             });
         });
-        describe("given a static dependencies", function () {
+        describe("given static dependencies", function () {
             beforeEach(function () {
                 const momentStub = () => {
                     return {
                         format: () => "this is moment stub"
                     };
                 };
-                manager.options.staticDependencies = { moment: momentStub };
+                const underscoreStub = {
+                    template: () => function () { return "this is underscore stub"; }
+                };
+                manager.options.staticDependencies = { moment: momentStub, underscore: underscoreStub };
             });
             it("static dependencies are not installed but resolved correctly", function () {
                 return __awaiter(this, void 0, void 0, function* () {
@@ -572,6 +603,7 @@ describe("PluginManager:", function () {
                     chai_1.assert.equal(manager.list()[0].name, "my-plugin-with-dep");
                     const pluginInstance = manager.require("my-plugin-with-dep");
                     chai_1.assert.equal(pluginInstance.testMoment, "this is moment stub");
+                    chai_1.assert.equal(pluginInstance.testUnderscore, "this is underscore stub");
                 });
             });
         });
@@ -636,4 +668,14 @@ describe("PluginManager:", function () {
         });
     });
 });
+function getGithubAuth() {
+    try {
+        return require("./github_auth.json");
+    }
+    catch (e) {
+        // tslint:disable-next-line:no-console
+        console.warn("No github_auth.json found, github api can give rate limits errors");
+        return undefined;
+    }
+}
 //# sourceMappingURL=PluginManagerSuite.js.map

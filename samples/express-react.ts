@@ -6,11 +6,11 @@ const manager = new PluginManager();
 
 async function run() {
 	console.log("Installing express...");
-	await manager.installFromNpm("express");
+	await manager.install("express");
 	console.log("Installing react...");
-	await manager.installFromNpm("react");
+	await manager.install("react");
 	console.log("Installing react-dom...");
-	await manager.installFromNpm("react-dom");
+	await manager.install("react-dom");
 
 	const express = manager.require("express");
 	const React = manager.require("react");

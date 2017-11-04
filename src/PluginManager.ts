@@ -8,6 +8,7 @@ import * as lockFile from "lockfile";
 import * as semver from "semver";
 import * as Debug from "debug";
 import { GithubRegistryClient } from "./GithubRegistryClient";
+import * as GitHubApi from "github";
 const debug = Debug("live-plugin-manager");
 
 const BASE_NPM_URL = "https://registry.npmjs.org";
@@ -23,6 +24,7 @@ export interface PluginManagerOptions {
 	hostRequire?: NodeRequire;
 	ignoredDependencies: Array<string|RegExp>;
 	staticDependencies: { [key: string]: any; };
+	githubAuthentication?: GitHubApi.Auth;
 }
 
 const cwd = process.cwd();
@@ -49,7 +51,7 @@ export class PluginManager {
 	private readonly vm: PluginVm;
 	private readonly installedPlugins = new Array<PluginInfo>();
 	private readonly npmRegistry: NpmRegistryClient;
-	private readonly githubRegistry = new GithubRegistryClient();
+	private readonly githubRegistry: GithubRegistryClient;
 
 	constructor(options?: Partial<PluginManagerOptions>) {
 		if (options && !options.pluginsPath && options.cwd) {
@@ -59,6 +61,18 @@ export class PluginManager {
 		this.options = {...DefaultOptions, ...(options || {})};
 		this.vm = new PluginVm(this);
 		this.npmRegistry = new NpmRegistryClient(this.options.npmRegistryUrl, this.options.npmRegistryConfig);
+		this.githubRegistry = new GithubRegistryClient(this.options.githubAuthentication);
+	}
+
+	async install(name: string, version?: string): Promise<IPluginInfo> {
+		await fs.ensureDir(this.options.pluginsPath);
+
+		await this.syncLock();
+		try {
+			return await this.installLockFree(name, version);
+		} finally {
+			await this.syncUnlock();
+		}
 	}
 
 	/**
@@ -211,6 +225,18 @@ export class PluginManager {
 		}
 
 		await this.deleteAndUnloadPlugin(info);
+	}
+
+	private async installLockFree(name: string, version?: string): Promise<IPluginInfo> {
+		if (!this.isValidPluginName(name)) {
+			throw new Error(`Invalid plugin name '${name}'`);
+		}
+
+		if (version && this.githubRegistry.isGithubRepo(version)) {
+			return this.installFromGithubLockFree(version);
+		}
+
+		return this.installFromNpmLockFree(name, version);
 	}
 
 	private async installFromPathLockFree(
@@ -372,7 +398,7 @@ export class PluginManager {
 				debug(`Installing dependencies of ${packageInfo.name}: ${key} is already installed`);
 			} else {
 				debug(`Installing dependencies of ${packageInfo.name}: ${key} ...`);
-				await this.installFromNpmLockFree(key, version);
+				await this.installLockFree(key, version);
 			}
 
 			dependencies.push(key);
@@ -395,6 +421,12 @@ export class PluginManager {
 		if (!this.options.hostRequire) {
 			return false;
 		}
+
+		// TODO Here I should check also if version is compatible?
+		// I can resolve the module, get the corresponding package.json
+		//  load it and get the version, then use
+		// if (semver.satisfies(installedInfo.version, version))
+		// to check if compatible...
 
 		try {
 			this.options.hostRequire.resolve(name);

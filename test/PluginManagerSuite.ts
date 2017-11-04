@@ -12,7 +12,9 @@ describe("PluginManager:", function() {
 	let manager: PluginManager;
 
 	beforeEach(async function() {
-		manager = new PluginManager();
+		manager = new PluginManager({
+			githubAuthentication: getGithubAuth()
+		});
 
 		// sanity check to see if the pluginsPath is what we expect to be
 		if (manager.options.pluginsPath !== path.join(__dirname, "../plugin_packages")) {
@@ -148,6 +150,8 @@ describe("PluginManager:", function() {
 		});
 
 		describe("from github", function() {
+			this.slow(4000);
+
 			it("installing a not existing plugin", async function() {
 				try {
 					const pluginInfo = await manager.installFromGithub("this/doesnotexists");
@@ -158,13 +162,37 @@ describe("PluginManager:", function() {
 				throw new Error("Expected to fail");
 			});
 
-			it("installing a plugin from master branch (underscore)", async function() {
-				// NOTE: Initially I have tried with lodash but it doesn't have a valid structure
-				// (missing lodash.js, probably need a compilation)
+			// NOTE: Initially I have tried with lodash but it doesn't have a valid structure
+			// (missing lodash.js, probably need a compilation)
 
-				// https://github.com/jashkenas/underscore/archive/master.zip
-				// https://codeload.github.com/jashkenas/underscore/legacy.tar.gz/master
+			it("installing a plugin from master branch (underscore)", async function() {
 				const pluginInfo = await manager.installFromGithub("jashkenas/underscore");
+
+				const _ = manager.require("underscore");
+				assert.isDefined(_, "Plugin is not loaded");
+
+				// try to use the plugin
+				const result = _.defaults({ a: 1 }, { a: 3, b: 2 });
+				assert.equal(result.a, 1);
+				assert.equal(result.b, 2);
+			});
+
+			it("installing a plugin from commit (underscore)", async function() {
+				const pluginInfo = await manager.installFromGithub("jashkenas/underscore#1aed9ec");
+				assert.equal(pluginInfo.version, "1.8.0");
+
+				const _ = manager.require("underscore");
+				assert.isDefined(_, "Plugin is not loaded");
+
+				// try to use the plugin
+				const result = _.defaults({ a: 1 }, { a: 3, b: 2 });
+				assert.equal(result.a, 1);
+				assert.equal(result.b, 2);
+			});
+
+			it("installing a plugin from tag (underscore)", async function() {
+				const pluginInfo = await manager.installFromGithub("jashkenas/underscore#1.8.0");
+				assert.equal(pluginInfo.version, "1.8.0");
 
 				const _ = manager.require("underscore");
 				assert.isDefined(_, "Plugin is not loaded");
@@ -471,13 +499,16 @@ describe("PluginManager:", function() {
 	});
 
 	describe("plugins dependencies", function() {
+		this.slow(6000);
+
 		it("dependencies are installed", async function() {
 			const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
 			const pluginInfo = await manager.installFromPath(pluginSourcePath);
 
-			assert.equal(manager.list().length, 2);
+			assert.equal(manager.list().length, 3);
 			assert.equal(manager.list()[0].name, "moment");
-			assert.equal(manager.list()[1].name, "my-plugin-with-dep");
+			assert.equal(manager.list()[1].name, "underscore");
+			assert.equal(manager.list()[2].name, "my-plugin-with-dep");
 		});
 
 		it("dependencies are available", async function() {
@@ -485,7 +516,9 @@ describe("PluginManager:", function() {
 			const pluginInfo = await manager.installFromPath(pluginSourcePath);
 
 			const pluginInstance = manager.require("my-plugin-with-dep");
+
 			assert.equal(pluginInstance.testMoment, "1981/10/06");
+			assert.equal(pluginInstance.testUnderscore, "hello underscore!");
 		});
 
 		it("by default @types dependencies are not installed", async function() {
@@ -510,7 +543,7 @@ describe("PluginManager:", function() {
 
 		describe("Given some ignored dependencies", function() {
 			beforeEach(function() {
-				manager.options.ignoredDependencies = [/^@types\//, "moment"];
+				manager.options.ignoredDependencies = [/^@types\//, "moment", "underscore"];
 			});
 
 			it("ignored dependencies are not installed", async function() {
@@ -565,14 +598,18 @@ describe("PluginManager:", function() {
 			});
 		});
 
-		describe("given a static dependencies", function() {
+		describe("given static dependencies", function() {
 			beforeEach(function() {
 				const momentStub = () => {
 					return {
 						format: () => "this is moment stub"
 					};
 				};
-				manager.options.staticDependencies = {moment: momentStub};
+
+				const underscoreStub = {
+					template: () => function() { return "this is underscore stub"; }
+				};
+				manager.options.staticDependencies = {moment: momentStub, underscore: underscoreStub};
 			});
 
 			it("static dependencies are not installed but resolved correctly", async function() {
@@ -584,6 +621,7 @@ describe("PluginManager:", function() {
 
 				const pluginInstance = manager.require("my-plugin-with-dep");
 				assert.equal(pluginInstance.testMoment, "this is moment stub");
+				assert.equal(pluginInstance.testUnderscore, "this is underscore stub");
 			});
 		});
 	});
@@ -642,3 +680,13 @@ describe("PluginManager:", function() {
 		});
 	});
 });
+
+function getGithubAuth() {
+	try {
+		return require("./github_auth.json");
+	} catch (e) {
+		// tslint:disable-next-line:no-console
+		console.warn("No github_auth.json found, github api can give rate limits errors");
+		return undefined;
+	}
+}
