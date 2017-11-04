@@ -6,7 +6,7 @@ const manager = new PluginManager();
 
 async function run() {
 	console.log("Installing express...");
-	await manager.install("express");
+	await manager.install("express", "4.16.2");
 
 	const express = manager.require("express");
 

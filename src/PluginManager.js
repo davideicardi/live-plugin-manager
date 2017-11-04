@@ -175,14 +175,10 @@ class PluginManager {
         return this.getFullInfo(name);
     }
     getInfoFromNpm(name, version = NPM_LATEST_TAG) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return yield this.npmRegistry.get(name, version);
-        });
+        return this.npmRegistry.get(name, version);
     }
     getInfoFromGithub(repository) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return yield this.githubRegistry.get(repository);
-        });
+        return this.githubRegistry.get(repository);
     }
     runScript(code) {
         return this.vm.runScript(code);
@@ -238,7 +234,7 @@ class PluginManager {
                 debug(`Copy from ${location} to ${this.options.pluginsPath}`);
                 yield fs.copy(location, this.getPluginLocation(packageJson.name));
             }
-            return yield this.addPlugin(packageJson);
+            return this.addPlugin(packageJson);
         });
     }
     installFromNpmLockFree(name, version = NPM_LATEST_TAG) {
@@ -261,7 +257,7 @@ class PluginManager {
                 yield this.removeDownloaded(registryInfo.name);
                 yield this.npmRegistry.download(this.options.pluginsPath, registryInfo);
             }
-            return yield this.addPlugin(registryInfo);
+            return this.addPlugin(registryInfo);
         });
     }
     installFromGithubLockFree(repository) {
@@ -284,7 +280,7 @@ class PluginManager {
                 yield this.removeDownloaded(registryInfo.name);
                 yield this.githubRegistry.download(this.options.pluginsPath, registryInfo);
             }
-            return yield this.addPlugin(registryInfo);
+            return this.addPlugin(registryInfo);
         });
     }
     installFromCodeLockFree(name, code, version = "0.0.0") {
@@ -321,7 +317,7 @@ class PluginManager {
                 yield fs.writeFile(path.join(location, DefaultMainFile), code);
                 yield fs.writeFile(path.join(location, "package.json"), JSON.stringify(packageJson));
             }
-            return yield this.addPlugin(packageJson);
+            return this.addPlugin(packageJson);
         });
     }
     installDependencies(packageInfo) {

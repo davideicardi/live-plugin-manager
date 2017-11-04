@@ -21,7 +21,7 @@ export interface PluginManagerOptions {
 	npmRegistryConfig: any;
 	requireCoreModules: boolean;
 	hostRequire?: NodeRequire;
-	ignoredDependencies: Array<string|RegExp>;
+	ignoredDependencies: Array<string | RegExp>;
 	staticDependencies: { [key: string]: any; };
 	githubAuthentication?: GitHubApi.Auth;
 }
@@ -194,12 +194,12 @@ export class PluginManager {
 		return this.getFullInfo(name);
 	}
 
-	async getInfoFromNpm(name: string, version = NPM_LATEST_TAG): Promise<PackageInfo> {
-		return await this.npmRegistry.get(name, version);
+	getInfoFromNpm(name: string, version = NPM_LATEST_TAG): Promise<PackageInfo> {
+		return this.npmRegistry.get(name, version);
 	}
 
-	async getInfoFromGithub(repository: string): Promise<PackageInfo> {
-		return await this.githubRegistry.get(repository);
+	getInfoFromGithub(repository: string): Promise<PackageInfo> {
+		return this.githubRegistry.get(repository);
 	}
 
 	runScript(code: string): any {
@@ -267,7 +267,7 @@ export class PluginManager {
 			await fs.copy(location, this.getPluginLocation(packageJson.name));
 		}
 
-		return await this.addPlugin(packageJson);
+		return this.addPlugin(packageJson);
 	}
 
 	private async installFromNpmLockFree(name: string, version = NPM_LATEST_TAG): Promise<IPluginInfo> {
@@ -297,7 +297,7 @@ export class PluginManager {
 				registryInfo);
 		}
 
-		return await this.addPlugin(registryInfo);
+		return this.addPlugin(registryInfo);
 	}
 
 	private async installFromGithubLockFree(repository: string): Promise<IPluginInfo> {
@@ -327,7 +327,7 @@ export class PluginManager {
 				registryInfo);
 		}
 
-		return await this.addPlugin(registryInfo);
+		return this.addPlugin(registryInfo);
 	}
 
 	private async installFromCodeLockFree(name: string, code: string, version: string = "0.0.0"): Promise<IPluginInfo> {
@@ -371,7 +371,7 @@ export class PluginManager {
 			await fs.writeFile(path.join(location, "package.json"), JSON.stringify(packageJson));
 		}
 
-		return await this.addPlugin(packageJson);
+		return this.addPlugin(packageJson);
 	}
 
 	private async installDependencies(packageInfo: PackageInfo): Promise<string[]> {

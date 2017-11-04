@@ -1,20 +1,21 @@
 import * as os from "os";
 import * as path from "path";
 import * as fs from "./fileSystem";
+import * as tar from "tar";
 import * as Debug from "debug";
 import { httpDownload } from "./httpUtils";
 const debug = Debug("live-plugin-manager.TarballUtils");
 
-const Targz = require("tar.gz");
-
 export async function extractTarball(tgzFile: string, destinationDirectory: string) {
 	debug(`Extracting ${tgzFile} to ${destinationDirectory} ...`);
 
-	const targz = new Targz({}, {
-		strip: 1 // strip the first "package" directory
-	});
+	await fs.ensureDir(destinationDirectory);
 
-	await targz.extract(tgzFile, destinationDirectory);
+	await tar.extract({
+		file: tgzFile,
+		cwd: destinationDirectory,
+		strip: 1
+	});
 }
 
 export async function downloadTarball(url: string): Promise<string> {

@@ -11,17 +11,19 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const os = require("os");
 const path = require("path");
 const fs = require("./fileSystem");
+const tar = require("tar");
 const Debug = require("debug");
 const httpUtils_1 = require("./httpUtils");
 const debug = Debug("live-plugin-manager.TarballUtils");
-const Targz = require("tar.gz");
 function extractTarball(tgzFile, destinationDirectory) {
     return __awaiter(this, void 0, void 0, function* () {
         debug(`Extracting ${tgzFile} to ${destinationDirectory} ...`);
-        const targz = new Targz({}, {
-            strip: 1 // strip the first "package" directory
+        yield fs.ensureDir(destinationDirectory);
+        yield tar.extract({
+            file: tgzFile,
+            cwd: destinationDirectory,
+            strip: 1
         });
-        yield targz.extract(tgzFile, destinationDirectory);
     });
 }
 exports.extractTarball = extractTarball;

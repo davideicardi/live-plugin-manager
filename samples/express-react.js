@@ -14,11 +14,11 @@ const manager = new index_1.PluginManager();
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         console.log("Installing express...");
-        yield manager.install("express");
+        yield manager.install("express", "4.16.2");
         console.log("Installing react...");
-        yield manager.install("react");
+        yield manager.install("react", "16.0.0");
         console.log("Installing react-dom...");
-        yield manager.install("react-dom");
+        yield manager.install("react-dom", "16.0.0");
         const express = manager.require("express");
         const React = manager.require("react");
         const ReactDOMServer = manager.require("react-dom/server");
