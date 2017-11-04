@@ -39,7 +39,7 @@ As usual there are some **known limitations**, see section at the end.
     const manager = new PluginManager();
 
     async function run() {
-      await manager.installFromNpm("moment");
+      await manager.install("moment");
 
       const moment = manager.require("moment");
       console.log(moment().format());
@@ -107,6 +107,7 @@ Create a new instance of `PluginManager`. Takes an optional `options` parameter 
 - `npmRegistryConfig`: npm registry configuration see [npm-registry-client config](https://github.com/npm/npm-registry-client)
 - `ignoredDependencies`: array of string or RegExp with the list of dependencies to ignore, default to `@types/*`
 - `staticDependencies`: object with an optional list of static dependencies that can be used to force a dependencies to be ignored (not installed when a plugin depend on it) and loaded from this list
+- `githubAuthentication`: Github authentication configuration (optional). See `installFromGithub` or [Github api authentication](https://github.com/octokit/node-github#authentication) for more info.
 
 ### pluginManager.install(name: string, version?: string): Promise\<IPluginInfo\>
 
