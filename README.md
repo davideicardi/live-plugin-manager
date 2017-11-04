@@ -185,6 +185,7 @@ I suggest usually to allow to install only a limited sets of plugins or only all
 This project use the following dependencies to do it's job:
 
 - [npm-registry-client](https://github.com/npm/npm-registry-client): npm registry handling
+- [github](https://www.npmjs.com/package/github)
 - [vm](https://nodejs.org/api/vm.html): compiling and running plugin code within V8 Virtual Machine contexts
 - [lockfile](https://github.com/npm/lockfile): file system locking to prevent concurrent operations
 - [tar.gz](https://github.com/alanhoff/node-tar.gz): extract package file
@@ -194,6 +195,7 @@ This project use the following dependencies to do it's job:
 While I have tried to mimic the standard Node.js module and package architecture there are some differences.
 First of all is the fact that plugins by definition are installed at runtime in contrast with a standard Node.js application where modules are installed before executin the node.js proccess.
 Modules can be loaded one or more times, instead in standard Node.js they are loaded only the first time that you `require` it.
+Only one version of a plugin can be installed, also for dependencies, while in Node.js multiple version can be installed (each module can have it's own `node_modules`).
 
 ## Git integration
 

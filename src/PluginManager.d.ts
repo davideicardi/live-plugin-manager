@@ -65,7 +65,7 @@ export declare class PluginManager {
     private installFromCodeLockFree(name, code, version?);
     private installDependencies(packageInfo);
     private unloadWithDependents(plugin);
-    private isModuleAvailableFromHost(name);
+    private isModuleAvailableFromHost(name, version);
     private isValidPluginName(name);
     private getPluginLocation(name);
     private removeDownloaded(name);

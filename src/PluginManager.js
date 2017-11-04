@@ -338,7 +338,7 @@ class PluginManager {
                     continue;
                 }
                 const version = packageInfo.dependencies[key].toString();
-                if (this.isModuleAvailableFromHost(key)) {
+                if (this.isModuleAvailableFromHost(key, version)) {
                     debug(`Installing dependencies of ${packageInfo.name}: ${key} is already available on host`);
                 }
                 else if (this.alreadyInstalled(key, version)) {
@@ -361,7 +361,7 @@ class PluginManager {
             }
         }
     }
-    isModuleAvailableFromHost(name) {
+    isModuleAvailableFromHost(name, version) {
         if (!this.options.hostRequire) {
             return false;
         }
@@ -371,8 +371,8 @@ class PluginManager {
         // if (semver.satisfies(installedInfo.version, version))
         // to check if compatible...
         try {
-            this.options.hostRequire.resolve(name);
-            return true;
+            const modulePackage = this.options.hostRequire(name + "/package.json");
+            return semver.satisfies(modulePackage.version, version);
         }
         catch (e) {
             return false;

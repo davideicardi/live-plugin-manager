@@ -154,6 +154,12 @@ describe("PluginManager:", function () {
         });
         describe("from github", function () {
             this.slow(4000);
+            it("api configuration", function () {
+                if (!manager.options.githubAuthentication) {
+                    // tslint:disable-next-line:no-console
+                    console.error("WARNING: No github_auth.json found, github api can give rate limits errors");
+                }
+            });
             it("installing a not existing plugin", function () {
                 return __awaiter(this, void 0, void 0, function* () {
                     try {
@@ -490,47 +496,59 @@ describe("PluginManager:", function () {
     });
     describe("plugins dependencies", function () {
         this.slow(6000);
-        it("dependencies are installed", function () {
-            return __awaiter(this, void 0, void 0, function* () {
-                const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
-                const pluginInfo = yield manager.installFromPath(pluginSourcePath);
-                chai_1.assert.equal(manager.list().length, 3);
-                chai_1.assert.equal(manager.list()[0].name, "moment");
-                chai_1.assert.equal(manager.list()[1].name, "underscore");
-                chai_1.assert.equal(manager.list()[2].name, "my-plugin-with-dep");
+        describe("Npm dependencies", function () {
+            it("dependencies are installed", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
+                    const pluginInfo = yield manager.installFromPath(pluginSourcePath);
+                    chai_1.assert.equal(manager.list().length, 2);
+                    chai_1.assert.equal(manager.list()[0].name, "moment");
+                    chai_1.assert.equal(manager.list()[1].name, "my-plugin-with-dep");
+                });
+            });
+            it("dependencies are available", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
+                    const pluginInfo = yield manager.installFromPath(pluginSourcePath);
+                    const pluginInstance = manager.require("my-plugin-with-dep");
+                    chai_1.assert.equal(pluginInstance.testDebug, require("debug")); // I expect to be exactly the same
+                    chai_1.assert.equal(pluginInstance.testMoment, "1981/10/06");
+                });
+            });
+            it("by default @types dependencies are not installed", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
+                    const pluginInfo = yield manager.installFromPath(pluginSourcePath);
+                    for (const p of manager.list()) {
+                        chai_1.assert.notEqual(p.name, "@types/express");
+                    }
+                });
+            });
+            it("dependencies installed in the host are not installed but are available", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    // debug package is already available in the host
+                    const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
+                    const pluginInfo = yield manager.installFromPath(pluginSourcePath);
+                    for (const p of manager.list()) {
+                        chai_1.assert.notEqual(p.name, "debug");
+                    }
+                });
             });
         });
-        it("dependencies are available", function () {
-            return __awaiter(this, void 0, void 0, function* () {
-                const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
-                const pluginInfo = yield manager.installFromPath(pluginSourcePath);
-                const pluginInstance = manager.require("my-plugin-with-dep");
-                chai_1.assert.equal(pluginInstance.testMoment, "1981/10/06");
-                chai_1.assert.equal(pluginInstance.testUnderscore, "hello underscore!");
-            });
-        });
-        it("by default @types dependencies are not installed", function () {
-            return __awaiter(this, void 0, void 0, function* () {
-                const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
-                const pluginInfo = yield manager.installFromPath(pluginSourcePath);
-                for (const p of manager.list()) {
-                    chai_1.assert.notEqual(p.name, "@types/express");
-                }
-            });
-        });
-        it("dependencies installed in the host are not installed but are available", function () {
-            return __awaiter(this, void 0, void 0, function* () {
-                // debug package is already available in the host
-                const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
-                const pluginInfo = yield manager.installFromPath(pluginSourcePath);
-                for (const p of manager.list()) {
-                    chai_1.assert.notEqual(p.name, "debug");
-                }
+        describe("Github dependencies", function () {
+            it("dependencies are installed", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    const pluginSourcePath = path.join(__dirname, "my-plugin-with-git-dep");
+                    const pluginInfo = yield manager.installFromPath(pluginSourcePath);
+                    chai_1.assert.equal(manager.list().length, 2);
+                    chai_1.assert.equal(manager.list()[0].name, "underscore");
+                    chai_1.assert.equal(manager.list()[1].name, "my-plugin-with-git-dep");
+                });
             });
         });
         describe("Given some ignored dependencies", function () {
             beforeEach(function () {
-                manager.options.ignoredDependencies = [/^@types\//, "moment", "underscore"];
+                manager.options.ignoredDependencies = [/^@types\//, "moment"];
             });
             it("ignored dependencies are not installed", function () {
                 return __awaiter(this, void 0, void 0, function* () {
@@ -590,10 +608,7 @@ describe("PluginManager:", function () {
                         format: () => "this is moment stub"
                     };
                 };
-                const underscoreStub = {
-                    template: () => function () { return "this is underscore stub"; }
-                };
-                manager.options.staticDependencies = { moment: momentStub, underscore: underscoreStub };
+                manager.options.staticDependencies = { moment: momentStub };
             });
             it("static dependencies are not installed but resolved correctly", function () {
                 return __awaiter(this, void 0, void 0, function* () {
@@ -603,7 +618,25 @@ describe("PluginManager:", function () {
                     chai_1.assert.equal(manager.list()[0].name, "my-plugin-with-dep");
                     const pluginInstance = manager.require("my-plugin-with-dep");
                     chai_1.assert.equal(pluginInstance.testMoment, "this is moment stub");
-                    chai_1.assert.equal(pluginInstance.testUnderscore, "this is underscore stub");
+                });
+            });
+        });
+        describe("Not compatible dependencies", function () {
+            it("dependencies are installed", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    const pluginSourcePath = path.join(__dirname, "my-plugin-with-diff-dep");
+                    const pluginInfo = yield manager.installFromPath(pluginSourcePath);
+                    chai_1.assert.equal(manager.list().length, 2);
+                    chai_1.assert.equal(manager.list()[0].name, "debug");
+                    chai_1.assert.equal(manager.list()[1].name, "my-plugin-with-diff-dep");
+                });
+            });
+            it("dependencies are available", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    const pluginSourcePath = path.join(__dirname, "my-plugin-with-diff-dep");
+                    const pluginInfo = yield manager.installFromPath(pluginSourcePath);
+                    const pluginInstance = manager.require("my-plugin-with-diff-dep");
+                    chai_1.assert.notEqual(pluginInstance.testDebug, require("debug")); // I expect to be different (v2 vs v3)
                 });
             });
         });
@@ -673,8 +706,13 @@ function getGithubAuth() {
         return require("./github_auth.json");
     }
     catch (e) {
-        // tslint:disable-next-line:no-console
-        console.warn("No github_auth.json found, github api can give rate limits errors");
+        if (process.env.github_auth_username) {
+            return {
+                type: "basic",
+                username: process.env.github_auth_username,
+                password: process.env.github_auth_token
+            };
+        }
         return undefined;
     }
 }

@@ -152,6 +152,13 @@ describe("PluginManager:", function() {
 		describe("from github", function() {
 			this.slow(4000);
 
+			it("api configuration", function() {
+				if (!manager.options.githubAuthentication) {
+					// tslint:disable-next-line:no-console
+					console.error("WARNING: No github_auth.json found, github api can give rate limits errors");
+				}
+			});
+
 			it("installing a not existing plugin", async function() {
 				try {
 					const pluginInfo = await manager.installFromGithub("this/doesnotexists");
@@ -501,49 +508,62 @@ describe("PluginManager:", function() {
 	describe("plugins dependencies", function() {
 		this.slow(6000);
 
-		it("dependencies are installed", async function() {
-			const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
-			const pluginInfo = await manager.installFromPath(pluginSourcePath);
+		describe("Npm dependencies", function() {
+			it("dependencies are installed", async function() {
+				const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
+				const pluginInfo = await manager.installFromPath(pluginSourcePath);
 
-			assert.equal(manager.list().length, 3);
-			assert.equal(manager.list()[0].name, "moment");
-			assert.equal(manager.list()[1].name, "underscore");
-			assert.equal(manager.list()[2].name, "my-plugin-with-dep");
+				assert.equal(manager.list().length, 2);
+				assert.equal(manager.list()[0].name, "moment");
+				assert.equal(manager.list()[1].name, "my-plugin-with-dep");
+			});
+
+			it("dependencies are available", async function() {
+				const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
+				const pluginInfo = await manager.installFromPath(pluginSourcePath);
+
+				const pluginInstance = manager.require("my-plugin-with-dep");
+
+				assert.equal(pluginInstance.testDebug, require("debug")); // I expect to be exactly the same
+				assert.equal(pluginInstance.testMoment, "1981/10/06");
+			});
+
+			it("by default @types dependencies are not installed", async function() {
+				const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
+				const pluginInfo = await manager.installFromPath(pluginSourcePath);
+
+				for (const p of manager.list()) {
+					assert.notEqual(p.name, "@types/express");
+				}
+			});
+
+			it("dependencies installed in the host are not installed but are available", async function() {
+				// debug package is already available in the host
+
+				const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
+				const pluginInfo = await manager.installFromPath(pluginSourcePath);
+
+				for (const p of manager.list()) {
+					assert.notEqual(p.name, "debug");
+				}
+			});
 		});
 
-		it("dependencies are available", async function() {
-			const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
-			const pluginInfo = await manager.installFromPath(pluginSourcePath);
+		describe("Github dependencies", function() {
 
-			const pluginInstance = manager.require("my-plugin-with-dep");
+			it("dependencies are installed", async function() {
+				const pluginSourcePath = path.join(__dirname, "my-plugin-with-git-dep");
+				const pluginInfo = await manager.installFromPath(pluginSourcePath);
 
-			assert.equal(pluginInstance.testMoment, "1981/10/06");
-			assert.equal(pluginInstance.testUnderscore, "hello underscore!");
-		});
-
-		it("by default @types dependencies are not installed", async function() {
-			const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
-			const pluginInfo = await manager.installFromPath(pluginSourcePath);
-
-			for (const p of manager.list()) {
-				assert.notEqual(p.name, "@types/express");
-			}
-		});
-
-		it("dependencies installed in the host are not installed but are available", async function() {
-			// debug package is already available in the host
-
-			const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
-			const pluginInfo = await manager.installFromPath(pluginSourcePath);
-
-			for (const p of manager.list()) {
-				assert.notEqual(p.name, "debug");
-			}
+				assert.equal(manager.list().length, 2);
+				assert.equal(manager.list()[0].name, "underscore");
+				assert.equal(manager.list()[1].name, "my-plugin-with-git-dep");
+			});
 		});
 
 		describe("Given some ignored dependencies", function() {
 			beforeEach(function() {
-				manager.options.ignoredDependencies = [/^@types\//, "moment", "underscore"];
+				manager.options.ignoredDependencies = [/^@types\//, "moment"];
 			});
 
 			it("ignored dependencies are not installed", async function() {
@@ -606,10 +626,7 @@ describe("PluginManager:", function() {
 					};
 				};
 
-				const underscoreStub = {
-					template: () => function() { return "this is underscore stub"; }
-				};
-				manager.options.staticDependencies = {moment: momentStub, underscore: underscoreStub};
+				manager.options.staticDependencies = {moment: momentStub};
 			});
 
 			it("static dependencies are not installed but resolved correctly", async function() {
@@ -621,7 +638,26 @@ describe("PluginManager:", function() {
 
 				const pluginInstance = manager.require("my-plugin-with-dep");
 				assert.equal(pluginInstance.testMoment, "this is moment stub");
-				assert.equal(pluginInstance.testUnderscore, "this is underscore stub");
+			});
+		});
+
+		describe("Not compatible dependencies", function() {
+			it("dependencies are installed", async function() {
+				const pluginSourcePath = path.join(__dirname, "my-plugin-with-diff-dep");
+				const pluginInfo = await manager.installFromPath(pluginSourcePath);
+
+				assert.equal(manager.list().length, 2);
+				assert.equal(manager.list()[0].name, "debug");
+				assert.equal(manager.list()[1].name, "my-plugin-with-diff-dep");
+			});
+
+			it("dependencies are available", async function() {
+				const pluginSourcePath = path.join(__dirname, "my-plugin-with-diff-dep");
+				const pluginInfo = await manager.installFromPath(pluginSourcePath);
+
+				const pluginInstance = manager.require("my-plugin-with-diff-dep");
+
+				assert.notEqual(pluginInstance.testDebug, require("debug")); // I expect to be different (v2 vs v3)
 			});
 		});
 	});
@@ -681,12 +717,18 @@ describe("PluginManager:", function() {
 	});
 });
 
+
 function getGithubAuth() {
 	try {
 		return require("./github_auth.json");
 	} catch (e) {
-		// tslint:disable-next-line:no-console
-		console.warn("No github_auth.json found, github api can give rate limits errors");
+		if (process.env.github_auth_username) {
+			return {
+				type: "basic",
+				username: process.env.github_auth_username,
+				password: process.env.github_auth_token
+			};
+		}
 		return undefined;
 	}
 }
