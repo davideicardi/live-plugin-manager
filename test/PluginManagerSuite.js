@@ -8,7 +8,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const chai_1 = require("chai");
+const chai_1 = require("chai"); // tslint:disable-line:no-implicit-dependencies
 const path = require("path");
 const fs = require("fs-extra");
 const os = require("os");
@@ -395,7 +395,7 @@ describe("PluginManager:", function () {
             it("directly requiring a not installed plugin throw an error", function () {
                 return __awaiter(this, void 0, void 0, function* () {
                     try {
-                        require("moment");
+                        require("moment"); // tslint:disable-line:no-implicit-dependencies
                     }
                     catch (e) {
                         return;
@@ -641,60 +641,76 @@ describe("PluginManager:", function () {
             });
         });
     });
-    describe("npm registry info", function () {
+    describe("query npm package", function () {
         it("get latest version info", function () {
             return __awaiter(this, void 0, void 0, function* () {
-                const info = yield manager.getInfoFromNpm("lodash");
+                const info = yield manager.queryPackageFromNpm("lodash");
                 chai_1.assert.equal("lodash", info.name);
                 chai_1.assert.isDefined(info.version);
             });
         });
         it("get specific version info", function () {
             return __awaiter(this, void 0, void 0, function* () {
-                let info = yield manager.getInfoFromNpm("lodash", "4.17.4");
+                let info = yield manager.queryPackageFromNpm("lodash", "4.17.4");
                 chai_1.assert.equal("lodash", info.name);
                 chai_1.assert.equal("4.17.4", info.version);
-                info = yield manager.getInfoFromNpm("lodash", "=4.17.4");
+                info = yield manager.queryPackageFromNpm("lodash", "=4.17.4");
                 chai_1.assert.equal("lodash", info.name);
                 chai_1.assert.equal("4.17.4", info.version);
             });
         });
         it("get caret version range info", function () {
             return __awaiter(this, void 0, void 0, function* () {
-                const info = yield manager.getInfoFromNpm("lodash", "^3.0.0");
+                const info = yield manager.queryPackageFromNpm("lodash", "^3.0.0");
                 chai_1.assert.equal("lodash", info.name);
                 chai_1.assert.equal("3.10.1", info.version); // this test can fail if lodash publish a 3.x version
             });
         });
         it("get latest version info for scoped packages", function () {
             return __awaiter(this, void 0, void 0, function* () {
-                const info = yield manager.getInfoFromNpm("@types/node");
+                const info = yield manager.queryPackageFromNpm("@types/node");
                 chai_1.assert.equal("@types/node", info.name);
                 chai_1.assert.isDefined(info.version);
             });
         });
         it("get specific version info for scoped packages", function () {
             return __awaiter(this, void 0, void 0, function* () {
-                let info = yield manager.getInfoFromNpm("@types/node", "7.0.13");
+                let info = yield manager.queryPackageFromNpm("@types/node", "7.0.13");
                 chai_1.assert.equal("@types/node", info.name);
                 chai_1.assert.equal("7.0.13", info.version);
-                info = yield manager.getInfoFromNpm("@types/node", "=7.0.13");
+                info = yield manager.queryPackageFromNpm("@types/node", "=7.0.13");
                 chai_1.assert.equal("@types/node", info.name);
                 chai_1.assert.equal("7.0.13", info.version);
             });
         });
         it("get caret version range info for scoped packages", function () {
             return __awaiter(this, void 0, void 0, function* () {
-                const info = yield manager.getInfoFromNpm("@types/node", "^6.0.0");
+                const info = yield manager.queryPackageFromNpm("@types/node", "^6.0.0");
                 chai_1.assert.equal("@types/node", info.name);
                 chai_1.assert.equal("6.0.90", info.version); // this test can fail if @types/node publish a 6.x version
             });
         });
     });
-    describe("github registry info", function () {
+    describe("query github package", function () {
         it("get version info", function () {
             return __awaiter(this, void 0, void 0, function* () {
-                const info = yield manager.getInfoFromGithub("lodash/lodash");
+                const info = yield manager.queryPackageFromGithub("lodash/lodash");
+                chai_1.assert.equal("lodash", info.name);
+                chai_1.assert.isDefined(info.version);
+            });
+        });
+    });
+    describe("query package info", function () {
+        it("get version from github", function () {
+            return __awaiter(this, void 0, void 0, function* () {
+                const info = yield manager.queryPackage("lodash", "lodash/lodash");
+                chai_1.assert.equal("lodash", info.name);
+                chai_1.assert.isDefined(info.version);
+            });
+        });
+        it("get version from npm", function () {
+            return __awaiter(this, void 0, void 0, function* () {
+                const info = yield manager.queryPackage("lodash", "4.17.4");
                 chai_1.assert.equal("lodash", info.name);
                 chai_1.assert.isDefined(info.version);
             });

@@ -171,9 +171,17 @@ Get information about an installed package.
 
 Run the specified Node.js javascript code with the same context of plugins. Script are executed using `vm` as with each plugin.
 
-### async getInfoFromNpm(name: string, version = "latest"): Promise<PackageInfo>
+### async queryPackage(name: string, version?: string): Promise<PackageInfo>
+
+Get package/module info from npm registry or github depending of the version format.
+
+### async queryPackageFromNpm(name: string, version = "latest"): Promise<PackageInfo>
 
 Get package/module info from npm registry.
+
+### async queryPackageFromGithub(repository: string): Promise<PackageInfo>
+
+Get package/module info from github registry.
 
 ## Security
 

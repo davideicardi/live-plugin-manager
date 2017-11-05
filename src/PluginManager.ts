@@ -194,11 +194,27 @@ export class PluginManager {
 		return this.getFullInfo(name);
 	}
 
-	getInfoFromNpm(name: string, version = NPM_LATEST_TAG): Promise<PackageInfo> {
+	queryPackage(name: string, version?: string): Promise<PackageInfo> {
+		if (!this.isValidPluginName(name)) {
+			throw new Error(`Invalid plugin name '${name}'`);
+		}
+
+		if (version && this.githubRegistry.isGithubRepo(version)) {
+			return this.queryPackageFromGithub(version);
+		}
+
+		return this.queryPackageFromNpm(name, version);
+	}
+
+	queryPackageFromNpm(name: string, version = NPM_LATEST_TAG): Promise<PackageInfo> {
+		if (!this.isValidPluginName(name)) {
+			throw new Error(`Invalid plugin name '${name}'`);
+		}
+
 		return this.npmRegistry.get(name, version);
 	}
 
-	getInfoFromGithub(repository: string): Promise<PackageInfo> {
+	queryPackageFromGithub(repository: string): Promise<PackageInfo> {
 		return this.githubRegistry.get(repository);
 	}
 

@@ -53,8 +53,9 @@ export declare class PluginManager {
     require(fullName: string): any;
     alreadyInstalled(name: string, version?: string): IPluginInfo | undefined;
     getInfo(name: string): IPluginInfo | undefined;
-    getInfoFromNpm(name: string, version?: string): Promise<PackageInfo>;
-    getInfoFromGithub(repository: string): Promise<PackageInfo>;
+    queryPackage(name: string, version?: string): Promise<PackageInfo>;
+    queryPackageFromNpm(name: string, version?: string): Promise<PackageInfo>;
+    queryPackageFromGithub(repository: string): Promise<PackageInfo>;
     runScript(code: string): any;
     getFullInfo(name: string): PluginInfo | undefined;
     private uninstallLockFree(name);

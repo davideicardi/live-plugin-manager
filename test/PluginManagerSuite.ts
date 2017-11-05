@@ -1,4 +1,4 @@
-import { assert } from "chai";
+import { assert } from "chai"; // tslint:disable-line:no-implicit-dependencies
 import * as path from "path";
 import * as fs from "fs-extra";
 import * as os from "os";
@@ -404,7 +404,7 @@ describe("PluginManager:", function() {
 
 			it("directly requiring a not installed plugin throw an error", async function() {
 				try {
-					require("moment");
+					require("moment"); // tslint:disable-line:no-implicit-dependencies
 				} catch (e) {
 					return;
 				}
@@ -662,55 +662,69 @@ describe("PluginManager:", function() {
 		});
 	});
 
-	describe("npm registry info", function() {
+	describe("query npm package", function() {
 		it("get latest version info", async function() {
-			const info = await manager.getInfoFromNpm("lodash");
+			const info = await manager.queryPackageFromNpm("lodash");
 			assert.equal("lodash", info.name);
 			assert.isDefined(info.version);
 		});
 
 		it("get specific version info", async function() {
-			let info = await manager.getInfoFromNpm("lodash", "4.17.4");
+			let info = await manager.queryPackageFromNpm("lodash", "4.17.4");
 			assert.equal("lodash", info.name);
 			assert.equal("4.17.4", info.version);
 
-			info = await manager.getInfoFromNpm("lodash", "=4.17.4");
+			info = await manager.queryPackageFromNpm("lodash", "=4.17.4");
 			assert.equal("lodash", info.name);
 			assert.equal("4.17.4", info.version);
 		});
 
 		it("get caret version range info", async function() {
-			const info = await manager.getInfoFromNpm("lodash", "^3.0.0");
+			const info = await manager.queryPackageFromNpm("lodash", "^3.0.0");
 			assert.equal("lodash", info.name);
 			assert.equal("3.10.1", info.version); // this test can fail if lodash publish a 3.x version
 		});
 
 		it("get latest version info for scoped packages", async function() {
-			const info = await manager.getInfoFromNpm("@types/node");
+			const info = await manager.queryPackageFromNpm("@types/node");
 			assert.equal("@types/node", info.name);
 			assert.isDefined(info.version);
 		});
 
 		it("get specific version info for scoped packages", async function() {
-			let info = await manager.getInfoFromNpm("@types/node", "7.0.13");
+			let info = await manager.queryPackageFromNpm("@types/node", "7.0.13");
 			assert.equal("@types/node", info.name);
 			assert.equal("7.0.13", info.version);
 
-			info = await manager.getInfoFromNpm("@types/node", "=7.0.13");
+			info = await manager.queryPackageFromNpm("@types/node", "=7.0.13");
 			assert.equal("@types/node", info.name);
 			assert.equal("7.0.13", info.version);
 		});
 
 		it("get caret version range info for scoped packages", async function() {
-			const info = await manager.getInfoFromNpm("@types/node", "^6.0.0");
+			const info = await manager.queryPackageFromNpm("@types/node", "^6.0.0");
 			assert.equal("@types/node", info.name);
 			assert.equal("6.0.90", info.version); // this test can fail if @types/node publish a 6.x version
 		});
 	});
 
-	describe("github registry info", function() {
+	describe("query github package", function() {
 		it("get version info", async function() {
-			const info = await manager.getInfoFromGithub("lodash/lodash");
+			const info = await manager.queryPackageFromGithub("lodash/lodash");
+			assert.equal("lodash", info.name);
+			assert.isDefined(info.version);
+		});
+	});
+
+	describe("query package info", function() {
+		it("get version from github", async function() {
+			const info = await manager.queryPackage("lodash", "lodash/lodash");
+			assert.equal("lodash", info.name);
+			assert.isDefined(info.version);
+		});
+
+		it("get version from npm", async function() {
+			const info = await manager.queryPackage("lodash", "4.17.4");
 			assert.equal("lodash", info.name);
 			assert.isDefined(info.version);
 		});
