@@ -669,6 +669,12 @@ describe("PluginManager:", function() {
 			assert.isDefined(info.version);
 		});
 
+		it("get latest version info (with string empty version)", async function() {
+			const info = await manager.queryPackageFromNpm("lodash", "");
+			assert.equal("lodash", info.name);
+			assert.isDefined(info.version);
+		});
+
 		it("get specific version info", async function() {
 			let info = await manager.queryPackageFromNpm("lodash", "4.17.4");
 			assert.equal("lodash", info.name);
@@ -704,7 +710,7 @@ describe("PluginManager:", function() {
 		it("get caret version range info for scoped packages", async function() {
 			const info = await manager.queryPackageFromNpm("@types/node", "^6.0.0");
 			assert.equal("@types/node", info.name);
-			assert.equal("6.0.90", info.version); // this test can fail if @types/node publish a 6.x version
+			assert.equal("6.0.92", info.version); // this test can fail if @types/node publish a 6.x version
 		});
 	});
 

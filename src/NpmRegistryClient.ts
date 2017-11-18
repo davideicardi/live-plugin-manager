@@ -70,6 +70,9 @@ function encodeNpmName(name: string) {
 }
 
 function normalizeVersion(name: string, version: string): string {
+
+	version = (version || "").trim() || "latest";
+
 	if (name.startsWith("@")) { // is scoped
 		// npm api seems to have some problems with scoped packages
 		// https://github.com/npm/registry/issues/34

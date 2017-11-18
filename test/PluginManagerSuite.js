@@ -649,6 +649,13 @@ describe("PluginManager:", function () {
                 chai_1.assert.isDefined(info.version);
             });
         });
+        it("get latest version info (with string empty version)", function () {
+            return __awaiter(this, void 0, void 0, function* () {
+                const info = yield manager.queryPackageFromNpm("lodash", "");
+                chai_1.assert.equal("lodash", info.name);
+                chai_1.assert.isDefined(info.version);
+            });
+        });
         it("get specific version info", function () {
             return __awaiter(this, void 0, void 0, function* () {
                 let info = yield manager.queryPackageFromNpm("lodash", "4.17.4");
@@ -687,7 +694,7 @@ describe("PluginManager:", function () {
             return __awaiter(this, void 0, void 0, function* () {
                 const info = yield manager.queryPackageFromNpm("@types/node", "^6.0.0");
                 chai_1.assert.equal("@types/node", info.name);
-                chai_1.assert.equal("6.0.90", info.version); // this test can fail if @types/node publish a 6.x version
+                chai_1.assert.equal("6.0.92", info.version); // this test can fail if @types/node publish a 6.x version
             });
         });
     });
