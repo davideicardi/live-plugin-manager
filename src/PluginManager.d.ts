@@ -15,6 +15,8 @@ export interface PluginManagerOptions {
         [key: string]: any;
     };
     githubAuthentication?: GitHubApi.Auth;
+    lockWait: number;
+    lockStale: number;
 }
 export interface InstallFromPathOptions {
     force: boolean;

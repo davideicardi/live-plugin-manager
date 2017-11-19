@@ -29,7 +29,9 @@ const DefaultOptions = {
     requireCoreModules: true,
     hostRequire: require,
     ignoredDependencies: [/^@types\//],
-    staticDependencies: {}
+    staticDependencies: {},
+    lockWait: 120000,
+    lockStale: 180000,
 };
 const NPM_LATEST_TAG = "latest";
 class PluginManager {
@@ -121,6 +123,7 @@ class PluginManager {
     }
     uninstall(name) {
         return __awaiter(this, void 0, void 0, function* () {
+            yield fs.ensureDir(this.options.pluginsPath);
             yield this.syncLock();
             try {
                 return yield this.uninstallLockFree(name);
@@ -132,6 +135,7 @@ class PluginManager {
     }
     uninstallAll() {
         return __awaiter(this, void 0, void 0, function* () {
+            yield fs.ensureDir(this.options.pluginsPath);
             yield this.syncLock();
             try {
                 // TODO First I should install dependents plugins??
@@ -485,7 +489,7 @@ class PluginManager {
         debug("Acquiring lock ...");
         const lockLocation = path.join(this.options.pluginsPath, "install.lock");
         return new Promise((resolve, reject) => {
-            lockFile.lock(lockLocation, { wait: 30000 }, (err) => {
+            lockFile.lock(lockLocation, { wait: this.options.lockWait, stale: this.options.lockStale }, (err) => {
                 if (err) {
                     debug("Failed to acquire lock", err);
                     return reject("Failed to acquire lock: " + err.message);

@@ -723,6 +723,67 @@ describe("PluginManager:", function () {
             });
         });
     });
+    describe("locking", function () {
+        beforeEach(function () {
+            // reduce lock timeout for test reason
+            manager.options.lockWait = 50;
+            manager.options.lockStale = 1000;
+        });
+        it("cannot install multiple package concurrently", function () {
+            return __awaiter(this, void 0, void 0, function* () {
+                // I expect this to take some time...
+                const installation1 = manager.installFromNpm("moment");
+                // so I expect a concurrent installation to fail...
+                const pluginSourcePath = path.join(__dirname, "my-basic-plugin");
+                const installation2 = manager.installFromPath(pluginSourcePath);
+                try {
+                    yield installation2;
+                }
+                catch (err) {
+                    yield installation1;
+                    return;
+                }
+                throw new Error("Expected to fail");
+            });
+        });
+        describe("given a lock", function () {
+            beforeEach(function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    yield fs.ensureDir(manager.options.pluginsPath);
+                    // simulate a lock
+                    yield manager.syncLock();
+                    manager.options.lockStale = 1000;
+                });
+            });
+            afterEach(function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    // simulate a lock
+                    yield manager.syncUnlock();
+                });
+            });
+            it("cannot install package", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    const pluginSourcePath = path.join(__dirname, "my-basic-plugin");
+                    const installation = manager.installFromPath(pluginSourcePath);
+                    try {
+                        yield installation;
+                    }
+                    catch (err) {
+                        return;
+                    }
+                    throw new Error("Expected to fail");
+                });
+            });
+            it("sync is considered stale after some time", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    yield sleep(manager.options.lockStale + 1);
+                    // expected to succeeded because lock is considered stale
+                    const pluginSourcePath = path.join(__dirname, "my-basic-plugin");
+                    yield manager.installFromPath(pluginSourcePath);
+                });
+            });
+        });
+    });
 });
 function getGithubAuth() {
     try {
@@ -738,5 +799,8 @@ function getGithubAuth() {
         }
         return undefined;
     }
+}
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
 }
 //# sourceMappingURL=PluginManagerSuite.js.map

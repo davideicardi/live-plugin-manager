@@ -108,6 +108,8 @@ Create a new instance of `PluginManager`. Takes an optional `options` parameter 
 - `ignoredDependencies`: array of string or RegExp with the list of dependencies to ignore, default to `@types/*`
 - `staticDependencies`: object with an optional list of static dependencies that can be used to force a dependencies to be ignored (not installed when a plugin depend on it) and loaded from this list
 - `githubAuthentication`: Github authentication configuration (optional). See `installFromGithub` or [Github api authentication](https://github.com/octokit/node-github#authentication) for more info.
+- `lockWait`: A number of milliseconds to wait for locks when installing modules to expire before giving up. (default 2 min)
+- `lockStale`: A number of milliseconds before installations locks are considered to have expired. (default 3 min)
 
 ### pluginManager.install(name: string, version?: string): Promise\<IPluginInfo\>
 
@@ -196,7 +198,7 @@ This project use the following dependencies to do it's job:
 - [npm-registry-client](https://github.com/npm/npm-registry-client): npm registry handling
 - [github](https://www.npmjs.com/package/github)
 - [vm](https://nodejs.org/api/vm.html): compiling and running plugin code within V8 Virtual Machine contexts
-- [lockfile](https://github.com/npm/lockfile): file system locking to prevent concurrent operations
+- [lockfile](https://github.com/npm/lockfile): file system locking to prevent concurrent operations (see below)
 - [tar.gz](https://github.com/alanhoff/node-tar.gz): extract package file
 - [fs-extra](https://github.com/jprichardson/node-fs-extra): file system operations
 - [debug](https://github.com/visionmedia/debug): debug informations
@@ -205,6 +207,15 @@ While I have tried to mimic the standard Node.js module and package architecture
 First of all is the fact that plugins by definition are installed at runtime in contrast with a standard Node.js application where modules are installed before executin the node.js proccess.
 Modules can be loaded one or more times, instead in standard Node.js they are loaded only the first time that you `require` it.
 Only one version of a plugin can be installed, also for dependencies, while in Node.js multiple version can be installed (each module can have it's own `node_modules`).
+
+### Locking
+
+A file system locking is implemented using [lockfile](https://github.com/npm/lockfile) library to allow multiple app instances to share the file system. 
+This is common in some cloud scenario (for example Azure) where file system is shared between instances.
+
+Locking is used to ensure that only one instance is installing/uninstalling plugins in a given moment.
+
+You can configure `lockWait` inside constructor to configure lock timeout, and `lockStale` to consider a file lock no more valid after that period.
 
 ## Git integration
 

@@ -24,6 +24,8 @@ export interface PluginManagerOptions {
 	ignoredDependencies: Array<string | RegExp>;
 	staticDependencies: { [key: string]: any; };
 	githubAuthentication?: GitHubApi.Auth;
+	lockWait: number;
+	lockStale: number;
 }
 
 const cwd = process.cwd();
@@ -36,7 +38,9 @@ const DefaultOptions: PluginManagerOptions = {
 	requireCoreModules: true,
 	hostRequire: require,
 	ignoredDependencies: [/^@types\//],
-	staticDependencies: {}
+	staticDependencies: {},
+	lockWait: 120000,
+	lockStale: 180000,
 };
 
 const NPM_LATEST_TAG = "latest";
@@ -135,6 +139,8 @@ export class PluginManager {
 	}
 
 	async uninstall(name: string): Promise<void> {
+		await fs.ensureDir(this.options.pluginsPath);
+
 		await this.syncLock();
 		try {
 			return await this.uninstallLockFree(name);
@@ -144,6 +150,8 @@ export class PluginManager {
 	}
 
 	async uninstallAll(): Promise<void> {
+		await fs.ensureDir(this.options.pluginsPath);
+
 		await this.syncLock();
 		try {
 			// TODO First I should install dependents plugins??
@@ -565,7 +573,7 @@ export class PluginManager {
 
 		const lockLocation = path.join(this.options.pluginsPath, "install.lock");
 		return new Promise<void>((resolve, reject) => {
-			lockFile.lock(lockLocation, { wait: 30000 }, (err) => {
+			lockFile.lock(lockLocation, { wait: this.options.lockWait, stale: this.options.lockStale }, (err) => {
 				if (err) {
 					debug("Failed to acquire lock", err);
 					return reject("Failed to acquire lock: " + err.message);

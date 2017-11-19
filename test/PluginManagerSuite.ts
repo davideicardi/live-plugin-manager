@@ -735,6 +735,69 @@ describe("PluginManager:", function() {
 			assert.isDefined(info.version);
 		});
 	});
+
+	describe("locking", function() {
+		beforeEach(function() {
+			// reduce lock timeout for test reason
+			manager.options.lockWait = 50;
+			manager.options.lockStale = 1000;
+		});
+
+		it("cannot install multiple package concurrently", async function() {
+			// I expect this to take some time...
+			const installation1 = manager.installFromNpm("moment");
+
+			// so I expect a concurrent installation to fail...
+			const pluginSourcePath = path.join(__dirname, "my-basic-plugin");
+			const installation2 = manager.installFromPath(pluginSourcePath);
+
+			try {
+				await installation2;
+			} catch (err) {
+				await installation1;
+				return;
+			}
+
+			throw new Error("Expected to fail");
+		});
+
+		describe("given a lock", function() {
+
+			beforeEach(async function() {
+				await fs.ensureDir(manager.options.pluginsPath);
+
+				// simulate a lock
+				await (manager as any).syncLock();
+				manager.options.lockStale = 1000;
+			});
+
+			afterEach(async function() {
+				// simulate a lock
+				await (manager as any).syncUnlock();
+			});
+
+			it("cannot install package", async function() {
+				const pluginSourcePath = path.join(__dirname, "my-basic-plugin");
+				const installation = manager.installFromPath(pluginSourcePath);
+
+				try {
+					await installation;
+				} catch (err) {
+					return;
+				}
+
+				throw new Error("Expected to fail");
+			});
+
+			it("sync is considered stale after some time", async function() {
+				await sleep(manager.options.lockStale + 1);
+
+				// expected to succeeded because lock is considered stale
+				const pluginSourcePath = path.join(__dirname, "my-basic-plugin");
+				await manager.installFromPath(pluginSourcePath);
+			});
+		});
+	});
 });
 
 
@@ -751,4 +814,8 @@ function getGithubAuth() {
 		}
 		return undefined;
 	}
+}
+
+function sleep(ms: number) {
+	return new Promise((resolve) => setTimeout(resolve, ms));
 }
