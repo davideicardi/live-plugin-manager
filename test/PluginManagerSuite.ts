@@ -123,6 +123,21 @@ describe("PluginManager:", function() {
 
 				assert.equal(pluginInstance.myVariable, "value1");
 			});
+
+			it("installing a plugin with node_modules should not copy node_modules", async function() {
+				const pluginPath = path.join(__dirname, "my-plugin-with-npm-modules");
+				await manager.installFromPath(pluginPath);
+
+				const pluginInstance = manager.require("my-plugin-with-npm-modules");
+				assert.isDefined(pluginInstance, "Plugin is not loaded");
+				assert.equal(pluginInstance.myVariable, "value1");
+
+				const pluginDestinationPath = path.join(manager.options.pluginsPath, "my-plugin-with-npm-modules");
+				assert.isTrue(fs.existsSync(pluginDestinationPath),
+					"Plugin directory should be copied");
+				assert.isFalse(fs.existsSync(path.join(pluginDestinationPath, "node_modules")),
+					"Directory node_modules should not be copied");
+			});
 		});
 
 		describe("from npm", function() {

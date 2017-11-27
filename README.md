@@ -142,7 +142,7 @@ See [Github api authentication](https://github.com/octokit/node-github#authentic
 
 ### installFromPath(location: string, options: {force: boolean} = {}): Promise\<IPluginInfo\>
 
-Install the specified package from a filesystem location. Dependencies are automatically installed from npm.
+Install the specified package from a filesystem location. Dependencies are automatically installed from npm. `node_modules` folder is excluded from source location.
 
 ### installFromCode(name: string, code: string, version?: string): Promise\<IPluginInfo\>
 
@@ -229,7 +229,7 @@ Usually you should add this to your `.gitignore` file:
 There are some known limitations when installing a package:
 
 - Different plugins cannot depends on different/incompatible modules. If plugin A require module x at version 1 and plugin B require modele X at version 2 then plugin A and plugin B cannot be installed simultaneously.
-- No `pre/post-install` scripts are executed (for now)
+- No `pre/post-install` scripts are executed (some packages use this scripts to build assets or for platform specific installation, so for this reason some packages are not supported)
 - C/C++ packages (`.node`) are not supported
 - Plugin dependencies can be specified only as NPM dependencies (version number) or github dependencies (owner/repo), url or other kind of dependencies are not supported
 

@@ -127,6 +127,18 @@ describe("PluginManager:", function () {
                     chai_1.assert.equal(pluginInstance.myVariable, "value1");
                 });
             });
+            it("installing a plugin with node_modules should not copy node_modules", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    const pluginPath = path.join(__dirname, "my-plugin-with-npm-modules");
+                    yield manager.installFromPath(pluginPath);
+                    const pluginInstance = manager.require("my-plugin-with-npm-modules");
+                    chai_1.assert.isDefined(pluginInstance, "Plugin is not loaded");
+                    chai_1.assert.equal(pluginInstance.myVariable, "value1");
+                    const pluginDestinationPath = path.join(manager.options.pluginsPath, "my-plugin-with-npm-modules");
+                    chai_1.assert.isTrue(fs.existsSync(pluginDestinationPath), "Plugin directory should be copied");
+                    chai_1.assert.isFalse(fs.existsSync(path.join(pluginDestinationPath, "node_modules")), "Directory node_modules should not be copied");
+                });
+            });
         });
         describe("from npm", function () {
             it("installing a not existing plugin", function () {

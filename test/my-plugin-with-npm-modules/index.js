@@ -1,0 +1,2 @@
+
+exports.myVariable = "value1";

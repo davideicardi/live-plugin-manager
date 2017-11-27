@@ -248,7 +248,7 @@ class PluginManager {
             if (options.force || !(yield this.isAlreadyDownloaded(packageJson.name, packageJson.version))) {
                 yield this.removeDownloaded(packageJson.name);
                 debug(`Copy from ${location} to ${this.options.pluginsPath}`);
-                yield fs.copy(location, this.getPluginLocation(packageJson.name));
+                yield fs.copy(location, this.getPluginLocation(packageJson.name), { exclude: ["node_modules"] });
             }
             return this.addPlugin(packageJson);
         });

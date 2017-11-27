@@ -288,7 +288,7 @@ export class PluginManager {
 			await this.removeDownloaded(packageJson.name);
 
 			debug(`Copy from ${location} to ${this.options.pluginsPath}`);
-			await fs.copy(location, this.getPluginLocation(packageJson.name));
+			await fs.copy(location, this.getPluginLocation(packageJson.name), { exclude: ["node_modules"] });
 		}
 
 		return this.addPlugin(packageJson);
