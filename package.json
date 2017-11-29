@@ -1,6 +1,6 @@
 {
   "name": "live-plugin-manager",
-  "version": "0.9.3",
+  "version": "0.9.4",
   "description": "Install and uninstall any node package at runtime from npm registry",
   "keywords": [
     "plugin",
