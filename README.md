@@ -189,19 +189,19 @@ Get package/module info from github registry.
 
 Often is a bad idea for security to allow installation and execution of any node.js package inside your application.
 When installing a package it's code is executed with the same permissions of your host application and can potentially damage your entire server.
-I suggest usually to allow to install only a limited sets of plugins or only allow administrator to install plugins.
+I suggest usually to allow to install only a limited sets of plugins or only allow trusted administrator to install plugins.
 
 ## Under to hood
 
 This project use the following dependencies to do it's job:
 
-- [npm-registry-client](https://github.com/npm/npm-registry-client): npm registry handling
 - [github](https://www.npmjs.com/package/github)
 - [vm](https://nodejs.org/api/vm.html): compiling and running plugin code within V8 Virtual Machine contexts
 - [lockfile](https://github.com/npm/lockfile): file system locking to prevent concurrent operations (see below)
 - [tar.gz](https://github.com/alanhoff/node-tar.gz): extract package file
 - [fs-extra](https://github.com/jprichardson/node-fs-extra): file system operations
 - [debug](https://github.com/visionmedia/debug): debug informations
+- (removed for now because not very useful) [npm-registry-client](https://github.com/npm/npm-registry-client): npm registry handling
 
 While I have tried to mimic the standard Node.js module and package architecture there are some differences.
 First of all is the fact that plugins by definition are installed at runtime in contrast with a standard Node.js application where modules are installed before executin the node.js proccess.

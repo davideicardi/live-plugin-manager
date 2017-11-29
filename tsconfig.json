@@ -14,7 +14,7 @@
     "samples/plugins",
     "test/plugins",
     "node_modules",
+    "plugin_packages",
     "**/*.d.ts"
-  ],
-  "compileOnSave": true
+  ]
 }

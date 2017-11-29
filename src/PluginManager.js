@@ -250,7 +250,8 @@ class PluginManager {
                 debug(`Copy from ${location} to ${this.options.pluginsPath}`);
                 yield fs.copy(location, this.getPluginLocation(packageJson.name), { exclude: ["node_modules"] });
             }
-            return this.addPlugin(packageJson);
+            const pluginInfo = yield this.createPluginInfo(packageJson.name);
+            return this.addPlugin(pluginInfo);
         });
     }
     installFromNpmLockFree(name, version = NPM_LATEST_TAG) {
@@ -273,7 +274,8 @@ class PluginManager {
                 yield this.removeDownloaded(registryInfo.name);
                 yield this.npmRegistry.download(this.options.pluginsPath, registryInfo);
             }
-            return this.addPlugin(registryInfo);
+            const pluginInfo = yield this.createPluginInfo(registryInfo.name);
+            return this.addPlugin(pluginInfo);
         });
     }
     installFromGithubLockFree(repository) {
@@ -296,7 +298,8 @@ class PluginManager {
                 yield this.removeDownloaded(registryInfo.name);
                 yield this.githubRegistry.download(this.options.pluginsPath, registryInfo);
             }
-            return this.addPlugin(registryInfo);
+            const pluginInfo = yield this.createPluginInfo(registryInfo.name);
+            return this.addPlugin(pluginInfo);
         });
     }
     installFromCodeLockFree(name, code, version = "0.0.0") {
@@ -309,9 +312,7 @@ class PluginManager {
             }
             const packageJson = {
                 name,
-                version,
-                dependencies: [],
-                description: name
+                version
             };
             // already installed satisfied version
             if (version !== "0.0.0") {
@@ -333,43 +334,45 @@ class PluginManager {
                 yield fs.writeFile(path.join(location, DefaultMainFile), code);
                 yield fs.writeFile(path.join(location, "package.json"), JSON.stringify(packageJson));
             }
-            return this.addPlugin(packageJson);
+            const pluginInfo = yield this.createPluginInfo(packageJson.name);
+            return this.addPlugin(pluginInfo);
         });
     }
-    installDependencies(packageInfo) {
+    installDependencies(plugin) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (!packageInfo.dependencies) {
-                return [];
+            if (!plugin.dependencies) {
+                return {};
             }
-            const dependencies = new Array();
-            for (const key in packageInfo.dependencies) {
-                if (!packageInfo.dependencies.hasOwnProperty(key)) {
+            const dependencies = {};
+            for (const key in plugin.dependencies) {
+                if (!plugin.dependencies.hasOwnProperty(key)) {
                     continue;
                 }
                 if (this.shouldIgnore(key)) {
                     continue;
                 }
-                const version = packageInfo.dependencies[key].toString();
+                const version = plugin.dependencies[key];
                 if (this.isModuleAvailableFromHost(key, version)) {
-                    debug(`Installing dependencies of ${packageInfo.name}: ${key} is already available on host`);
+                    debug(`Installing dependencies of ${plugin.name}: ${key} is already available on host`);
                 }
                 else if (this.alreadyInstalled(key, version)) {
-                    debug(`Installing dependencies of ${packageInfo.name}: ${key} is already installed`);
+                    debug(`Installing dependencies of ${plugin.name}: ${key} is already installed`);
                 }
                 else {
-                    debug(`Installing dependencies of ${packageInfo.name}: ${key} ...`);
+                    debug(`Installing dependencies of ${plugin.name}: ${key} ...`);
                     yield this.installLockFree(key, version);
                 }
-                dependencies.push(key);
+                // NOTE: maybe here I should put the actual version?
+                dependencies[key] = version;
             }
             return dependencies;
         });
     }
     unloadWithDependents(plugin) {
         this.unload(plugin);
-        for (const dependent of this.installedPlugins) {
-            if (dependent.dependencies.indexOf(plugin.name) >= 0) {
-                this.unloadWithDependents(dependent);
+        for (const installed of this.installedPlugins) {
+            if (installed.dependencies[plugin.name]) {
+                this.unloadWithDependents(installed);
             }
         }
     }
@@ -410,7 +413,7 @@ class PluginManager {
     removeDownloaded(name) {
         return __awaiter(this, void 0, void 0, function* () {
             const location = this.getPluginLocation(name);
-            if (!(yield fs.exists(location))) {
+            if (!(yield fs.directoryExists(location))) {
                 yield fs.remove(location);
             }
         });
@@ -418,7 +421,7 @@ class PluginManager {
     isAlreadyDownloaded(name, version) {
         return __awaiter(this, void 0, void 0, function* () {
             const location = this.getPluginLocation(name);
-            if (!(yield fs.exists(location))) {
+            if (!(yield fs.directoryExists(location))) {
                 return false;
             }
             try {
@@ -433,7 +436,7 @@ class PluginManager {
     readPackageJsonFromPath(location) {
         return __awaiter(this, void 0, void 0, function* () {
             const packageJsonFile = path.join(location, "package.json");
-            if (!(yield fs.exists(packageJsonFile))) {
+            if (!(yield fs.fileExists(packageJsonFile))) {
                 throw new Error(`Invalid plugin ${location}, package.json is missing`);
             }
             const packageJson = JSON.parse(yield fs.readFile(packageJsonFile, "utf8"));
@@ -453,26 +456,11 @@ class PluginManager {
         debug(`Unloading ${plugin.name}...`);
         this.vm.unload(plugin);
     }
-    addPlugin(packageInfo) {
+    addPlugin(plugin) {
         return __awaiter(this, void 0, void 0, function* () {
-            const dependencies = yield this.installDependencies(packageInfo);
-            const DefaultMainFileExtension = ".js";
-            const location = this.getPluginLocation(packageInfo.name);
-            const pluginInfo = {
-                name: packageInfo.name,
-                version: packageInfo.version,
-                location,
-                mainFile: path.normalize(path.join(location, packageInfo.main || DefaultMainFile)),
-                loaded: false,
-                dependencies,
-                requiredInstances: new Map()
-            };
-            // If no extensions for main file is used, just default to .js
-            if (!path.extname(pluginInfo.mainFile)) {
-                pluginInfo.mainFile += DefaultMainFileExtension;
-            }
-            this.installedPlugins.push(pluginInfo);
-            return pluginInfo;
+            yield this.installDependencies(plugin);
+            this.installedPlugins.push(plugin);
+            return plugin;
         });
     }
     deleteAndUnloadPlugin(plugin) {
@@ -534,6 +522,25 @@ class PluginManager {
             }
         }
         return false;
+    }
+    createPluginInfo(name) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const DefaultMainFileExtension = ".js";
+            const location = this.getPluginLocation(name);
+            const packageJson = yield this.readPackageJsonFromPath(location);
+            let mainFile = path.normalize(path.join(location, packageJson.main || DefaultMainFile));
+            // If no extensions for main file is used, just default to .js
+            if (!path.extname(mainFile)) {
+                mainFile += DefaultMainFileExtension;
+            }
+            return {
+                name: packageJson.name,
+                version: packageJson.version,
+                location,
+                mainFile,
+                dependencies: packageJson.dependencies || {}
+            };
+        });
     }
 }
 exports.PluginManager = PluginManager;

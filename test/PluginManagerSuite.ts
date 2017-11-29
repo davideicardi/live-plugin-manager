@@ -33,7 +33,7 @@ describe("PluginManager:", function() {
 			const plugins = await manager.list();
 			assert.equal(plugins.length, 0);
 
-			assert.isUndefined(manager.alreadyInstalled("lodash"));
+			assert.isUndefined(manager.alreadyInstalled("cookie"));
 			assert.isUndefined(manager.alreadyInstalled("moment"));
 			assert.isUndefined(manager.alreadyInstalled("my-basic-plugin"));
 		});
@@ -53,9 +53,9 @@ describe("PluginManager:", function() {
 				}
 			};
 
-			assert.isFalse(isAvaialable("lodash"));
-			assert.isFalse(isAvaialable("moment"));
-			assert.isFalse(isAvaialable("my-basic-plugin"));
+			assert.isFalse(isAvaialable("cookie"), "cookie should not be available");
+			assert.isFalse(isAvaialable("moment"), "moment should not be available");
+			assert.isFalse(isAvaialable("my-basic-plugin"), "my-basic-plugin should not be available");
 		});
 
 		describe("from path", function() {
@@ -151,16 +151,16 @@ describe("PluginManager:", function() {
 				throw new Error("Expected to fail");
 			});
 
-			it("installing a plugin (lodash)", async function() {
-				await manager.installFromNpm("lodash", "4.17.4");
+			it("installing a plugin (cookie)", async function() {
+				await manager.installFromNpm("cookie", "0.3.1");
 
-				const _ = manager.require("lodash");
-				assert.isDefined(_, "Plugin is not loaded");
+				const cookie = manager.require("cookie");
+				assert.isDefined(cookie, "Plugin is not loaded");
 
 				// try to use the plugin
-				const result = _.defaults({ a: 1 }, { a: 3, b: 2 });
-				assert.equal(result.a, 1);
-				assert.equal(result.b, 2);
+				const result = cookie.parse("foo=bar;x=y");
+				assert.equal(result.foo, "bar");
+				assert.equal(result.x, "y");
 			});
 		});
 
@@ -681,14 +681,13 @@ describe("PluginManager:", function() {
 		it("get latest version info", async function() {
 			const info = await manager.queryPackageFromNpm("lodash");
 			assert.equal("lodash", info.name);
-			assert.isDefined(info.version);
-			assert.isDefined(info.main);
+			assert.isDefined(info.version, "Version not defined");
 		});
 
 		it("get latest version info (with string empty version)", async function() {
 			const info = await manager.queryPackageFromNpm("lodash", "");
 			assert.equal("lodash", info.name);
-			assert.isDefined(info.version);
+			assert.isDefined(info.version, "Version not defined");
 		});
 
 		it("get specific version info", async function() {

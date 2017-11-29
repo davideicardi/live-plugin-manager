@@ -1,9 +1,9 @@
 import * as GitHubApi from "github";
-import { PackageInfo } from "./NpmRegistryClient";
+import { PackageJsonInfo } from "./PackageInfo";
 export declare class GithubRegistryClient {
     private readonly gitHubApi;
     constructor(auth?: GitHubApi.Auth);
-    get(repository: string): Promise<PackageInfo>;
-    download(destinationDirectory: string, packageInfo: PackageInfo): Promise<string>;
+    get(repository: string): Promise<PackageJsonInfo>;
+    download(destinationDirectory: string, packageInfo: PackageJsonInfo): Promise<string>;
     isGithubRepo(version: string): boolean;
 }

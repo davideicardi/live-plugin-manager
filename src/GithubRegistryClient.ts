@@ -3,7 +3,7 @@ import * as fs from "./fileSystem";
 import * as GitHubApi from "github";
 import * as Debug from "debug";
 import { downloadTarball, extractTarball } from "./tarballUtils";
-import { PackageInfo } from "./NpmRegistryClient";
+import { PackageJsonInfo } from "./PackageInfo";
 const debug = Debug("live-plugin-manager.GithubRegistryClient");
 
 export class GithubRegistryClient {
@@ -16,7 +16,7 @@ export class GithubRegistryClient {
 		}
 	}
 
-	async get(repository: string): Promise<PackageInfo> {
+	async get(repository: string): Promise<PackageJsonInfo> {
 		const repoInfo = extractRepositoryInfo(repository);
 
 		debug("Repository info: ", repoInfo);
@@ -28,7 +28,7 @@ export class GithubRegistryClient {
 
 		const contentBuff = new Buffer(response.data.content, "base64");
 		const contentString = contentBuff.toString("utf-8");
-		const pkgContent = JSON.parse(contentString) as PackageInfo;
+		const pkgContent = JSON.parse(contentString) as PackageJsonInfo;
 		if (!pkgContent.name || !pkgContent.version) {
 			throw new Error("Invalid plugin github repository " + repository);
 		}
@@ -56,7 +56,7 @@ export class GithubRegistryClient {
 
 	async download(
 		destinationDirectory: string,
-		packageInfo: PackageInfo): Promise<string> {
+		packageInfo: PackageJsonInfo): Promise<string> {
 
 		if (!packageInfo.dist || !packageInfo.dist.tarball) {
 			throw new Error("Invalid dist.tarball property");
@@ -65,9 +65,12 @@ export class GithubRegistryClient {
 		const tgzFile = await downloadTarball(packageInfo.dist.tarball);
 
 		const pluginDirectory = path.join(destinationDirectory, packageInfo.name);
-		await extractTarball(tgzFile, pluginDirectory);
 
-		await fs.remove(tgzFile);
+		try {
+			await extractTarball(tgzFile, pluginDirectory);
+		} finally {
+			await fs.remove(tgzFile);
+		}
 
 		return pluginDirectory;
 	}

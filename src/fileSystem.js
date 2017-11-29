@@ -1,59 +1,65 @@
 "use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const fs = require("fs-extra");
 const path = require("path");
 var fs_extra_1 = require("fs-extra");
 exports.createWriteStream = fs_extra_1.createWriteStream;
 function remove(fsPath) {
-    return new Promise((resolve, reject) => {
-        fs.remove(fsPath, (err) => {
-            if (err) {
-                return reject(err);
-            }
-            resolve();
-        });
-    });
+    return fs.remove(fsPath);
 }
 exports.remove = remove;
-function exists(fsPath) {
-    return new Promise((resolve, reject) => {
-        fs.exists(fsPath, (pathExists) => {
-            resolve(pathExists);
-        });
+function directoryExists(fsPath) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            const stats = yield fs.stat(fsPath);
+            return stats.isDirectory();
+        }
+        catch (err) {
+            if (err.code === "ENOENT") {
+                return false;
+            }
+            throw err;
+        }
     });
 }
-exports.exists = exists;
-function ensureDir(fsPath) {
-    return new Promise((resolve, reject) => {
-        fs.ensureDir(fsPath, (err) => {
-            if (err) {
-                return reject(err);
+exports.directoryExists = directoryExists;
+function fileExists(fsPath) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            const stats = yield fs.stat(fsPath);
+            return stats.isFile();
+        }
+        catch (err) {
+            if (err.code === "ENOENT") {
+                return false;
             }
-            resolve();
-        });
+            throw err;
+        }
     });
+}
+exports.fileExists = fileExists;
+function ensureDir(fsPath) {
+    return fs.ensureDir(fsPath);
 }
 exports.ensureDir = ensureDir;
 function readFile(fsPath, encoding) {
-    return new Promise((resolve, reject) => {
-        fs.readFile(fsPath, encoding, (err, data) => {
-            if (err) {
-                return reject(err);
-            }
-            resolve(data);
-        });
-    });
+    return fs.readFile(fsPath, encoding);
 }
 exports.readFile = readFile;
+function readJsonFile(fsPath) {
+    return fs.readJson(fsPath);
+}
+exports.readJsonFile = readJsonFile;
 function writeFile(fsPath, content, encoding) {
-    return new Promise((resolve, reject) => {
-        fs.writeFile(fsPath, content, { encoding }, (err) => {
-            if (err) {
-                return reject(err);
-            }
-            resolve();
-        });
-    });
+    return fs.writeFile(fsPath, content, { encoding });
 }
 exports.writeFile = writeFile;
 function copy(src, dest, options) {
@@ -67,14 +73,7 @@ function copy(src, dest, options) {
         }
         return true;
     };
-    return new Promise((resolve, reject) => {
-        fs.copy(src, dest, { filter }, (err) => {
-            if (err) {
-                return reject(err);
-            }
-            resolve();
-        });
-    });
+    return fs.copy(src, dest, { filter });
 }
 exports.copy = copy;
 //# sourceMappingURL=fileSystem.js.map

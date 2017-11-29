@@ -53,8 +53,12 @@ class GithubRegistryClient {
             }
             const tgzFile = yield tarballUtils_1.downloadTarball(packageInfo.dist.tarball);
             const pluginDirectory = path.join(destinationDirectory, packageInfo.name);
-            yield tarballUtils_1.extractTarball(tgzFile, pluginDirectory);
-            yield fs.remove(tgzFile);
+            try {
+                yield tarballUtils_1.extractTarball(tgzFile, pluginDirectory);
+            }
+            finally {
+                yield fs.remove(tgzFile);
+            }
             return pluginDirectory;
         });
     }

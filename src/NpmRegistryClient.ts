@@ -3,24 +3,29 @@ import * as path from "path";
 import * as fs from "./fileSystem";
 import { downloadTarball, extractTarball } from "./tarballUtils";
 import * as semVer from "semver";
-
-const RegistryClient = require("npm-registry-client");
-const log = require("npmlog");
-log.level = "silent"; // disable log for npm-registry-client
+import * as httpUtils from "./httpUtils";
+import { PackageInfo } from "./PackageInfo";
+import * as Debug from "debug";
+const debug = Debug("live-plugin-manager.NpmRegistryClient");
 
 export class NpmRegistryClient {
-	private readonly registryClient: any;
-	private readonly auth?: {token: string, alwaysAuth: boolean};
-
+	defaultHeaders: httpUtils.Headers;
 	constructor(private readonly npmUrl: string, config: NpmRegistryConfig) {
-		this.registryClient = new RegistryClient(config);
+		const staticHeaders = {
+			// https://github.com/npm/registry/blob/master/docs/responses/package-metadata.md
+			"accept-encoding": "gzip",
+			"accept": "application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8, */*",
+			"user-agent": config.userAgent || "live-plugin-manager"
+		};
 
-		if (config.auth) {
-			this.auth = {...config.auth, alwaysAuth: true};
-		}
+		this.defaultHeaders = config.auth
+			? {...staticHeaders, ...httpUtils.headersBearerAuth(config.auth.token)}
+			: {...staticHeaders};
 	}
 
 	async get(name: string, versionOrTag = "latest"): Promise<PackageInfo> {
+		debug(`Getting npm info for ${name}:${versionOrTag}...`);
+
 		const data = await this.getNpmData(name);
 		versionOrTag = versionOrTag.trim();
 
@@ -57,11 +62,7 @@ export class NpmRegistryClient {
 		}
 
 		return {
-			_id: pInfo._id,
-			dependencies: pInfo.dependencies || {},
-			description: pInfo.description || "",
 			dist: pInfo.dist,
-			main: pInfo.main,
 			name: pInfo.name,
 			version: pInfo.version
 		};
@@ -75,36 +76,38 @@ export class NpmRegistryClient {
 			throw new Error("Invalid dist.tarball property");
 		}
 
-		const tgzFile = await downloadTarball(packageInfo.dist.tarball);
+		const tgzFile = await downloadTarball(packageInfo.dist.tarball, this.defaultHeaders);
 
 		const pluginDirectory = path.join(destinationDirectory, packageInfo.name);
-		await extractTarball(tgzFile, pluginDirectory);
-
-		await fs.remove(tgzFile);
+		try {
+			await extractTarball(tgzFile, pluginDirectory);
+		} finally {
+			await fs.remove(tgzFile);
+		}
 
 		return pluginDirectory;
 	}
 
-	private getNpmData(name: string) {
-		return new Promise<NpmData>((resolve, reject) => {
-			const params = {timeout: 5000, auth: this.auth};
-			const regUrl = urlJoin(this.npmUrl, encodeNpmName(name));
-			this.registryClient.get(regUrl, params, (err: any, data: any) => {
-				if (err) {
-					if (err.message) {
-						err.message = `Failed to get package '${name}' ${err.message}`;
-					}
-					return reject(err);
-				}
+	private async getNpmData(name: string): Promise<NpmData> {
+		const regUrl = urlJoin(this.npmUrl, encodeNpmName(name));
+		const headers = this.defaultHeaders;
+		try {
+			const result = await httpUtils.httpJsonGet<NpmData>(regUrl, headers);
+			if (!result) {
+				throw new Error("Response is empty");
+			}
+			if (!result.versions
+			|| !result.name) {
+				throw new Error("Invalid json format");
+			}
 
-				if (!data.versions
-				|| !data.name) {
-					reject(new Error(`Failed to get package '${name}': invalid json format`));
-				}
-
-				resolve(data as NpmData);
-			});
-		});
+			return result;
+		} catch (err) {
+			if (err.message) {
+				err.message = `Failed to get package '${name}' ${err.message}`;
+			}
+			throw err;
+		}
 	}
 }
 
@@ -118,29 +121,12 @@ interface NpmData {
 	};
 	versions: {
 		[version: string]: {
-			_id: string;
 			dist: {
-				shasum: string;
 				tarball: string;
 			},
-			dependencies: {[name: string]: string}
 			name: string,
-			description?: string,
-			version: string,
-			main: string
+			version: string
 		}
-	};
-}
-
-export interface PackageInfo {
-	_id?: string;
-	name: string;
-	description: string;
-	version: string;
-	main?: string;
-	dependencies?: any;
-	dist?: {
-		tarball: string
 	};
 }
 

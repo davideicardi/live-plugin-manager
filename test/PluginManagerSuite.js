@@ -39,7 +39,7 @@ describe("PluginManager:", function () {
             return __awaiter(this, void 0, void 0, function* () {
                 const plugins = yield manager.list();
                 chai_1.assert.equal(plugins.length, 0);
-                chai_1.assert.isUndefined(manager.alreadyInstalled("lodash"));
+                chai_1.assert.isUndefined(manager.alreadyInstalled("cookie"));
                 chai_1.assert.isUndefined(manager.alreadyInstalled("moment"));
                 chai_1.assert.isUndefined(manager.alreadyInstalled("my-basic-plugin"));
             });
@@ -61,9 +61,9 @@ describe("PluginManager:", function () {
                         }
                     }
                 };
-                chai_1.assert.isFalse(isAvaialable("lodash"));
-                chai_1.assert.isFalse(isAvaialable("moment"));
-                chai_1.assert.isFalse(isAvaialable("my-basic-plugin"));
+                chai_1.assert.isFalse(isAvaialable("cookie"), "cookie should not be available");
+                chai_1.assert.isFalse(isAvaialable("moment"), "moment should not be available");
+                chai_1.assert.isFalse(isAvaialable("my-basic-plugin"), "my-basic-plugin should not be available");
             });
         });
         describe("from path", function () {
@@ -152,15 +152,15 @@ describe("PluginManager:", function () {
                     throw new Error("Expected to fail");
                 });
             });
-            it("installing a plugin (lodash)", function () {
+            it("installing a plugin (cookie)", function () {
                 return __awaiter(this, void 0, void 0, function* () {
-                    yield manager.installFromNpm("lodash", "4.17.4");
-                    const _ = manager.require("lodash");
-                    chai_1.assert.isDefined(_, "Plugin is not loaded");
+                    yield manager.installFromNpm("cookie", "0.3.1");
+                    const cookie = manager.require("cookie");
+                    chai_1.assert.isDefined(cookie, "Plugin is not loaded");
                     // try to use the plugin
-                    const result = _.defaults({ a: 1 }, { a: 3, b: 2 });
-                    chai_1.assert.equal(result.a, 1);
-                    chai_1.assert.equal(result.b, 2);
+                    const result = cookie.parse("foo=bar;x=y");
+                    chai_1.assert.equal(result.foo, "bar");
+                    chai_1.assert.equal(result.x, "y");
                 });
             });
         });
@@ -658,15 +658,14 @@ describe("PluginManager:", function () {
             return __awaiter(this, void 0, void 0, function* () {
                 const info = yield manager.queryPackageFromNpm("lodash");
                 chai_1.assert.equal("lodash", info.name);
-                chai_1.assert.isDefined(info.version);
-                chai_1.assert.isDefined(info.main);
+                chai_1.assert.isDefined(info.version, "Version not defined");
             });
         });
         it("get latest version info (with string empty version)", function () {
             return __awaiter(this, void 0, void 0, function* () {
                 const info = yield manager.queryPackageFromNpm("lodash", "");
                 chai_1.assert.equal("lodash", info.name);
-                chai_1.assert.isDefined(info.version);
+                chai_1.assert.isDefined(info.version, "Version not defined");
             });
         });
         it("get specific version info", function () {

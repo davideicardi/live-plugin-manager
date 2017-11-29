@@ -4,55 +4,51 @@ import * as path from "path";
 export {createWriteStream} from "fs-extra";
 
 export function remove(fsPath: string): Promise<void> {
-	return new Promise<void>((resolve, reject) => {
-		fs.remove(fsPath, (err) => {
-			if (err) {
-				return reject(err);
-			}
-			resolve();
-		});
-	});
+	return fs.remove(fsPath);
 }
 
-export function exists(fsPath: string): Promise<boolean> {
-	return new Promise<boolean>((resolve, reject) => {
-		fs.exists(fsPath, (pathExists) => {
-			resolve(pathExists);
-		});
-	});
+export async function directoryExists(fsPath: string): Promise<boolean> {
+	try {
+		const stats = await fs.stat(fsPath);
+
+		return stats.isDirectory();
+	} catch (err) {
+		if (err.code === "ENOENT") {
+			return false;
+		}
+
+		throw err;
+	}
+}
+
+export async function fileExists(fsPath: string): Promise<boolean> {
+	try {
+		const stats = await fs.stat(fsPath);
+
+		return stats.isFile();
+	} catch (err) {
+		if (err.code === "ENOENT") {
+			return false;
+		}
+
+		throw err;
+	}
 }
 
 export function ensureDir(fsPath: string): Promise<void> {
-	return new Promise<void>((resolve, reject) => {
-		fs.ensureDir(fsPath, (err) => {
-			if (err) {
-				return reject(err);
-			}
-			resolve();
-		});
-	});
+	return fs.ensureDir(fsPath);
 }
 
 export function readFile(fsPath: string, encoding: string): Promise<string> {
-	return new Promise<string>((resolve, reject) => {
-		fs.readFile(fsPath, encoding, (err, data) => {
-			if (err) {
-				return reject(err);
-			}
-			resolve(data);
-		});
-	});
+	return fs.readFile(fsPath, encoding);
+}
+
+export function readJsonFile(fsPath: string): Promise<any> {
+	return fs.readJson(fsPath);
 }
 
 export function writeFile(fsPath: string, content: string, encoding?: string): Promise<void> {
-	return new Promise<void>((resolve, reject) => {
-		fs.writeFile(fsPath, content, {encoding}, (err) => {
-			if (err) {
-				return reject(err);
-			}
-			resolve();
-		});
-	});
+	return fs.writeFile(fsPath, content, {encoding});
 }
 
 export function copy(src: string, dest: string, options?: Partial<CopyOptions>): Promise<void> {
@@ -70,14 +66,7 @@ export function copy(src: string, dest: string, options?: Partial<CopyOptions>):
 		return true;
 	};
 
-	return new Promise<void>((resolve, reject) => {
-		fs.copy(src, dest, { filter } , (err) => {
-			if (err) {
-				return reject(err);
-			}
-			resolve();
-		});
-	});
+	return fs.copy(src, dest, { filter });
 }
 
 export interface CopyOptions {

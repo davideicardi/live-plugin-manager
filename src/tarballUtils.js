@@ -13,7 +13,7 @@ const path = require("path");
 const fs = require("./fileSystem");
 const tar = require("tar");
 const Debug = require("debug");
-const httpUtils_1 = require("./httpUtils");
+const httpUtils = require("./httpUtils");
 const debug = Debug("live-plugin-manager.TarballUtils");
 function extractTarball(tgzFile, destinationDirectory) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -27,15 +27,15 @@ function extractTarball(tgzFile, destinationDirectory) {
     });
 }
 exports.extractTarball = extractTarball;
-function downloadTarball(url) {
+function downloadTarball(url, headers) {
     return __awaiter(this, void 0, void 0, function* () {
         const destinationFile = path.join(os.tmpdir(), Date.now().toString() + ".tgz");
         // delete file if exists
-        if (yield fs.exists(destinationFile)) {
+        if (yield fs.fileExists(destinationFile)) {
             yield fs.remove(destinationFile);
         }
         debug(`Downloading ${url} to ${destinationFile} ...`);
-        yield httpUtils_1.httpDownload(url, destinationFile);
+        yield httpUtils.httpDownload(url, destinationFile, headers);
         return destinationFile;
     });
 }

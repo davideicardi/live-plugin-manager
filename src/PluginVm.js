@@ -44,7 +44,8 @@ class PluginVm {
             location: path.join(this.manager.options.pluginsPath, name),
             mainFile: filePath,
             name,
-            version: "1.0.0"
+            version: "1.0.0",
+            dependencies: {}
         };
         return this.vmRunScript(pluginContext, filePath, code);
     }

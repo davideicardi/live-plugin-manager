@@ -1,7 +1,8 @@
 /// <reference types="node" />
-import { PackageInfo, NpmRegistryConfig } from "./NpmRegistryClient";
-import { PluginInfo, IPluginInfo } from "./PluginInfo";
+import { NpmRegistryConfig } from "./NpmRegistryClient";
+import { IPluginInfo } from "./PluginInfo";
 import * as GitHubApi from "github";
+import { PackageInfo } from "./PackageInfo";
 export interface PluginManagerOptions {
     cwd: string;
     pluginsPath: string;
@@ -59,14 +60,14 @@ export declare class PluginManager {
     queryPackageFromNpm(name: string, version?: string): Promise<PackageInfo>;
     queryPackageFromGithub(repository: string): Promise<PackageInfo>;
     runScript(code: string): any;
-    getFullInfo(name: string): PluginInfo | undefined;
+    getFullInfo(name: string): IPluginInfo | undefined;
     private uninstallLockFree(name);
     private installLockFree(name, version?);
     private installFromPathLockFree(location, options);
     private installFromNpmLockFree(name, version?);
     private installFromGithubLockFree(repository);
     private installFromCodeLockFree(name, code, version?);
-    private installDependencies(packageInfo);
+    private installDependencies(plugin);
     private unloadWithDependents(plugin);
     private isModuleAvailableFromHost(name, version);
     private isValidPluginName(name);
@@ -76,9 +77,10 @@ export declare class PluginManager {
     private readPackageJsonFromPath(location);
     private load(plugin, filePath?);
     private unload(plugin);
-    private addPlugin(packageInfo);
+    private addPlugin(plugin);
     private deleteAndUnloadPlugin(plugin);
     private syncLock();
     private syncUnlock();
     private shouldIgnore(name);
+    private createPluginInfo(name);
 }

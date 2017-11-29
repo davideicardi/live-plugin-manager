@@ -1,13 +1,14 @@
 import * as fs from "./fileSystem";
 import * as path from "path";
-import {NpmRegistryClient, PackageInfo, NpmRegistryConfig} from "./NpmRegistryClient";
+import {NpmRegistryClient, NpmRegistryConfig} from "./NpmRegistryClient";
 import {PluginVm} from "./PluginVm";
-import {PluginInfo, IPluginInfo} from "./PluginInfo";
+import {IPluginInfo} from "./PluginInfo";
 import * as lockFile from "lockfile";
 import * as semver from "semver";
 import * as Debug from "debug";
 import { GithubRegistryClient } from "./GithubRegistryClient";
 import * as GitHubApi from "github";
+import { PackageJsonInfo, PackageInfo } from "./PackageInfo";
 const debug = Debug("live-plugin-manager");
 
 const BASE_NPM_URL = "https://registry.npmjs.org";
@@ -52,7 +53,7 @@ export interface InstallFromPathOptions {
 export class PluginManager {
 	readonly options: PluginManagerOptions;
 	private readonly vm: PluginVm;
-	private readonly installedPlugins = new Array<PluginInfo>();
+	private readonly installedPlugins = new Array<IPluginInfo>();
 	private readonly npmRegistry: NpmRegistryClient;
 	private readonly githubRegistry: GithubRegistryClient;
 
@@ -230,7 +231,7 @@ export class PluginManager {
 		return this.vm.runScript(code);
 	}
 
-	getFullInfo(name: string): PluginInfo | undefined {
+	getFullInfo(name: string): IPluginInfo | undefined {
 		return this.installedPlugins.find((p) => p.name === name);
 	}
 
@@ -291,7 +292,9 @@ export class PluginManager {
 			await fs.copy(location, this.getPluginLocation(packageJson.name), { exclude: ["node_modules"] });
 		}
 
-		return this.addPlugin(packageJson);
+		const pluginInfo = await this.createPluginInfo(packageJson.name);
+
+		return this.addPlugin(pluginInfo);
 	}
 
 	private async installFromNpmLockFree(name: string, version = NPM_LATEST_TAG): Promise<IPluginInfo> {
@@ -321,7 +324,8 @@ export class PluginManager {
 				registryInfo);
 		}
 
-		return this.addPlugin(registryInfo);
+		const pluginInfo = await this.createPluginInfo(registryInfo.name);
+		return this.addPlugin(pluginInfo);
 	}
 
 	private async installFromGithubLockFree(repository: string): Promise<IPluginInfo> {
@@ -351,7 +355,8 @@ export class PluginManager {
 				registryInfo);
 		}
 
-		return this.addPlugin(registryInfo);
+		const pluginInfo = await this.createPluginInfo(registryInfo.name);
+		return this.addPlugin(pluginInfo);
 	}
 
 	private async installFromCodeLockFree(name: string, code: string, version: string = "0.0.0"): Promise<IPluginInfo> {
@@ -365,9 +370,7 @@ export class PluginManager {
 
 		const packageJson: PackageInfo = {
 			name,
-			version,
-			dependencies: [],
-			description: name
+			version
 		};
 
 		// already installed satisfied version
@@ -395,47 +398,49 @@ export class PluginManager {
 			await fs.writeFile(path.join(location, "package.json"), JSON.stringify(packageJson));
 		}
 
-		return this.addPlugin(packageJson);
+		const pluginInfo = await this.createPluginInfo(packageJson.name);
+		return this.addPlugin(pluginInfo);
 	}
 
-	private async installDependencies(packageInfo: PackageInfo): Promise<string[]> {
-		if (!packageInfo.dependencies) {
-			return [];
+	private async installDependencies(plugin: IPluginInfo): Promise<{ [name: string]: string }> {
+		if (!plugin.dependencies) {
+			return {};
 		}
 
-		const dependencies = new Array<string>();
+		const dependencies: { [name: string]: string } = {};
 
-		for (const key in packageInfo.dependencies) {
-			if (!packageInfo.dependencies.hasOwnProperty(key)) {
+		for (const key in plugin.dependencies) {
+			if (!plugin.dependencies.hasOwnProperty(key)) {
 				continue;
 			}
 			if (this.shouldIgnore(key)) {
 				continue;
 			}
 
-			const version = packageInfo.dependencies[key].toString();
+			const version = plugin.dependencies[key];
 
 			if (this.isModuleAvailableFromHost(key, version)) {
-				debug(`Installing dependencies of ${packageInfo.name}: ${key} is already available on host`);
+				debug(`Installing dependencies of ${plugin.name}: ${key} is already available on host`);
 			} else if (this.alreadyInstalled(key, version)) {
-				debug(`Installing dependencies of ${packageInfo.name}: ${key} is already installed`);
+				debug(`Installing dependencies of ${plugin.name}: ${key} is already installed`);
 			} else {
-				debug(`Installing dependencies of ${packageInfo.name}: ${key} ...`);
+				debug(`Installing dependencies of ${plugin.name}: ${key} ...`);
 				await this.installLockFree(key, version);
 			}
 
-			dependencies.push(key);
+			// NOTE: maybe here I should put the actual version?
+			dependencies[key] = version;
 		}
 
 		return dependencies;
 	}
 
-	private unloadWithDependents(plugin: PluginInfo) {
+	private unloadWithDependents(plugin: IPluginInfo) {
 		this.unload(plugin);
 
-		for (const dependent of this.installedPlugins) {
-			if (dependent.dependencies.indexOf(plugin.name) >= 0) {
-				this.unloadWithDependents(dependent);
+		for (const installed of this.installedPlugins) {
+			if (installed.dependencies[plugin.name]) {
+				this.unloadWithDependents(installed);
 			}
 		}
 	}
@@ -483,14 +488,14 @@ export class PluginManager {
 
 	private async removeDownloaded(name: string) {
 		const location = this.getPluginLocation(name);
-		if (!(await fs.exists(location))) {
+		if (!(await fs.directoryExists(location))) {
 			await fs.remove(location);
 		}
 	}
 
 	private async isAlreadyDownloaded(name: string, version: string): Promise<boolean> {
 		const location = this.getPluginLocation(name);
-		if (!(await fs.exists(location))) {
+		if (!(await fs.directoryExists(location))) {
 			return false;
 		}
 
@@ -503,9 +508,9 @@ export class PluginManager {
 		}
 	}
 
-	private async readPackageJsonFromPath(location: string): Promise<PackageInfo> {
+	private async readPackageJsonFromPath(location: string): Promise<PackageJsonInfo> {
 		const packageJsonFile = path.join(location, "package.json");
-		if (!(await fs.exists(packageJsonFile))) {
+		if (!(await fs.fileExists(packageJsonFile))) {
 			throw new Error(`Invalid plugin ${location}, package.json is missing`);
 		}
 		const packageJson = JSON.parse(await fs.readFile(packageJsonFile, "utf8"));
@@ -519,45 +524,27 @@ export class PluginManager {
 		return packageJson;
 	}
 
-	private load(plugin: PluginInfo, filePath?: string): any {
+	private load(plugin: IPluginInfo, filePath?: string): any {
 		filePath = filePath || plugin.mainFile;
 
 		debug(`Loading ${plugin.name}${filePath}...`);
 		return this.vm.load(plugin, filePath);
 	}
 
-	private unload(plugin: PluginInfo) {
+	private unload(plugin: IPluginInfo) {
 		debug(`Unloading ${plugin.name}...`);
 		this.vm.unload(plugin);
 	}
 
-	private async addPlugin(packageInfo: PackageInfo): Promise<PluginInfo> {
-		const dependencies = await this.installDependencies(packageInfo);
+	private async addPlugin(plugin: IPluginInfo): Promise<IPluginInfo> {
+		await this.installDependencies(plugin);
 
-		const DefaultMainFileExtension = ".js";
+		this.installedPlugins.push(plugin);
 
-		const location = this.getPluginLocation(packageInfo.name);
-		const pluginInfo = {
-			name: packageInfo.name,
-			version: packageInfo.version,
-			location,
-			mainFile: path.normalize(path.join(location, packageInfo.main || DefaultMainFile)),
-			loaded: false,
-			dependencies,
-			requiredInstances: new Map<string, any>()
-		};
-
-		// If no extensions for main file is used, just default to .js
-		if (!path.extname(pluginInfo.mainFile)) {
-			pluginInfo.mainFile += DefaultMainFileExtension;
-		}
-
-		this.installedPlugins.push(pluginInfo);
-
-		return pluginInfo;
+		return plugin;
 	}
 
-	private async deleteAndUnloadPlugin(plugin: PluginInfo): Promise<void> {
+	private async deleteAndUnloadPlugin(plugin: IPluginInfo): Promise<void> {
 		const index = this.installedPlugins.indexOf(plugin);
 		if (index >= 0) {
 			this.installedPlugins.splice(index, 1);
@@ -627,5 +614,26 @@ export class PluginManager {
 		}
 
 		return false;
+	}
+
+	private async createPluginInfo(name: string): Promise<IPluginInfo> {
+		const DefaultMainFileExtension = ".js";
+
+		const location = this.getPluginLocation(name);
+		const packageJson = await this.readPackageJsonFromPath(location);
+
+		let mainFile = path.normalize(path.join(location, packageJson.main || DefaultMainFile));
+		// If no extensions for main file is used, just default to .js
+		if (!path.extname(mainFile)) {
+			mainFile += DefaultMainFileExtension;
+		}
+
+		return {
+			name: packageJson.name,
+			version: packageJson.version,
+			location,
+			mainFile,
+			dependencies: packageJson.dependencies || {}
+		};
 	}
 }
