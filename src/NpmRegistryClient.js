@@ -32,7 +32,7 @@ class NpmRegistryClient {
             const distTags = data["dist-tags"];
             let version = distTags && distTags[versionOrTag];
             if (!version) {
-                version = versionOrTag;
+                version = semVer.clean(versionOrTag) || versionOrTag;
             }
             // find correct version
             let pInfo = data.versions[version];
@@ -43,9 +43,11 @@ class NpmRegistryClient {
                         continue;
                     }
                     const pVersionInfo = data.versions[pVersion];
-                    if (semVer.satisfies(pVersionInfo.version, version)) {
+                    if (!semVer.satisfies(pVersionInfo.version, version)) {
+                        continue;
+                    }
+                    if (!pInfo || semVer.gt(pVersionInfo.version, pInfo.version)) {
                         pInfo = pVersionInfo;
-                        break;
                     }
                 }
             }

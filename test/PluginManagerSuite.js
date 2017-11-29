@@ -672,18 +672,18 @@ describe("PluginManager:", function () {
         it("get specific version info", function () {
             return __awaiter(this, void 0, void 0, function* () {
                 let info = yield manager.queryPackageFromNpm("lodash", "4.17.4");
-                chai_1.assert.equal("lodash", info.name);
-                chai_1.assert.equal("4.17.4", info.version);
+                chai_1.assert.equal(info.name, "lodash");
+                chai_1.assert.equal(info.version, "4.17.4");
                 info = yield manager.queryPackageFromNpm("lodash", "=4.17.4");
-                chai_1.assert.equal("lodash", info.name);
-                chai_1.assert.equal("4.17.4", info.version);
+                chai_1.assert.equal(info.name, "lodash");
+                chai_1.assert.equal(info.version, "4.17.4");
             });
         });
         it("get caret version range info", function () {
             return __awaiter(this, void 0, void 0, function* () {
                 const info = yield manager.queryPackageFromNpm("lodash", "^3.0.0");
-                chai_1.assert.equal("lodash", info.name);
-                chai_1.assert.equal("3.10.1", info.version); // this test can fail if lodash publish a 3.x version
+                chai_1.assert.equal(info.name, "lodash");
+                chai_1.assert.equal(info.version, "3.10.1"); // this test can fail if lodash publish a 3.x version
             });
         });
         it("get latest version info for scoped packages", function () {
@@ -697,17 +697,17 @@ describe("PluginManager:", function () {
             return __awaiter(this, void 0, void 0, function* () {
                 let info = yield manager.queryPackageFromNpm("@types/node", "7.0.13");
                 chai_1.assert.equal("@types/node", info.name);
-                chai_1.assert.equal("7.0.13", info.version);
+                chai_1.assert.equal(info.version, "7.0.13");
                 info = yield manager.queryPackageFromNpm("@types/node", "=7.0.13");
                 chai_1.assert.equal("@types/node", info.name);
-                chai_1.assert.equal("7.0.13", info.version);
+                chai_1.assert.equal(info.version, "7.0.13");
             });
         });
         it("get caret version range info for scoped packages", function () {
             return __awaiter(this, void 0, void 0, function* () {
                 const info = yield manager.queryPackageFromNpm("@types/node", "^6.0.0");
-                chai_1.assert.equal("@types/node", info.name);
-                chai_1.assert.equal("6.0.92", info.version); // this test can fail if @types/node publish a 6.x version
+                chai_1.assert.equal(info.name, "@types/node");
+                chai_1.assert.equal(info.version, "6.0.92"); // this test can fail if @types/node publish a 6.x version
             });
         });
     });

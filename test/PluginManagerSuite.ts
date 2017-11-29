@@ -693,18 +693,18 @@ describe("PluginManager:", function() {
 
 		it("get specific version info", async function() {
 			let info = await manager.queryPackageFromNpm("lodash", "4.17.4");
-			assert.equal("lodash", info.name);
-			assert.equal("4.17.4", info.version);
+			assert.equal(info.name, "lodash");
+			assert.equal(info.version, "4.17.4");
 
 			info = await manager.queryPackageFromNpm("lodash", "=4.17.4");
-			assert.equal("lodash", info.name);
-			assert.equal("4.17.4", info.version);
+			assert.equal(info.name, "lodash");
+			assert.equal(info.version, "4.17.4");
 		});
 
 		it("get caret version range info", async function() {
 			const info = await manager.queryPackageFromNpm("lodash", "^3.0.0");
-			assert.equal("lodash", info.name);
-			assert.equal("3.10.1", info.version); // this test can fail if lodash publish a 3.x version
+			assert.equal(info.name, "lodash");
+			assert.equal(info.version, "3.10.1"); // this test can fail if lodash publish a 3.x version
 		});
 
 		it("get latest version info for scoped packages", async function() {
@@ -716,17 +716,17 @@ describe("PluginManager:", function() {
 		it("get specific version info for scoped packages", async function() {
 			let info = await manager.queryPackageFromNpm("@types/node", "7.0.13");
 			assert.equal("@types/node", info.name);
-			assert.equal("7.0.13", info.version);
+			assert.equal(info.version, "7.0.13");
 
 			info = await manager.queryPackageFromNpm("@types/node", "=7.0.13");
 			assert.equal("@types/node", info.name);
-			assert.equal("7.0.13", info.version);
+			assert.equal(info.version, "7.0.13");
 		});
 
 		it("get caret version range info for scoped packages", async function() {
 			const info = await manager.queryPackageFromNpm("@types/node", "^6.0.0");
-			assert.equal("@types/node", info.name);
-			assert.equal("6.0.92", info.version); // this test can fail if @types/node publish a 6.x version
+			assert.equal(info.name, "@types/node");
+			assert.equal(info.version, "6.0.92"); // this test can fail if @types/node publish a 6.x version
 		});
 	});
 
