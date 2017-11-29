@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import { PackageInfo } from "./NpmRegistryClient";
+import { PackageInfo, NpmRegistryConfig } from "./NpmRegistryClient";
 import { PluginInfo, IPluginInfo } from "./PluginInfo";
 import * as GitHubApi from "github";
 export interface PluginManagerOptions {
@@ -7,7 +7,7 @@ export interface PluginManagerOptions {
     pluginsPath: string;
     sandbox: any;
     npmRegistryUrl: string;
-    npmRegistryConfig: any;
+    npmRegistryConfig: NpmRegistryConfig;
     requireCoreModules: boolean;
     hostRequire?: NodeRequire;
     ignoredDependencies: Array<string | RegExp>;

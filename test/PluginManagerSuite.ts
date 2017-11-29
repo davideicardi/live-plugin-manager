@@ -682,6 +682,7 @@ describe("PluginManager:", function() {
 			const info = await manager.queryPackageFromNpm("lodash");
 			assert.equal("lodash", info.name);
 			assert.isDefined(info.version);
+			assert.isDefined(info.main);
 		});
 
 		it("get latest version info (with string empty version)", async function() {

@@ -1,6 +1,6 @@
 import * as fs from "./fileSystem";
 import * as path from "path";
-import {NpmRegistryClient, PackageInfo} from "./NpmRegistryClient";
+import {NpmRegistryClient, PackageInfo, NpmRegistryConfig} from "./NpmRegistryClient";
 import {PluginVm} from "./PluginVm";
 import {PluginInfo, IPluginInfo} from "./PluginInfo";
 import * as lockFile from "lockfile";
@@ -18,7 +18,7 @@ export interface PluginManagerOptions {
 	pluginsPath: string;
 	sandbox: any;
 	npmRegistryUrl: string;
-	npmRegistryConfig: any;
+	npmRegistryConfig: NpmRegistryConfig;
 	requireCoreModules: boolean;
 	hostRequire?: NodeRequire;
 	ignoredDependencies: Array<string | RegExp>;

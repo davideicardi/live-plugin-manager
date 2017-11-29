@@ -12,6 +12,7 @@ const urlJoin = require("url-join");
 const path = require("path");
 const fs = require("./fileSystem");
 const tarballUtils_1 = require("./tarballUtils");
+const semVer = require("semver");
 const RegistryClient = require("npm-registry-client");
 const log = require("npmlog");
 log.level = "silent"; // disable log for npm-registry-client
@@ -19,21 +20,47 @@ class NpmRegistryClient {
     constructor(npmUrl, config) {
         this.npmUrl = npmUrl;
         this.registryClient = new RegistryClient(config);
+        if (config.auth) {
+            this.auth = Object.assign({}, config.auth, { alwaysAuth: true });
+        }
     }
-    get(name, version = "latest") {
-        return new Promise((resolve, reject) => {
-            const params = { timeout: 5000 };
-            const regUrl = urlJoin(this.npmUrl, encodeNpmName(name), normalizeVersion(name, version));
-            this.registryClient.get(regUrl, params, (err, data) => {
-                if (err) {
-                    if (err.message) {
-                        err.message = `Failed to get package '${name}:${version}' ${err.message}`;
+    get(name, versionOrTag = "latest") {
+        return __awaiter(this, void 0, void 0, function* () {
+            const data = yield this.getNpmData(name);
+            versionOrTag = versionOrTag.trim();
+            // check if there is a tag (es. latest)
+            const distTags = data["dist-tags"];
+            let version = distTags && distTags[versionOrTag];
+            if (!version) {
+                version = versionOrTag;
+            }
+            // find correct version
+            let pInfo = data.versions[version];
+            if (!pInfo) {
+                // find compatible version
+                for (const pVersion in data.versions) {
+                    if (!data.versions.hasOwnProperty(pVersion)) {
+                        continue;
                     }
-                    return reject(err);
+                    const pVersionInfo = data.versions[pVersion];
+                    if (semVer.satisfies(pVersionInfo.version, version)) {
+                        pInfo = pVersionInfo;
+                        break;
+                    }
                 }
-                // TODO Check if data is valid?
-                resolve(data);
-            });
+            }
+            if (!pInfo) {
+                throw new Error(`Version '${versionOrTag} not found`);
+            }
+            return {
+                _id: pInfo._id,
+                dependencies: pInfo.dependencies || {},
+                description: pInfo.description || "",
+                dist: pInfo.dist,
+                main: pInfo.main,
+                name: pInfo.name,
+                version: pInfo.version
+            };
         });
     }
     download(destinationDirectory, packageInfo) {
@@ -48,29 +75,28 @@ class NpmRegistryClient {
             return pluginDirectory;
         });
     }
+    getNpmData(name) {
+        return new Promise((resolve, reject) => {
+            const params = { timeout: 5000, auth: this.auth };
+            const regUrl = urlJoin(this.npmUrl, encodeNpmName(name));
+            this.registryClient.get(regUrl, params, (err, data) => {
+                if (err) {
+                    if (err.message) {
+                        err.message = `Failed to get package '${name}' ${err.message}`;
+                    }
+                    return reject(err);
+                }
+                if (!data.versions
+                    || !data.name) {
+                    reject(new Error(`Failed to get package '${name}': invalid json format`));
+                }
+                resolve(data);
+            });
+        });
+    }
 }
 exports.NpmRegistryClient = NpmRegistryClient;
 function encodeNpmName(name) {
     return name.replace("/", "%2F");
-}
-function normalizeVersion(name, version) {
-    version = (version || "").trim() || "latest";
-    if (name.startsWith("@")) {
-        // npm api seems to have some problems with scoped packages
-        // https://github.com/npm/registry/issues/34
-        // Here I try a workaround
-        if (version === "latest") {
-            return "*"; // TODO I'n not sure it is the same...
-        }
-        // add = if no other operators are specified
-        if (isNumber(version[0])) {
-            return "=" + encodeURIComponent(version);
-        }
-        return encodeURIComponent(version);
-    }
-    return encodeURIComponent(version);
-}
-function isNumber(c) {
-    return (c >= "0" && c <= "9");
 }
 //# sourceMappingURL=NpmRegistryClient.js.map

@@ -659,6 +659,7 @@ describe("PluginManager:", function () {
                 const info = yield manager.queryPackageFromNpm("lodash");
                 chai_1.assert.equal("lodash", info.name);
                 chai_1.assert.isDefined(info.version);
+                chai_1.assert.isDefined(info.main);
             });
         });
         it("get latest version info (with string empty version)", function () {
