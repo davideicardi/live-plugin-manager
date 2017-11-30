@@ -61,6 +61,7 @@ export class PluginManager {
 	private readonly installedPlugins = new Array<IPluginInfo>();
 	private readonly npmRegistry: NpmRegistryClient;
 	private readonly githubRegistry: GithubRegistryClient;
+	private readonly sandboxTemplates = new Map<string, PluginSandbox>();
 
 	constructor(options?: Partial<PluginManagerOptions>) {
 		if (options && !options.pluginsPath && options.cwd) {
@@ -176,7 +177,7 @@ export class PluginManager {
 	require(fullName: string): any {
 		const {pluginName, requiredPath} = this.vm.splitRequire(fullName);
 
-		const info = this.getFullInfo(pluginName);
+		const info = this.getInfo(pluginName);
 		if (!info) {
 			throw new Error(`${pluginName} not installed`);
 		}
@@ -187,6 +188,23 @@ export class PluginManager {
 		}
 
 		return this.load(info, filePath);
+	}
+
+	setSandboxTemplate(name: string, sandbox: PluginSandbox | undefined): void {
+		const info = this.getInfo(name);
+		if (!info) {
+			throw new Error(`${name} not installed`);
+		}
+
+		if (!sandbox) {
+			this.sandboxTemplates.delete(info.name);
+			return;
+		}
+		this.sandboxTemplates.set(info.name, sandbox);
+	}
+
+	getSandboxTemplate(name: string): PluginSandbox | undefined {
+		return this.sandboxTemplates.get(name);
 	}
 
 	alreadyInstalled(name: string, version?: string): IPluginInfo | undefined {
@@ -205,7 +223,7 @@ export class PluginManager {
 	}
 
 	getInfo(name: string): IPluginInfo | undefined {
-		return this.getFullInfo(name);
+		return this.installedPlugins.find((p) => p.name === name);
 	}
 
 	queryPackage(name: string, version?: string): Promise<PackageInfo> {
@@ -236,10 +254,6 @@ export class PluginManager {
 		return this.vm.runScript(code);
 	}
 
-	getFullInfo(name: string): IPluginInfo | undefined {
-		return this.installedPlugins.find((p) => p.name === name);
-	}
-
 	private async uninstallLockFree(name: string): Promise<void> {
 		if (!this.isValidPluginName(name)) {
 			throw new Error(`Invalid plugin name '${name}'`);
@@ -247,7 +261,7 @@ export class PluginManager {
 
 		debug(`Uninstalling ${name}...`);
 
-		const info = this.getFullInfo(name);
+		const info = this.getInfo(name);
 		if (!info) {
 			debug(`${name} not installed`);
 			return;
@@ -554,6 +568,7 @@ export class PluginManager {
 		if (index >= 0) {
 			this.installedPlugins.splice(index, 1);
 		}
+		this.sandboxTemplates.delete(plugin.name);
 
 		this.unloadWithDependents(plugin);
 

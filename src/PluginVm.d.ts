@@ -3,6 +3,7 @@ import { IPluginInfo } from "./PluginInfo";
 export declare class PluginVm {
     private readonly manager;
     private requireCache;
+    private sandboxCache;
     constructor(manager: PluginManager);
     unload(pluginContext: IPluginInfo): void;
     load(pluginContext: IPluginInfo, filePath: string): any;
@@ -22,4 +23,6 @@ export declare class PluginVm {
     private isPlugin(requiredName);
     private tryResolveAsFile(fullPath);
     private tryResolveAsDirectory(fullPath);
+    private getPluginSandbox(pluginContext);
+    private createSandbox(sandboxTemplate);
 }

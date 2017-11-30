@@ -32,6 +32,7 @@ export declare class PluginManager {
     private readonly installedPlugins;
     private readonly npmRegistry;
     private readonly githubRegistry;
+    private readonly sandboxTemplates;
     constructor(options?: Partial<PluginManagerOptions>);
     install(name: string, version?: string): Promise<IPluginInfo>;
     /**
@@ -58,13 +59,14 @@ export declare class PluginManager {
     uninstallAll(): Promise<void>;
     list(): IPluginInfo[];
     require(fullName: string): any;
+    setSandboxTemplate(name: string, sandbox: PluginSandbox | undefined): void;
+    getSandboxTemplate(name: string): PluginSandbox | undefined;
     alreadyInstalled(name: string, version?: string): IPluginInfo | undefined;
     getInfo(name: string): IPluginInfo | undefined;
     queryPackage(name: string, version?: string): Promise<PackageInfo>;
     queryPackageFromNpm(name: string, version?: string): Promise<PackageInfo>;
     queryPackageFromGithub(repository: string): Promise<PackageInfo>;
     runScript(code: string): any;
-    getFullInfo(name: string): IPluginInfo | undefined;
     private uninstallLockFree(name);
     private installLockFree(name, version?);
     private installFromPathLockFree(location, options);

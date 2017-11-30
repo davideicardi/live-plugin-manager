@@ -23,6 +23,8 @@ Main features are:
   - when updating a dependencies all dependents are reloaded
 - Support for concurrency operation on filesystem (cloud/webfarm scenario where file system is shared)
   - A filesystem lock is used to prevent multiple instances to work on the same filesystem in the same moment
+- Each plugin/package run in an semi isolated environment (VM sandbox)
+- You can pass environment variables for each plugin
 - Implementated in Typescript
 - Fully tested (mocha tests)
 
@@ -190,6 +192,13 @@ Get package/module info from github registry.
 Often is a bad idea for security to allow installation and execution of any node.js package inside your application.
 When installing a package it's code is executed with the same permissions of your host application and can potentially damage your entire server.
 I suggest usually to allow to install only a limited sets of plugins or only allow trusted administrator to install plugins.
+
+## Sandbox
+
+For advanced scenarios you can customize the sandbox where each plugin run. Sandbox defined NodeJS `global` object.
+A typical scenario is to customize the environment variables `global.process.env`. To customize the sandbox you can set a single
+sandbox for all plugins using `options.sandbox` in the `PluginManager` constructor or set a different sandbox for each plugin, see
+`PluginManager.setSandboxTemplate` and `PluginManager.getSandboxTemplate` functions.
 
 ## Under to hood
 

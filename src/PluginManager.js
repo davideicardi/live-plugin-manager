@@ -37,6 +37,7 @@ const NPM_LATEST_TAG = "latest";
 class PluginManager {
     constructor(options) {
         this.installedPlugins = new Array();
+        this.sandboxTemplates = new Map();
         if (options && !options.pluginsPath && options.cwd) {
             options.pluginsPath = path.join(options.cwd, "plugin_packages");
         }
@@ -153,7 +154,7 @@ class PluginManager {
     }
     require(fullName) {
         const { pluginName, requiredPath } = this.vm.splitRequire(fullName);
-        const info = this.getFullInfo(pluginName);
+        const info = this.getInfo(pluginName);
         if (!info) {
             throw new Error(`${pluginName} not installed`);
         }
@@ -162,6 +163,20 @@ class PluginManager {
             filePath = this.vm.resolve(info, requiredPath);
         }
         return this.load(info, filePath);
+    }
+    setSandboxTemplate(name, sandbox) {
+        const info = this.getInfo(name);
+        if (!info) {
+            throw new Error(`${name} not installed`);
+        }
+        if (!sandbox) {
+            this.sandboxTemplates.delete(info.name);
+            return;
+        }
+        this.sandboxTemplates.set(info.name, sandbox);
+    }
+    getSandboxTemplate(name) {
+        return this.sandboxTemplates.get(name);
     }
     alreadyInstalled(name, version) {
         const installedInfo = this.getInfo(name);
@@ -176,7 +191,7 @@ class PluginManager {
         return undefined;
     }
     getInfo(name) {
-        return this.getFullInfo(name);
+        return this.installedPlugins.find((p) => p.name === name);
     }
     queryPackage(name, version) {
         if (!this.isValidPluginName(name)) {
@@ -199,16 +214,13 @@ class PluginManager {
     runScript(code) {
         return this.vm.runScript(code);
     }
-    getFullInfo(name) {
-        return this.installedPlugins.find((p) => p.name === name);
-    }
     uninstallLockFree(name) {
         return __awaiter(this, void 0, void 0, function* () {
             if (!this.isValidPluginName(name)) {
                 throw new Error(`Invalid plugin name '${name}'`);
             }
             debug(`Uninstalling ${name}...`);
-            const info = this.getFullInfo(name);
+            const info = this.getInfo(name);
             if (!info) {
                 debug(`${name} not installed`);
                 return;
@@ -469,6 +481,7 @@ class PluginManager {
             if (index >= 0) {
                 this.installedPlugins.splice(index, 1);
             }
+            this.sandboxTemplates.delete(plugin.name);
             this.unloadWithDependents(plugin);
             yield fs.remove(plugin.location);
         });

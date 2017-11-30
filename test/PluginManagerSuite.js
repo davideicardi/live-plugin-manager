@@ -467,7 +467,8 @@ describe("PluginManager:", function () {
                 chai_1.assert.equal(pluginInstance.myJsonRequire.loaded, "yes");
                 chai_1.assert.equal(pluginInstance.myGlobals.__filename, path.join(manager.options.pluginsPath, "my-test-plugin", "index.js"));
                 chai_1.assert.equal(pluginInstance.myGlobals.__dirname, path.join(manager.options.pluginsPath, "my-test-plugin"));
-                chai_1.assert.equal(pluginInstance.myGlobals.process, process);
+                // NOTE: process is not equal because I copy it to override vars
+                // assert.equal(pluginInstance.myGlobals.process, process);
                 chai_1.assert.equal(pluginInstance.myGlobals.console, console);
                 chai_1.assert.equal(pluginInstance.myGlobals.clearImmediate, clearImmediate);
                 chai_1.assert.equal(pluginInstance.myGlobals.clearInterval, clearInterval);
@@ -813,18 +814,26 @@ describe("PluginManager:", function () {
                 const result = manager.runScript(code);
                 chai_1.assert.equal(result, encodeURIComponent("test/1"));
             });
-            it("globals are inherited from parent", function () {
+            it("globals are inherited from host", function () {
                 // Note: this is a bad practice (modify global...) but I support it
                 global.myCustomGlobalVar = "myCustomGlobalVar1";
                 const code = `module.exports = myCustomGlobalVar`;
                 const result = manager.runScript(code);
                 chai_1.assert.equal(result, "myCustomGlobalVar1");
             });
-            it("globals can be overwritten from parent", function () {
+            it("globals can be overwritten from host", function () {
                 manager.options.sandbox.global = Object.assign({}, global, { myCustomGlobalVar: "myCustomGlobalVar2" });
                 const code = `module.exports = myCustomGlobalVar`;
                 const result = manager.runScript(code);
                 chai_1.assert.equal(result, "myCustomGlobalVar2");
+            });
+            it("overwritten globals not affect host, is isolated", function () {
+                chai_1.assert.isUndefined(global.SOME_OTHER_KEY, "Initially host should not have it");
+                manager.options.sandbox.global = Object.assign({}, global, { SOME_OTHER_KEY: "test1" });
+                const code = `module.exports = SOME_OTHER_KEY;`;
+                const result = manager.runScript(code);
+                chai_1.assert.equal(result, "test1");
+                chai_1.assert.isUndefined(global.SOME_OTHER_KEY, "Host should not inherit it");
             });
         });
         describe("given an environment variables", function () {
@@ -834,12 +843,12 @@ describe("PluginManager:", function () {
             afterEach(function () {
                 delete process.env.SOME_RANDOM_KEY;
             });
-            it("plugins inherit from parent", function () {
+            it("plugins inherit from host", function () {
                 const code = `module.exports = process.env.SOME_RANDOM_KEY;`;
                 const result = manager.runScript(code);
                 chai_1.assert.equal(result, "test1");
             });
-            it("allow to override env from parent", function () {
+            it("allow to override env from host", function () {
                 manager.options.sandbox.env = { SOME_KEY: "test2" };
                 const code = `module.exports = process.env.SOME_RANDOM_KEY;`;
                 const result = manager.runScript(code);
@@ -848,8 +857,50 @@ describe("PluginManager:", function () {
                 const result2 = manager.runScript(code2);
                 chai_1.assert.equal(result2, "test2");
             });
+            it("overwritten env not affect host, is isolated", function () {
+                chai_1.assert.isUndefined(process.env.SOME_PLUGIN_KEY, "Initially host should not have it");
+                manager.options.sandbox.env = { SOME_PLUGIN_KEY: "test2" };
+                const code = `module.exports = process.env.SOME_PLUGIN_KEY;`;
+                const result = manager.runScript(code);
+                chai_1.assert.equal(result, "test2");
+                chai_1.assert.isUndefined(process.env.SOME_PLUGIN_KEY, "Host should not inherit it");
+            });
         });
-        // TODO Override sandbox for each plugin
+        describe("sandbox specific for plugin", function () {
+            it("set sandbox for a specific plugin", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    const code = `module.exports = process.env.SOME_RANDOM_KEY;`;
+                    yield manager.installFromCode("my-plugin-with-sandbox", code);
+                    manager.setSandboxTemplate("my-plugin-with-sandbox", {
+                        env: {
+                            SOME_RANDOM_KEY: "test1"
+                        }
+                    });
+                    const result = manager.require("my-plugin-with-sandbox");
+                    chai_1.assert.equal(result, "test1");
+                });
+            });
+            it("A plugin share the same globals between modules", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    const pluginSourcePath = path.join(__dirname, "my-plugin-env-global");
+                    yield manager.installFromPath(pluginSourcePath);
+                    const result = manager.require("my-plugin-env-global");
+                    chai_1.assert.equal(result, "Hello world!");
+                });
+            });
+            it("plugins not share global and env with host, is isolated", function () {
+                chai_1.assert.isUndefined(process.env.SOME_PLUGIN_KEY, "Initially host should not have it");
+                chai_1.assert.isUndefined(global.SOME_OTHER_KEY, "Initially host should not have it");
+                const code = `
+				global.SOME_OTHER_KEY = "test1";
+				process.env.SOME_PLUGIN_KEY = "test2";
+				module.exports = SOME_OTHER_KEY + process.env.SOME_PLUGIN_KEY;`;
+                const result = manager.runScript(code);
+                chai_1.assert.equal(result, "test1test2");
+                chai_1.assert.isUndefined(process.env.SOME_PLUGIN_KEY, "Host should not inherit it");
+                chai_1.assert.isUndefined(global.SOME_OTHER_KEY, "Host should not have it");
+            });
+        });
     });
 });
 function getGithubAuth() {

@@ -4,16 +4,19 @@ import * as path from "path";
 import {PluginManager} from "./PluginManager";
 import {IPluginInfo} from "./PluginInfo";
 import * as Debug from "debug";
+import { PluginSandbox } from "../index";
 const debug = Debug("live-plugin-manager.PluginVm");
 
 export class PluginVm {
 	private requireCache = new Map<IPluginInfo, Map<string, any>>();
+	private sandboxCache = new Map<IPluginInfo, NodeJS.Global>();
 
 	constructor(private readonly manager: PluginManager) {
 	}
 
 	unload(pluginContext: IPluginInfo): void {
 		this.requireCache.delete(pluginContext);
+		this.sandboxCache.delete(pluginContext);
 	}
 
 	load(pluginContext: IPluginInfo, filePath: string): any {
@@ -56,7 +59,11 @@ export class PluginVm {
 			dependencies: {}
 		};
 
-		return this.vmRunScript(pluginContext, filePath, code);
+		try {
+			return this.vmRunScript(pluginContext, filePath, code);
+		} finally {
+			this.unload(pluginContext);
+		}
 	}
 
 	splitRequire(fullName: string) {
@@ -111,28 +118,21 @@ export class PluginVm {
 
 	private createModuleSandbox(pluginContext: IPluginInfo, filePath: string) {
 
-		const pluginGlobalSource = this.manager.options.sandbox.global || global;
-		// https://nodejs.org/api/globals.html
-		const moduleSandbox = {
-			...pluginGlobalSource,  // clone obj
+		const pluginSandbox = this.getPluginSandbox(pluginContext);
 
-			// other "not real global" objects
+		const moduleDirname = path.dirname(filePath);
+
+		// assign missing https://nodejs.org/api/globals.html
+		//  and other "not real global" objects
+		const moduleSandbox = {
+			...pluginSandbox,
 			module: { exports: {} },
-			__dirname: path.dirname(filePath),
+			__dirname: moduleDirname,
 			__filename: filePath,
 			require: (requiredName: string) => {
-				return this.sandboxRequire(pluginContext, moduleSandbox.__dirname, requiredName);
+				return this.sandboxRequire(pluginContext, moduleDirname, requiredName);
 			}
 		};
-
-		// override the global obj to "unlink" it from the original global obj
-		//  and make it unique for each plugin
-		moduleSandbox.global = moduleSandbox;
-
-		// override env
-		if (this.manager.options.sandbox.env) {
-			moduleSandbox.process.env = {...this.manager.options.sandbox.env}; // clone obj
-		}
 
 		return moduleSandbox;
 	}
@@ -264,5 +264,39 @@ export class PluginVm {
 		}
 
 		return undefined;
+	}
+
+	private getPluginSandbox(pluginContext: IPluginInfo): NodeJS.Global {
+		let pluginSandbox = this.sandboxCache.get(pluginContext);
+		if (!pluginSandbox) {
+			const srcSandboxTemplate = this.manager.getSandboxTemplate(pluginContext.name)
+			|| this.manager.options.sandbox;
+
+			pluginSandbox = this.createSandbox(srcSandboxTemplate);
+
+			this.sandboxCache.set(pluginContext, pluginSandbox);
+		}
+
+		return pluginSandbox;
+	}
+
+	private createSandbox(sandboxTemplate: PluginSandbox): NodeJS.Global {
+
+		const srcGlobal = sandboxTemplate.global || global;
+		const srcEnv = sandboxTemplate.env || global.process.env;
+
+		const sandbox = {
+			...srcGlobal,
+			process: Object.create(srcGlobal.process)
+		};
+
+		// override the global obj to "unlink" it from the original global obj
+		//  and make it unique for each sandbox
+		sandbox.global = sandbox;
+
+		// override env to "unlink" from original process
+		sandbox.process.env = {...srcEnv}; // copy properties
+
+		return sandbox;
 	}
 }
