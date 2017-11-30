@@ -813,6 +813,77 @@ describe("PluginManager:", function() {
 			});
 		});
 	});
+
+	describe("sandbox", function() {
+		describe("given globals variables", function() {
+			it("unknown globals throw an exception", function() {
+				const code = `module.exports = someUnknownGlobalVar;`;
+				try {
+					manager.runScript(code);
+				} catch {
+					return;
+				}
+				throw new Error("Excepted to fail");
+			});
+
+			it("globals are available", function() {
+				const code = `module.exports = encodeURIComponent("test/1");`;
+				const result = manager.runScript(code);
+				assert.equal(result, encodeURIComponent("test/1"));
+			});
+
+			it("globals are inherited from parent", function() {
+				// Note: this is a bad practice (modify global...) but I support it
+				(global as any).myCustomGlobalVar = "myCustomGlobalVar1";
+				const code = `module.exports = myCustomGlobalVar`;
+				const result = manager.runScript(code);
+				assert.equal(result, "myCustomGlobalVar1");
+			});
+
+			it("globals can be overwritten from parent", function() {
+				(manager.options.sandbox.global as any) = {
+					...global, // copy default global
+					myCustomGlobalVar: "myCustomGlobalVar2"
+				};
+				const code = `module.exports = myCustomGlobalVar`;
+				const result = manager.runScript(code);
+				assert.equal(result, "myCustomGlobalVar2");
+			});
+		});
+
+		describe("given an environment variables", function() {
+
+			beforeEach(function() {
+				process.env.SOME_RANDOM_KEY = "test1";
+			});
+
+			afterEach(function() {
+				delete process.env.SOME_RANDOM_KEY;
+			});
+
+			it("plugins inherit from parent", function() {
+				const code = `module.exports = process.env.SOME_RANDOM_KEY;`;
+
+				const result = manager.runScript(code);
+				assert.equal(result, "test1");
+			});
+
+			it("allow to override env from parent", function() {
+				manager.options.sandbox.env = { SOME_KEY: "test2" };
+
+				const code = `module.exports = process.env.SOME_RANDOM_KEY;`;
+				const result = manager.runScript(code);
+				assert.isUndefined(result);
+
+				const code2 = `module.exports = process.env.SOME_KEY;`;
+				const result2 = manager.runScript(code2);
+				assert.equal(result2, "test2");
+			});
+
+		});
+
+		// TODO Override sandbox for each plugin
+	});
 });
 
 
@@ -835,6 +906,7 @@ function sleep(ms: number) {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// process.on("unhandledRejection", (reason, p) => {
-//   console.log("Unhandled Rejection at: Promise", p, "reason:", reason.stack);
-// });
+process.on("unhandledRejection", (reason, p) => {
+	// tslint:disable-next-line:no-console
+	console.log("Unhandled Rejection at: Promise", p, "reason:", reason.stack);
+});

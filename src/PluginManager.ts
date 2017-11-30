@@ -17,7 +17,7 @@ const DefaultMainFile = "index.js";
 export interface PluginManagerOptions {
 	cwd: string;
 	pluginsPath: string;
-	sandbox: any;
+	sandbox: PluginSandbox;
 	npmRegistryUrl: string;
 	npmRegistryConfig: NpmRegistryConfig;
 	requireCoreModules: boolean;
@@ -27,6 +27,11 @@ export interface PluginManagerOptions {
 	githubAuthentication?: GitHubApi.Auth;
 	lockWait: number;
 	lockStale: number;
+}
+
+export interface PluginSandbox {
+	env?: NodeJS.ProcessEnv;
+	global?: NodeJS.Global;
 }
 
 const cwd = process.cwd();

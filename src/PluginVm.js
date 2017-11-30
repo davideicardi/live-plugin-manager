@@ -89,27 +89,20 @@ class PluginVm {
         moduleCache.set(filePath, instance);
     }
     createModuleSandbox(pluginContext, filePath) {
-        // tslint:disable-next-line:no-this-assignment
-        const me = this;
-        const moduleSandbox = Object.assign({}, this.manager.options.sandbox);
-        // see https://nodejs.org/api/globals.html
+        const pluginGlobalSource = this.manager.options.sandbox.global || global;
+        // https://nodejs.org/api/globals.html
+        const moduleSandbox = Object.assign({}, pluginGlobalSource, { 
+            // other "not real global" objects
+            module: { exports: {} }, __dirname: path.dirname(filePath), __filename: filePath, require: (requiredName) => {
+                return this.sandboxRequire(pluginContext, moduleSandbox.__dirname, requiredName);
+            } });
+        // override the global obj to "unlink" it from the original global obj
+        //  and make it unique for each plugin
         moduleSandbox.global = moduleSandbox;
-        moduleSandbox.Buffer = Buffer;
-        moduleSandbox.console = console; // TODO Maybe I can override the console ??
-        moduleSandbox.clearImmediate = clearImmediate;
-        moduleSandbox.clearInterval = clearInterval;
-        moduleSandbox.clearTimeout = clearTimeout;
-        moduleSandbox.setImmediate = setImmediate;
-        moduleSandbox.setInterval = setInterval;
-        moduleSandbox.setTimeout = setTimeout;
-        moduleSandbox.process = process;
-        moduleSandbox.module = { exports: {} };
-        // moduleSandbox.exports = moduleSandbox.module.exports; // I have declared it in the code itself
-        moduleSandbox.__dirname = path.dirname(filePath);
-        moduleSandbox.__filename = filePath;
-        moduleSandbox.require = function (requiredName) {
-            return me.sandboxRequire(pluginContext, moduleSandbox.__dirname, requiredName);
-        };
+        // override env
+        if (this.manager.options.sandbox.env) {
+            moduleSandbox.process.env = Object.assign({}, this.manager.options.sandbox.env); // clone obj
+        }
         return moduleSandbox;
     }
     sandboxResolve(pluginContext, moduleDirName, requiredName) {

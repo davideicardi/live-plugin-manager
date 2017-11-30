@@ -110,29 +110,29 @@ export class PluginVm {
 	}
 
 	private createModuleSandbox(pluginContext: IPluginInfo, filePath: string) {
-		// tslint:disable-next-line:no-this-assignment
-		const me = this;
-		const moduleSandbox = {...this.manager.options.sandbox};
 
-		// see https://nodejs.org/api/globals.html
-		moduleSandbox.global = moduleSandbox;
-		moduleSandbox.Buffer = Buffer;
-		moduleSandbox.console = console; // TODO Maybe I can override the console ??
-		moduleSandbox.clearImmediate = clearImmediate;
-		moduleSandbox.clearInterval = clearInterval;
-		moduleSandbox.clearTimeout = clearTimeout;
-		moduleSandbox.setImmediate = setImmediate;
-		moduleSandbox.setInterval = setInterval;
-		moduleSandbox.setTimeout = setTimeout;
-		moduleSandbox.process = process;
-		moduleSandbox.module = { exports: {} };
-		// moduleSandbox.exports = moduleSandbox.module.exports; // I have declared it in the code itself
-		moduleSandbox.__dirname = path.dirname(filePath);
-		moduleSandbox.__filename = filePath;
+		const pluginGlobalSource = this.manager.options.sandbox.global || global;
+		// https://nodejs.org/api/globals.html
+		const moduleSandbox = {
+			...pluginGlobalSource,  // clone obj
 
-		moduleSandbox.require = function(requiredName: string) {
-			return me.sandboxRequire(pluginContext, moduleSandbox.__dirname, requiredName);
+			// other "not real global" objects
+			module: { exports: {} },
+			__dirname: path.dirname(filePath),
+			__filename: filePath,
+			require: (requiredName: string) => {
+				return this.sandboxRequire(pluginContext, moduleSandbox.__dirname, requiredName);
+			}
 		};
+
+		// override the global obj to "unlink" it from the original global obj
+		//  and make it unique for each plugin
+		moduleSandbox.global = moduleSandbox;
+
+		// override env
+		if (this.manager.options.sandbox.env) {
+			moduleSandbox.process.env = {...this.manager.options.sandbox.env}; // clone obj
+		}
 
 		return moduleSandbox;
 	}
