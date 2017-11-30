@@ -26,12 +26,12 @@ describe("PluginManager:", function () {
             if (manager.options.pluginsPath !== path.join(__dirname, "../plugin_packages")) {
                 throw new Error("Invalid plugins path " + manager.options.pluginsPath);
             }
-            fs.removeSync(manager.options.pluginsPath);
+            yield fs.remove(manager.options.pluginsPath);
         });
     });
     afterEach(function () {
         return __awaiter(this, void 0, void 0, function* () {
-            fs.removeSync(manager.options.pluginsPath);
+            yield fs.remove(manager.options.pluginsPath);
         });
     });
     describe("installation", function () {
@@ -769,7 +769,7 @@ describe("PluginManager:", function () {
             });
             afterEach(function () {
                 return __awaiter(this, void 0, void 0, function* () {
-                    // simulate a lock
+                    // simulate unlock
                     yield manager.syncUnlock();
                 });
             });
@@ -815,4 +815,7 @@ function getGithubAuth() {
 function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
+// process.on("unhandledRejection", (reason, p) => {
+//   console.log("Unhandled Rejection at: Promise", p, "reason:", reason.stack);
+// });
 //# sourceMappingURL=PluginManagerSuite.js.map

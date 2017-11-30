@@ -21,11 +21,11 @@ describe("PluginManager:", function() {
 			throw new Error("Invalid plugins path " + manager.options.pluginsPath);
 		}
 
-		fs.removeSync(manager.options.pluginsPath);
+		await fs.remove(manager.options.pluginsPath);
 	});
 
 	afterEach(async function() {
-		fs.removeSync(manager.options.pluginsPath);
+		await fs.remove(manager.options.pluginsPath);
 	});
 
 	describe("installation", function() {
@@ -787,7 +787,7 @@ describe("PluginManager:", function() {
 			});
 
 			afterEach(async function() {
-				// simulate a lock
+				// simulate unlock
 				await (manager as any).syncUnlock();
 			});
 
@@ -834,3 +834,7 @@ function getGithubAuth() {
 function sleep(ms: number) {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
+// process.on("unhandledRejection", (reason, p) => {
+//   console.log("Unhandled Rejection at: Promise", p, "reason:", reason.stack);
+// });
