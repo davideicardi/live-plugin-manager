@@ -5,6 +5,7 @@ const fs = require("fs-extra");
 const path = require("path");
 const Debug = require("debug");
 const debug = Debug("live-plugin-manager.PluginVm");
+const SCOPED_REGEX = /^(@[a-zA-Z0-9-_]+\/[a-zA-Z0-9-_]+)(.*)/;
 class PluginVm {
     constructor(manager) {
         this.manager = manager;
@@ -57,6 +58,10 @@ class PluginVm {
         }
     }
     splitRequire(fullName) {
+        const scopedInfo = this.getScopedInfo(fullName);
+        if (scopedInfo) {
+            return scopedInfo;
+        }
         const slashPosition = fullName.indexOf("/");
         let requiredPath;
         let pluginName = fullName;
@@ -65,6 +70,19 @@ class PluginVm {
             requiredPath = "." + fullName.substring(slashPosition);
         }
         return { pluginName, requiredPath };
+    }
+    getScopedInfo(fullName) {
+        const match = SCOPED_REGEX.exec(fullName);
+        if (!match) {
+            return undefined;
+        }
+        const requiredPath = match[2]
+            ? "." + match[2]
+            : undefined;
+        return {
+            pluginName: match[1],
+            requiredPath
+        };
     }
     vmRunScript(pluginContext, filePath, code) {
         const sandbox = this.createModuleSandbox(pluginContext, filePath);
