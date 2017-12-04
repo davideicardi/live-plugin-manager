@@ -13,6 +13,7 @@ export declare class PluginVm {
         pluginName: string;
         requiredPath: string | undefined;
     };
+    private getScopedInfo(fullName);
     private vmRunScript(pluginContext, filePath, code);
     private getCache(pluginContext, filePath);
     private setCache(pluginContext, filePath, instance);

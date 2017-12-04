@@ -7,6 +7,8 @@ import * as Debug from "debug";
 import { PluginSandbox } from "../index";
 const debug = Debug("live-plugin-manager.PluginVm");
 
+const SCOPED_REGEX = /^(@[a-zA-Z0-9-_]+\/[a-zA-Z0-9-_]+)(.*)/;
+
 export class PluginVm {
 	private requireCache = new Map<IPluginInfo, Map<string, any>>();
 	private sandboxCache = new Map<IPluginInfo, NodeJS.Global>();
@@ -67,6 +69,11 @@ export class PluginVm {
 	}
 
 	splitRequire(fullName: string) {
+		const scopedInfo = this.getScopedInfo(fullName);
+		if (scopedInfo) {
+			return scopedInfo;
+		}
+
 		const slashPosition = fullName.indexOf("/");
 		let requiredPath: string | undefined;
 		let pluginName = fullName;
@@ -76,6 +83,22 @@ export class PluginVm {
 		}
 
 		return { pluginName, requiredPath };
+	}
+
+	private getScopedInfo(fullName: string) {
+		const match = SCOPED_REGEX.exec(fullName);
+		if (!match) {
+			return undefined;
+		}
+
+		const requiredPath = match[2]
+		? "." + match[2]
+		: undefined;
+
+		return {
+			pluginName: match[1],
+			requiredPath
+		};
 	}
 
 	private vmRunScript(pluginContext: IPluginInfo, filePath: string, code: string): any {

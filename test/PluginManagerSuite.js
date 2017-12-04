@@ -507,6 +507,26 @@ describe("PluginManager:", function () {
             });
         });
     });
+    describe("scoped plugins", function () {
+        it("installing a scoped plugin", function () {
+            return __awaiter(this, void 0, void 0, function* () {
+                const pluginPath = path.join(__dirname, "my-basic-plugin-scoped");
+                yield manager.installFromPath(pluginPath);
+                const pluginInstance = manager.require("@myscope/my-basic-plugin-scoped");
+                chai_1.assert.isDefined(pluginInstance, "Plugin is not loaded");
+                chai_1.assert.equal(pluginInstance.myVariable, "value1");
+            });
+        });
+        it("installing a scoped plugin with path", function () {
+            return __awaiter(this, void 0, void 0, function* () {
+                const pluginPath = path.join(__dirname, "my-basic-plugin-scoped");
+                yield manager.installFromPath(pluginPath);
+                const pluginInstance = manager.require("@myscope/my-basic-plugin-scoped/index.js");
+                chai_1.assert.isDefined(pluginInstance, "Plugin is not loaded");
+                chai_1.assert.equal(pluginInstance.myVariable, "value1");
+            });
+        });
+    });
     describe("plugins dependencies", function () {
         this.slow(6000);
         describe("Npm dependencies", function () {
