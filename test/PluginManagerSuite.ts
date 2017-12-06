@@ -141,6 +141,19 @@ describe("PluginManager:", function() {
 		});
 
 		describe("from npm", function() {
+			it("installing from a not valid npm url", async function() {
+				manager = new PluginManager({
+					npmRegistryUrl: "http://davideicardi.com/some-not-existing-registry/"
+				});
+				try {
+					await manager.installFromNpm("moment");
+				} catch (e) {
+					return;
+				}
+
+				throw new Error("Expected to fail");
+			});
+
 			it("installing a not existing plugin", async function() {
 				try {
 					await manager.installFromNpm("this-does-not-exists", "9.9.9");
@@ -161,6 +174,42 @@ describe("PluginManager:", function() {
 				const result = cookie.parse("foo=bar;x=y");
 				assert.equal(result.foo, "bar");
 				assert.equal(result.x, "y");
+			});
+
+			it("installing a plugin already present in the folder will succeeded also if npm is down", async function() {
+				// download it to ensure it is present
+				await manager.installFromNpm("cookie", "0.3.1");
+
+				const failedManager = new PluginManager({
+					npmRegistryUrl: "http://davideicardi.com/some-not-existing-registry/"
+				});
+
+				await failedManager.installFromNpm("cookie", "0.3.1");
+
+				const cookie = manager.require("cookie");
+				assert.isDefined(cookie, "Plugin is not loaded");
+
+				// try to use the plugin
+				const result = cookie.parse("foo=bar;x=y");
+				assert.equal(result.foo, "bar");
+				assert.equal(result.x, "y");
+			});
+
+			// tslint:disable-next-line:max-line-length
+			it("installing a plugin already present in the folder will fail if npm is down and noCache is used", async function() {
+				// download it to ensure it is present
+				await manager.installFromNpm("cookie", "0.3.1");
+
+				const failedManager = new PluginManager({
+					npmRegistryUrl: "http://davideicardi.com/some-not-existing-registry/",
+					npmInstallMode: "noCache"
+				});
+
+				try {
+					await failedManager.installFromNpm("cookie", "0.3.1");
+				} catch (e) {
+					return;
+				}
 			});
 		});
 
@@ -711,6 +760,18 @@ describe("PluginManager:", function() {
 
 		it("get latest version info (with string empty version)", async function() {
 			const info = await manager.queryPackageFromNpm("lodash", "");
+			assert.equal("lodash", info.name);
+			assert.isDefined(info.version, "Version not defined");
+		});
+
+		it("get latest version info (with undefined version)", async function() {
+			const info = await manager.queryPackageFromNpm("lodash", undefined);
+			assert.equal("lodash", info.name);
+			assert.isDefined(info.version, "Version not defined");
+		});
+
+		it("get latest version info (with null version)", async function() {
+			const info = await manager.queryPackageFromNpm("lodash", null as any);
 			assert.equal("lodash", info.name);
 			assert.isDefined(info.version, "Version not defined");
 		});

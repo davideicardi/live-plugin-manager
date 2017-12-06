@@ -31,6 +31,12 @@ class NpmRegistryClient {
     get(name, versionOrTag = "latest") {
         return __awaiter(this, void 0, void 0, function* () {
             debug(`Getting npm info for ${name}:${versionOrTag}...`);
+            if (typeof versionOrTag !== "string") {
+                versionOrTag = "";
+            }
+            if (typeof name !== "string") {
+                throw new Error("Invalid package name");
+            }
             const data = yield this.getNpmData(name);
             versionOrTag = versionOrTag.trim();
             // check if there is a tag (es. latest)

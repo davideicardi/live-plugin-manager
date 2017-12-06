@@ -23,8 +23,15 @@ export class NpmRegistryClient {
 			: {...staticHeaders};
 	}
 
-	async get(name: string, versionOrTag = "latest"): Promise<PackageInfo> {
+	async get(name: string, versionOrTag: string | null = "latest"): Promise<PackageInfo> {
 		debug(`Getting npm info for ${name}:${versionOrTag}...`);
+
+		if (typeof versionOrTag !== "string") {
+			versionOrTag = "";
+		}
+		if (typeof name !== "string") {
+			throw new Error("Invalid package name");
+		}
 
 		const data = await this.getNpmData(name);
 		versionOrTag = versionOrTag.trim();

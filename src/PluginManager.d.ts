@@ -9,6 +9,7 @@ export interface PluginManagerOptions {
     sandbox: PluginSandbox;
     npmRegistryUrl: string;
     npmRegistryConfig: NpmRegistryConfig;
+    npmInstallMode: "useCache" | "noCache";
     requireCoreModules: boolean;
     hostRequire?: NodeRequire;
     ignoredDependencies: Array<string | RegExp>;
@@ -70,16 +71,21 @@ export declare class PluginManager {
     private uninstallLockFree(name);
     private installLockFree(name, version?);
     private installFromPathLockFree(location, options);
-    private installFromNpmLockFree(name, version?);
+    /** Install from npm of from cache if already available */
+    private installFromNpmLockFreeCache(name, version?);
+    /** Install from npm */
+    private installFromNpmLockFreeDirect(name, version?);
     private installFromGithubLockFree(repository);
     private installFromCodeLockFree(name, code, version?);
     private installDependencies(plugin);
     private unloadWithDependents(plugin);
     private isModuleAvailableFromHost(name, version);
     private isValidPluginName(name);
+    private validatePluginVersion(version?);
     private getPluginLocation(name);
     private removeDownloaded(name);
     private isAlreadyDownloaded(name, version);
+    private getDownloadedPackage(name, version);
     private readPackageJsonFromPath(location);
     private load(plugin, filePath?);
     private unload(plugin);

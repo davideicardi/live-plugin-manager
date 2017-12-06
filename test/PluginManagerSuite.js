@@ -141,6 +141,20 @@ describe("PluginManager:", function () {
             });
         });
         describe("from npm", function () {
+            it("installing from a not valid npm url", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    manager = new index_1.PluginManager({
+                        npmRegistryUrl: "http://davideicardi.com/some-not-existing-registry/"
+                    });
+                    try {
+                        yield manager.installFromNpm("moment");
+                    }
+                    catch (e) {
+                        return;
+                    }
+                    throw new Error("Expected to fail");
+                });
+            });
             it("installing a not existing plugin", function () {
                 return __awaiter(this, void 0, void 0, function* () {
                     try {
@@ -161,6 +175,39 @@ describe("PluginManager:", function () {
                     const result = cookie.parse("foo=bar;x=y");
                     chai_1.assert.equal(result.foo, "bar");
                     chai_1.assert.equal(result.x, "y");
+                });
+            });
+            it("installing a plugin already present in the folder will succeeded also if npm is down", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    // download it to ensure it is present
+                    yield manager.installFromNpm("cookie", "0.3.1");
+                    const failedManager = new index_1.PluginManager({
+                        npmRegistryUrl: "http://davideicardi.com/some-not-existing-registry/"
+                    });
+                    yield failedManager.installFromNpm("cookie", "0.3.1");
+                    const cookie = manager.require("cookie");
+                    chai_1.assert.isDefined(cookie, "Plugin is not loaded");
+                    // try to use the plugin
+                    const result = cookie.parse("foo=bar;x=y");
+                    chai_1.assert.equal(result.foo, "bar");
+                    chai_1.assert.equal(result.x, "y");
+                });
+            });
+            // tslint:disable-next-line:max-line-length
+            it("installing a plugin already present in the folder will fail if npm is down and noCache is used", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    // download it to ensure it is present
+                    yield manager.installFromNpm("cookie", "0.3.1");
+                    const failedManager = new index_1.PluginManager({
+                        npmRegistryUrl: "http://davideicardi.com/some-not-existing-registry/",
+                        npmInstallMode: "noCache"
+                    });
+                    try {
+                        yield failedManager.installFromNpm("cookie", "0.3.1");
+                    }
+                    catch (e) {
+                        return;
+                    }
                 });
             });
         });
@@ -685,6 +732,20 @@ describe("PluginManager:", function () {
         it("get latest version info (with string empty version)", function () {
             return __awaiter(this, void 0, void 0, function* () {
                 const info = yield manager.queryPackageFromNpm("lodash", "");
+                chai_1.assert.equal("lodash", info.name);
+                chai_1.assert.isDefined(info.version, "Version not defined");
+            });
+        });
+        it("get latest version info (with undefined version)", function () {
+            return __awaiter(this, void 0, void 0, function* () {
+                const info = yield manager.queryPackageFromNpm("lodash", undefined);
+                chai_1.assert.equal("lodash", info.name);
+                chai_1.assert.isDefined(info.version, "Version not defined");
+            });
+        });
+        it("get latest version info (with null version)", function () {
+            return __awaiter(this, void 0, void 0, function* () {
+                const info = yield manager.queryPackageFromNpm("lodash", null);
                 chai_1.assert.equal("lodash", info.name);
                 chai_1.assert.isDefined(info.version, "Version not defined");
             });

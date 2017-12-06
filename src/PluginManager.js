@@ -25,6 +25,7 @@ const DefaultOptions = {
     npmRegistryUrl: BASE_NPM_URL,
     sandbox: {},
     npmRegistryConfig: {},
+    npmInstallMode: "useCache",
     pluginsPath: path.join(cwd, "plugin_packages"),
     requireCoreModules: true,
     hostRequire: require,
@@ -68,7 +69,7 @@ class PluginManager {
             yield fs.ensureDir(this.options.pluginsPath);
             yield this.syncLock();
             try {
-                return yield this.installFromNpmLockFree(name, version);
+                return yield this.installFromNpmLockFreeCache(name, version);
             }
             finally {
                 yield this.syncUnlock();
@@ -197,6 +198,7 @@ class PluginManager {
         if (!this.isValidPluginName(name)) {
             throw new Error(`Invalid plugin name '${name}'`);
         }
+        version = this.validatePluginVersion(version);
         if (version && this.githubRegistry.isGithubRepo(version)) {
             return this.queryPackageFromGithub(version);
         }
@@ -206,6 +208,7 @@ class PluginManager {
         if (!this.isValidPluginName(name)) {
             throw new Error(`Invalid plugin name '${name}'`);
         }
+        version = this.validatePluginVersion(version);
         return this.npmRegistry.get(name, version);
     }
     queryPackageFromGithub(repository) {
@@ -233,10 +236,11 @@ class PluginManager {
             if (!this.isValidPluginName(name)) {
                 throw new Error(`Invalid plugin name '${name}'`);
             }
+            version = this.validatePluginVersion(version);
             if (version && this.githubRegistry.isGithubRepo(version)) {
                 return this.installFromGithubLockFree(version);
             }
-            return this.installFromNpmLockFree(name, version);
+            return this.installFromNpmLockFreeCache(name, version);
         });
     }
     installFromPathLockFree(location, options) {
@@ -266,21 +270,34 @@ class PluginManager {
             return this.addPlugin(pluginInfo);
         });
     }
-    installFromNpmLockFree(name, version = NPM_LATEST_TAG) {
+    /** Install from npm of from cache if already available */
+    installFromNpmLockFreeCache(name, version = NPM_LATEST_TAG) {
         return __awaiter(this, void 0, void 0, function* () {
             if (!this.isValidPluginName(name)) {
                 throw new Error(`Invalid plugin name '${name}'`);
             }
-            const registryInfo = yield this.npmRegistry.get(name, version);
+            version = this.validatePluginVersion(version);
             // already installed satisfied version
-            const installedInfo = this.alreadyInstalled(registryInfo.name, registryInfo.version);
+            const installedInfo = this.alreadyInstalled(name, version);
             if (installedInfo) {
                 return installedInfo;
             }
-            // already installed not satisfied version
-            if (this.alreadyInstalled(registryInfo.name)) {
-                yield this.uninstallLockFree(registryInfo.name);
+            if (this.alreadyInstalled(name)) {
+                // already installed not satisfied version, then uninstall it first
+                yield this.uninstallLockFree(name);
             }
+            if (this.options.npmInstallMode === "useCache"
+                && (yield this.isAlreadyDownloaded(name, version))) {
+                const pluginInfo = yield this.createPluginInfo(name);
+                return this.addPlugin(pluginInfo);
+            }
+            return this.installFromNpmLockFreeDirect(name, version);
+        });
+    }
+    /** Install from npm */
+    installFromNpmLockFreeDirect(name, version = NPM_LATEST_TAG) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const registryInfo = yield this.npmRegistry.get(name, version);
             // already downloaded
             if (!(yield this.isAlreadyDownloaded(registryInfo.name, registryInfo.version))) {
                 yield this.removeDownloaded(registryInfo.name);
@@ -419,6 +436,13 @@ class PluginManager {
         }
         return true;
     }
+    validatePluginVersion(version) {
+        version = version || NPM_LATEST_TAG;
+        if (typeof version !== "string") {
+            throw new Error("Invalid version");
+        }
+        return version;
+    }
     getPluginLocation(name) {
         return path.join(this.options.pluginsPath, name);
     }
@@ -432,16 +456,29 @@ class PluginManager {
     }
     isAlreadyDownloaded(name, version) {
         return __awaiter(this, void 0, void 0, function* () {
+            if (!version || version === NPM_LATEST_TAG) {
+                version = ">0.1";
+            }
+            const packageJson = yield this.getDownloadedPackage(name, version);
+            if (!packageJson) {
+                return false;
+            }
+            return packageJson.name === name
+                && semver.satisfies(packageJson.version, version);
+        });
+    }
+    getDownloadedPackage(name, version) {
+        return __awaiter(this, void 0, void 0, function* () {
             const location = this.getPluginLocation(name);
             if (!(yield fs.directoryExists(location))) {
-                return false;
+                return;
             }
             try {
                 const packageJson = yield this.readPackageJsonFromPath(location);
-                return (packageJson.name === name && packageJson.version === version);
+                return packageJson;
             }
             catch (e) {
-                return false;
+                return;
             }
         });
     }
