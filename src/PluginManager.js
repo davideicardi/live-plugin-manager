@@ -456,8 +456,11 @@ class PluginManager {
     }
     isAlreadyDownloaded(name, version) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (!version || version === NPM_LATEST_TAG) {
-                version = ">0.1";
+            if (!version) {
+                version = ">0.0.1";
+            }
+            if (version === NPM_LATEST_TAG) {
+                return false;
             }
             const packageJson = yield this.getDownloadedPackage(name, version);
             if (!packageJson) {

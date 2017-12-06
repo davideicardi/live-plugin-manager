@@ -545,8 +545,12 @@ export class PluginManager {
 	}
 
 	private async isAlreadyDownloaded(name: string, version: string): Promise<boolean> {
-		if (!version || version === NPM_LATEST_TAG) {
-			version = ">0.1";
+		if (!version) {
+			version = ">0.0.1";
+		}
+
+		if (version === NPM_LATEST_TAG) {
+			return false;
 		}
 
 		const packageJson = await this.getDownloadedPackage(name, version);

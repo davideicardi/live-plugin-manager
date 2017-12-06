@@ -151,7 +151,7 @@ describe("PluginManager:", function() {
 					return;
 				}
 
-				throw new Error("Expected to fail");
+				throw new Error("Expected to throw");
 			});
 
 			it("installing a not existing plugin", async function() {
@@ -161,7 +161,7 @@ describe("PluginManager:", function() {
 					return;
 				}
 
-				throw new Error("Expected to fail");
+				throw new Error("Expected to throw");
 			});
 
 			it("installing a plugin (cookie)", async function() {
@@ -210,6 +210,26 @@ describe("PluginManager:", function() {
 				} catch (e) {
 					return;
 				}
+
+				throw new Error("Expected to throw");
+			});
+
+			// tslint:disable-next-line:max-line-length
+			it("installing a plugin already present in the folder will fail if npm is down and I ask for latest", async function() {
+				// download it to ensure it is present
+				await manager.installFromNpm("cookie", "0.3.1");
+
+				const failedManager = new PluginManager({
+					npmRegistryUrl: "http://davideicardi.com/some-not-existing-registry/"
+				});
+
+				try {
+					await failedManager.installFromNpm("cookie");
+				} catch (e) {
+					return;
+				}
+
+				throw new Error("Expected to throw");
 			});
 		});
 
