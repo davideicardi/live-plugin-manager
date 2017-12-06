@@ -124,6 +124,19 @@ Dependencies are automatically installed (devDependencies are ignored).
 ### pluginManager.installFromNpm(name: string, version = "latest"): Promise\<IPluginInfo\>
 
 Install the specified package from npm registry. Dependencies are automatically installed (devDependencies are ignored).
+By default is the package is already available in the download folder then and version is compatible then it is not requested again from npm. Change this behaviour by setting `npmInstallMode: "noCache"` options.
+
+To setup authentication for private npm registry use:
+
+    const manager = new PluginManager({
+      npmRegistryUrl: "http://your-private-registry",
+      npmRegistryConfig: {
+        auth: {
+          token: "your-token"
+        }
+      }
+    });
+
 
 ### pluginManager.installFromGithub(repository: string): Promise\<IPluginInfo\>
 
