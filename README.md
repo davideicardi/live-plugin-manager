@@ -53,7 +53,7 @@ As usual there are some **known limitations**, see section at the end.
 
 In the above code I install `moment` package at runtime, load and execute it.
 
-Plugins are installed inside the directory specified in the `PluginManager` constructor or in the `plugins` directory if not specified.
+Plugins are installed inside the directory specified in the `PluginManager` constructor or in the `plugin_packages` directory if not specified.
 
 Each time your applicaition start you should reinstall any packages that you need; already downloaded packages are not automatically installed, but installation is faster because no new file is downloaded. Typically I suggest to put the list of the installed packages in a database or any other central repository.
 
