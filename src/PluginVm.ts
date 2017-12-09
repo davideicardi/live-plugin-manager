@@ -163,9 +163,9 @@ export class PluginVm {
 	private sandboxResolve(pluginContext: IPluginInfo, moduleDirName: string, requiredName: string): string {
 		// I try to use a similar logic of https://nodejs.org/api/modules.html#modules_modules
 
-		// is a relative module
-		if (requiredName.startsWith(".")) {
-			const fullPath = path.normalize(path.join(moduleDirName, requiredName));
+		// is a relative module or absolute path
+		if (requiredName.startsWith(".") || path.isAbsolute(requiredName)) {
+			const fullPath = path.resolve(moduleDirName, requiredName);
 
 			// for security reason check to not load external files
 			if (!fullPath.startsWith(pluginContext.location)) {
@@ -249,22 +249,27 @@ export class PluginVm {
 	}
 
 	private tryResolveAsFile(fullPath: string): string | undefined {
-		if (!fs.existsSync(fullPath)) {
-			const isJs = this.tryResolveAsFile(fullPath + ".js");
-			if (isJs) {
-				return isJs;
+
+		const parentPath = path.dirname(fullPath);
+		if (checkPath(parentPath) !== "directory") {
+			return undefined;
+		}
+
+		const reqPathKind = checkPath(fullPath);
+
+		if (reqPathKind === "none") {
+			if (checkPath(fullPath + ".js") === "file") {
+				return fullPath + ".js";
 			}
 
-			const isJson = this.tryResolveAsFile(fullPath + ".json");
-			if (isJson) {
-				return isJson;
+			if (checkPath(fullPath + ".json") === "file") {
+				return fullPath + ".json";
 			}
 
 			return undefined;
 		}
 
-		const stats = fs.lstatSync(fullPath);
-		if (!stats.isDirectory()) {
+		if (reqPathKind === "file") {
 			return fullPath;
 		}
 
@@ -272,17 +277,17 @@ export class PluginVm {
 	}
 
 	private tryResolveAsDirectory(fullPath: string): string | undefined {
-		if (!fs.existsSync(fullPath)) {
+		if (checkPath(fullPath) !== "directory") {
 			return undefined;
 		}
 
 		const indexJs = path.join(fullPath, "index.js");
-		if (fs.existsSync(indexJs)) {
+		if (checkPath(indexJs) === "file") {
 			return indexJs;
 		}
 
 		const indexJson = path.join(fullPath, "index.json");
-		if (fs.existsSync(indexJson)) {
+		if (checkPath(indexJson) === "file") {
 			return indexJson;
 		}
 
@@ -321,5 +326,20 @@ export class PluginVm {
 		sandbox.process.env = {...srcEnv}; // copy properties
 
 		return sandbox;
+	}
+}
+
+function checkPath(fullPath: string): "file" | "directory" | "none" {
+	try {
+		const stats = fs.statSync(fullPath);
+		if (stats.isDirectory()) {
+			return "directory";
+		} else if (stats.isFile()) {
+			return "file";
+		} else {
+			return "none";
+		}
+	} catch {
+		return "none";
 	}
 }

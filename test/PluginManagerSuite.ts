@@ -532,6 +532,8 @@ describe("PluginManager:", function() {
 	});
 
 	describe("require", function() {
+
+		// TODO review this test, split it in microtest
 		it("plugins respect the same node.js behavior", async function() {
 			const pluginSourcePath = path.join(__dirname, "my-test-plugin");
 			await manager.installFromPath(pluginSourcePath);
@@ -562,6 +564,16 @@ describe("PluginManager:", function() {
 			assert.equal(pluginInstance.myGlobals.setInterval, setInterval);
 			assert.equal(pluginInstance.myGlobals.setTimeout, setTimeout);
 			assert.equal(pluginInstance.myGlobals.Buffer, Buffer);
+		});
+
+		it("require absolute files", async function() {
+			const pluginSourcePath = path.join(__dirname, "my-plugin-with-abs-require");
+			await manager.installFromPath(pluginSourcePath);
+
+			const pluginInstance = manager.require("my-plugin-with-abs-require");
+			assert.isDefined(pluginInstance, "Plugin is not loaded");
+
+			assert.equal(pluginInstance.myVariableFromAbsoluteFile, "value3");
 		});
 
 		it("requre a plugin sub folder", async function() {

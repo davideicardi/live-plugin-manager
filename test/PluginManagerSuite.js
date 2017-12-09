@@ -518,6 +518,7 @@ describe("PluginManager:", function () {
         });
     });
     describe("require", function () {
+        // TODO review this test, split it in microtest
         it("plugins respect the same node.js behavior", function () {
             return __awaiter(this, void 0, void 0, function* () {
                 const pluginSourcePath = path.join(__dirname, "my-test-plugin");
@@ -542,6 +543,15 @@ describe("PluginManager:", function () {
                 chai_1.assert.equal(pluginInstance.myGlobals.setInterval, setInterval);
                 chai_1.assert.equal(pluginInstance.myGlobals.setTimeout, setTimeout);
                 chai_1.assert.equal(pluginInstance.myGlobals.Buffer, Buffer);
+            });
+        });
+        it("require absolute files", function () {
+            return __awaiter(this, void 0, void 0, function* () {
+                const pluginSourcePath = path.join(__dirname, "my-plugin-with-abs-require");
+                yield manager.installFromPath(pluginSourcePath);
+                const pluginInstance = manager.require("my-plugin-with-abs-require");
+                chai_1.assert.isDefined(pluginInstance, "Plugin is not loaded");
+                chai_1.assert.equal(pluginInstance.myVariableFromAbsoluteFile, "value3");
             });
         });
         it("requre a plugin sub folder", function () {
