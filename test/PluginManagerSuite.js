@@ -608,6 +608,15 @@ describe("PluginManager:", function () {
                 chai_1.assert.equal(pluginInstance.myVariable, "value1");
             });
         });
+        it("installing a plugin with a circular reference in require", function () {
+            return __awaiter(this, void 0, void 0, function* () {
+                const pluginPath = path.join(__dirname, "my-plugin-with-circular-reference");
+                yield manager.installFromPath(pluginPath);
+                const pluginInstance = manager.require("my-plugin-with-circular-reference");
+                chai_1.assert.isDefined(pluginInstance, "Plugin is not loaded");
+                chai_1.assert.equal(pluginInstance.myVariable, "value1");
+            });
+        });
     });
     describe("scoped plugins", function () {
         it("installing a scoped plugin", function () {

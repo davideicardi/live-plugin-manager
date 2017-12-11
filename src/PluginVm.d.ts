@@ -14,7 +14,8 @@ export declare class PluginVm {
         requiredPath: string | undefined;
     };
     private getScopedInfo(fullName);
-    private vmRunScript(pluginContext, filePath, code);
+    private vmRunScriptInSandbox(moduleSandbox, filePath, code);
+    private vmRunScriptInPlugin(pluginContext, filePath, code);
     private getCache(pluginContext, filePath);
     private setCache(pluginContext, filePath, instance);
     private createModuleSandbox(pluginContext, filePath);
@@ -25,5 +26,5 @@ export declare class PluginVm {
     private tryResolveAsFile(fullPath);
     private tryResolveAsDirectory(fullPath);
     private getPluginSandbox(pluginContext);
-    private createSandbox(sandboxTemplate);
+    private createGlobalSandbox(sandboxTemplate);
 }

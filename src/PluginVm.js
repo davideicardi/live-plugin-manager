@@ -20,22 +20,26 @@ class PluginVm {
         let moduleInstance = this.getCache(pluginContext, filePath);
         if (moduleInstance) {
             debug(`${filePath} loaded from cache`);
-            return moduleInstance;
+            return moduleInstance.exports;
         }
         debug(`Loading ${filePath} ...`);
+        const sandbox = this.createModuleSandbox(pluginContext, filePath);
+        moduleInstance = sandbox.module;
         const filePathExtension = path.extname(filePath).toLowerCase();
         if (filePathExtension === ".js") {
             const code = fs.readFileSync(filePath, "utf8");
-            moduleInstance = this.vmRunScript(pluginContext, filePath, code);
+            // note: I first put the object (before executing the script) in cache to support circular require
+            this.setCache(pluginContext, filePath, moduleInstance);
+            this.vmRunScriptInSandbox(sandbox, filePath, code);
         }
         else if (filePathExtension === ".json") {
-            moduleInstance = fs.readJsonSync(filePath);
+            sandbox.module.exports = fs.readJsonSync(filePath);
+            this.setCache(pluginContext, filePath, moduleInstance);
         }
         else {
             throw new Error("Invalid javascript file " + filePath);
         }
-        this.setCache(pluginContext, filePath, moduleInstance);
-        return moduleInstance;
+        return moduleInstance.exports;
     }
     resolve(pluginContext, filePath) {
         return this.sandboxResolve(pluginContext, pluginContext.location, filePath);
@@ -51,7 +55,7 @@ class PluginVm {
             dependencies: {}
         };
         try {
-            return this.vmRunScript(pluginContext, filePath, code);
+            return this.vmRunScriptInPlugin(pluginContext, filePath, code);
         }
         finally {
             this.unload(pluginContext);
@@ -84,9 +88,8 @@ class PluginVm {
             requiredPath
         };
     }
-    vmRunScript(pluginContext, filePath, code) {
-        const sandbox = this.createModuleSandbox(pluginContext, filePath);
-        const moduleContext = vm.createContext(sandbox);
+    vmRunScriptInSandbox(moduleSandbox, filePath, code) {
+        const moduleContext = vm.createContext(moduleSandbox);
         // For performance reasons wrap code in a Immediately-invoked function expression
         // https://60devs.com/executing-js-code-with-nodes-vm-module.html
         // I have also declared the exports variable to support the
@@ -96,6 +99,10 @@ class PluginVm {
         const vmOptions = { displayErrors: true, filename: filePath };
         const script = new vm.Script(iifeCode, vmOptions);
         script.runInContext(moduleContext, vmOptions);
+    }
+    vmRunScriptInPlugin(pluginContext, filePath, code) {
+        const sandbox = this.createModuleSandbox(pluginContext, filePath);
+        this.vmRunScriptInSandbox(sandbox, filePath, code);
         return sandbox.module.exports;
     }
     getCache(pluginContext, filePath) {
@@ -116,11 +123,22 @@ class PluginVm {
     createModuleSandbox(pluginContext, filePath) {
         const pluginSandbox = this.getPluginSandbox(pluginContext);
         const moduleDirname = path.dirname(filePath);
+        const moduleRequire = (requiredName) => {
+            return this.sandboxRequire(pluginContext, moduleDirname, requiredName);
+        };
+        // TODO Add missing module properties
+        // tslint:disable-next-line:no-object-literal-type-assertion
+        const myModule = {
+            exports: {},
+            filename: filePath,
+            // id: filePath,
+            // children: [],
+            // loaded: false,
+            require: moduleRequire,
+        };
         // assign missing https://nodejs.org/api/globals.html
         //  and other "not real global" objects
-        const moduleSandbox = Object.assign({}, pluginSandbox, { module: { exports: {} }, __dirname: moduleDirname, __filename: filePath, require: (requiredName) => {
-                return this.sandboxRequire(pluginContext, moduleDirname, requiredName);
-            } });
+        const moduleSandbox = Object.assign({}, pluginSandbox, { module: myModule, __dirname: moduleDirname, __filename: filePath, require: moduleRequire });
         return moduleSandbox;
     }
     sandboxResolve(pluginContext, moduleDirName, requiredName) {
@@ -228,12 +246,12 @@ class PluginVm {
         if (!pluginSandbox) {
             const srcSandboxTemplate = this.manager.getSandboxTemplate(pluginContext.name)
                 || this.manager.options.sandbox;
-            pluginSandbox = this.createSandbox(srcSandboxTemplate);
+            pluginSandbox = this.createGlobalSandbox(srcSandboxTemplate);
             this.sandboxCache.set(pluginContext, pluginSandbox);
         }
         return pluginSandbox;
     }
-    createSandbox(sandboxTemplate) {
+    createGlobalSandbox(sandboxTemplate) {
         const srcGlobal = sandboxTemplate.global || global;
         const srcEnv = sandboxTemplate.env || global.process.env;
         const sandbox = Object.assign({}, srcGlobal, { process: Object.create(srcGlobal.process) });
@@ -263,4 +281,7 @@ function checkPath(fullPath) {
         return "none";
     }
 }
+// interface NodeModuleLight {
+// 	exports: any;
+// }
 //# sourceMappingURL=PluginVm.js.map

@@ -10,7 +10,7 @@ const debug = Debug("live-plugin-manager.PluginVm");
 const SCOPED_REGEX = /^(@[a-zA-Z0-9-_]+\/[a-zA-Z0-9-_]+)(.*)/;
 
 export class PluginVm {
-	private requireCache = new Map<IPluginInfo, Map<string, any>>();
+	private requireCache = new Map<IPluginInfo, Map<string, NodeModule>>();
 	private sandboxCache = new Map<IPluginInfo, NodeJS.Global>();
 
 	constructor(private readonly manager: PluginManager) {
@@ -25,25 +25,28 @@ export class PluginVm {
 		let moduleInstance = this.getCache(pluginContext, filePath);
 		if (moduleInstance) {
 			debug(`${filePath} loaded from cache`);
-			return moduleInstance;
+			return moduleInstance.exports;
 		}
 
 		debug(`Loading ${filePath} ...`);
 
+		const sandbox = this.createModuleSandbox(pluginContext, filePath);
+		moduleInstance = sandbox.module;
+
 		const filePathExtension = path.extname(filePath).toLowerCase();
 		if (filePathExtension === ".js") {
 			const code = fs.readFileSync(filePath, "utf8");
-
-			moduleInstance = this.vmRunScript(pluginContext, filePath, code);
+			// note: I first put the object (before executing the script) in cache to support circular require
+			this.setCache(pluginContext, filePath, moduleInstance);
+			this.vmRunScriptInSandbox(sandbox, filePath, code);
 		} else if (filePathExtension === ".json") {
-			moduleInstance = fs.readJsonSync(filePath);
+			sandbox.module.exports = fs.readJsonSync(filePath);
+			this.setCache(pluginContext, filePath, moduleInstance);
 		} else {
 			throw new Error("Invalid javascript file " + filePath);
 		}
 
-		this.setCache(pluginContext, filePath, moduleInstance);
-
-		return moduleInstance;
+		return moduleInstance.exports;
 	}
 
 	resolve(pluginContext: IPluginInfo, filePath: string): string {
@@ -62,7 +65,7 @@ export class PluginVm {
 		};
 
 		try {
-			return this.vmRunScript(pluginContext, filePath, code);
+			return this.vmRunScriptInPlugin(pluginContext, filePath, code);
 		} finally {
 			this.unload(pluginContext);
 		}
@@ -101,9 +104,8 @@ export class PluginVm {
 		};
 	}
 
-	private vmRunScript(pluginContext: IPluginInfo, filePath: string, code: string): any {
-		const sandbox = this.createModuleSandbox(pluginContext, filePath);
-		const moduleContext = vm.createContext(sandbox);
+	private vmRunScriptInSandbox(moduleSandbox: ModuleSandbox, filePath: string, code: string): void {
+		const moduleContext = vm.createContext(moduleSandbox);
 
 		// For performance reasons wrap code in a Immediately-invoked function expression
 		// https://60devs.com/executing-js-code-with-nodes-vm-module.html
@@ -116,11 +118,17 @@ export class PluginVm {
 		const script = new vm.Script(iifeCode, vmOptions);
 
 		script.runInContext(moduleContext, vmOptions);
+	}
+
+	private vmRunScriptInPlugin(pluginContext: IPluginInfo, filePath: string, code: string): any {
+		const sandbox = this.createModuleSandbox(pluginContext, filePath);
+
+		this.vmRunScriptInSandbox(sandbox, filePath, code);
 
 		return sandbox.module.exports;
 	}
 
-	private getCache(pluginContext: IPluginInfo, filePath: string): any {
+	private getCache(pluginContext: IPluginInfo, filePath: string): NodeModule | undefined {
 		const moduleCache = this.requireCache.get(pluginContext);
 		if (!moduleCache) {
 			return undefined;
@@ -129,7 +137,7 @@ export class PluginVm {
 		return moduleCache.get(filePath);
 	}
 
-	private setCache(pluginContext: IPluginInfo, filePath: string, instance: any): void {
+	private setCache(pluginContext: IPluginInfo, filePath: string, instance: NodeModule): void {
 		let moduleCache = this.requireCache.get(pluginContext);
 		if (!moduleCache) {
 			moduleCache = new Map<string, any>();
@@ -139,22 +147,36 @@ export class PluginVm {
 		moduleCache.set(filePath, instance);
 	}
 
-	private createModuleSandbox(pluginContext: IPluginInfo, filePath: string) {
+	private createModuleSandbox(pluginContext: IPluginInfo, filePath: string): ModuleSandbox {
 
 		const pluginSandbox = this.getPluginSandbox(pluginContext);
 
 		const moduleDirname = path.dirname(filePath);
 
+		const moduleRequire: NodeRequireFunction = (requiredName: string) => {
+			return this.sandboxRequire(pluginContext, moduleDirname, requiredName);
+		};
+
+		// TODO Add missing module properties
+		// tslint:disable-next-line:no-object-literal-type-assertion
+		const myModule: NodeModule = {
+			exports: {},
+			filename: filePath,
+			// id: filePath,
+			// children: [],
+			// loaded: false,
+			require: moduleRequire,
+			// parent: null
+		} as NodeModule;
+
 		// assign missing https://nodejs.org/api/globals.html
 		//  and other "not real global" objects
-		const moduleSandbox = {
+		const moduleSandbox: ModuleSandbox = {
 			...pluginSandbox,
-			module: { exports: {} },
+			module: myModule,
 			__dirname: moduleDirname,
 			__filename: filePath,
-			require: (requiredName: string) => {
-				return this.sandboxRequire(pluginContext, moduleDirname, requiredName);
-			}
+			require: moduleRequire
 		};
 
 		return moduleSandbox;
@@ -300,7 +322,7 @@ export class PluginVm {
 			const srcSandboxTemplate = this.manager.getSandboxTemplate(pluginContext.name)
 			|| this.manager.options.sandbox;
 
-			pluginSandbox = this.createSandbox(srcSandboxTemplate);
+			pluginSandbox = this.createGlobalSandbox(srcSandboxTemplate);
 
 			this.sandboxCache.set(pluginContext, pluginSandbox);
 		}
@@ -308,7 +330,7 @@ export class PluginVm {
 		return pluginSandbox;
 	}
 
-	private createSandbox(sandboxTemplate: PluginSandbox): NodeJS.Global {
+	private createGlobalSandbox(sandboxTemplate: PluginSandbox): NodeJS.Global {
 
 		const srcGlobal = sandboxTemplate.global || global;
 		const srcEnv = sandboxTemplate.env || global.process.env;
@@ -343,3 +365,14 @@ function checkPath(fullPath: string): "file" | "directory" | "none" {
 		return "none";
 	}
 }
+
+interface ModuleSandbox extends NodeJS.Global {
+	module: NodeModule;
+	__dirname: string;
+	__filename: string;
+	require: NodeRequireFunction; // TODO This should be a NodeRequire (with resolve, ...)
+}
+
+// interface NodeModuleLight {
+// 	exports: any;
+// }

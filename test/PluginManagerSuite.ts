@@ -633,6 +633,16 @@ describe("PluginManager:", function() {
 
 			assert.equal(pluginInstance.myVariable, "value1");
 		});
+
+		it("installing a plugin with a circular reference in require", async function() {
+			const pluginPath = path.join(__dirname, "my-plugin-with-circular-reference");
+			await manager.installFromPath(pluginPath);
+
+			const pluginInstance = manager.require("my-plugin-with-circular-reference");
+			assert.isDefined(pluginInstance, "Plugin is not loaded");
+
+			assert.equal(pluginInstance.myVariable, "value1");
+		});
 	});
 
 	describe("scoped plugins", function() {
