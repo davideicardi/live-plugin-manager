@@ -159,11 +159,7 @@ class PluginManager {
         if (!info) {
             throw new Error(`${pluginName} not installed`);
         }
-        let filePath;
-        if (requiredPath) {
-            filePath = this.vm.resolve(info, requiredPath);
-        }
-        return this.load(info, filePath);
+        return this.load(info, requiredPath);
     }
     setSandboxTemplate(name, sandbox) {
         const info = this.getInfo(name);
@@ -501,8 +497,9 @@ class PluginManager {
     }
     load(plugin, filePath) {
         filePath = filePath || plugin.mainFile;
-        debug(`Loading ${plugin.name}${filePath}...`);
-        return this.vm.load(plugin, filePath);
+        const resolvedPath = this.vm.resolve(plugin, filePath);
+        debug(`Loading ${filePath} of ${plugin.name} (${resolvedPath})...`);
+        return this.vm.load(plugin, resolvedPath);
     }
     unload(plugin) {
         debug(`Unloading ${plugin.name}...`);
@@ -578,14 +575,9 @@ class PluginManager {
     }
     createPluginInfo(name) {
         return __awaiter(this, void 0, void 0, function* () {
-            const DefaultMainFileExtension = ".js";
             const location = this.getPluginLocation(name);
             const packageJson = yield this.readPackageJsonFromPath(location);
-            let mainFile = path.normalize(path.join(location, packageJson.main || DefaultMainFile));
-            // If no extensions for main file is used, just default to .js
-            if (!path.extname(mainFile)) {
-                mainFile += DefaultMainFileExtension;
-            }
+            const mainFile = path.normalize(path.join(location, packageJson.main || DefaultMainFile));
             return {
                 name: packageJson.name,
                 version: packageJson.version,

@@ -184,12 +184,7 @@ export class PluginManager {
 			throw new Error(`${pluginName} not installed`);
 		}
 
-		let filePath: string | undefined;
-		if (requiredPath) {
-			filePath = this.vm.resolve(info, requiredPath);
-		}
-
-		return this.load(info, filePath);
+		return this.load(info, requiredPath);
 	}
 
 	setSandboxTemplate(name: string, sandbox: PluginSandbox | undefined): void {
@@ -596,8 +591,11 @@ export class PluginManager {
 	private load(plugin: IPluginInfo, filePath?: string): any {
 		filePath = filePath || plugin.mainFile;
 
-		debug(`Loading ${plugin.name}${filePath}...`);
-		return this.vm.load(plugin, filePath);
+		const resolvedPath = this.vm.resolve(plugin, filePath);
+
+		debug(`Loading ${filePath} of ${plugin.name} (${resolvedPath})...`);
+
+		return this.vm.load(plugin, resolvedPath);
 	}
 
 	private unload(plugin: IPluginInfo) {
@@ -687,16 +685,10 @@ export class PluginManager {
 	}
 
 	private async createPluginInfo(name: string): Promise<IPluginInfo> {
-		const DefaultMainFileExtension = ".js";
-
 		const location = this.getPluginLocation(name);
 		const packageJson = await this.readPackageJsonFromPath(location);
 
-		let mainFile = path.normalize(path.join(location, packageJson.main || DefaultMainFile));
-		// If no extensions for main file is used, just default to .js
-		if (!path.extname(mainFile)) {
-			mainFile += DefaultMainFileExtension;
-		}
+		const mainFile = path.normalize(path.join(location, packageJson.main || DefaultMainFile));
 
 		return {
 			name: packageJson.name,

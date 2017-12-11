@@ -1,0 +1,5 @@
+{
+  "name": "my-plugin-with-folder-as-main",
+  "version": "1.0.0",
+  "main": "lib"
+}

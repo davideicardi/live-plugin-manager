@@ -602,6 +602,16 @@ describe("PluginManager:", function() {
 			assert.equal(resultImplicit, resultExplicit);
 			assert.equal(resultImplicit, resultExplicit2);
 		});
+
+		it("installing a plugin with folder as main", async function() {
+			const pluginPath = path.join(__dirname, "my-plugin-with-folder-as-main");
+			await manager.installFromPath(pluginPath);
+
+			const pluginInstance = manager.require("my-plugin-with-folder-as-main");
+			assert.isDefined(pluginInstance, "Plugin is not loaded");
+
+			assert.equal(pluginInstance.myVariable, "value1");
+		});
 	});
 
 	describe("scoped plugins", function() {
