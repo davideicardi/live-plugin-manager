@@ -617,6 +617,15 @@ describe("PluginManager:", function () {
                 chai_1.assert.equal(pluginInstance.myVariable, "value1");
             });
         });
+        it("file should wins over folder with the same name", function () {
+            return __awaiter(this, void 0, void 0, function* () {
+                const pluginPath = path.join(__dirname, "my-plugin-file-win-over-folder");
+                yield manager.installFromPath(pluginPath);
+                const pluginInstance = manager.require("my-plugin-file-win-over-folder");
+                chai_1.assert.isDefined(pluginInstance, "Plugin is not loaded");
+                chai_1.assert.equal(pluginInstance, "i-am-the-file");
+            });
+        });
     });
     describe("scoped plugins", function () {
         it("installing a scoped plugin", function () {

@@ -6,7 +6,7 @@ const manager = new PluginManager();
 
 async function run() {
 	await manager.install("forge-nodejs-sdk");
-	const _ = manager.require("forge-nodejs-sdk");
+	manager.require("forge-nodejs-sdk");
 }
 
 run();

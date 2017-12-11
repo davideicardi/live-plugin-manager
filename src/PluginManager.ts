@@ -265,11 +265,15 @@ export class PluginManager {
 			throw new Error(`Invalid plugin name '${name}'`);
 		}
 
-		debug(`Uninstalling ${name}...`);
+		if (debug.enabled) {
+			debug(`Uninstalling ${name}...`);
+		}
 
 		const info = this.getInfo(name);
 		if (!info) {
-			debug(`${name} not installed`);
+			if (debug.enabled) {
+				debug(`${name} not installed`);
+			}
 			return;
 		}
 
@@ -315,7 +319,9 @@ export class PluginManager {
 		if (options.force || !(await this.isAlreadyDownloaded(packageJson.name, packageJson.version))) {
 			await this.removeDownloaded(packageJson.name);
 
-			debug(`Copy from ${location} to ${this.options.pluginsPath}`);
+			if (debug.enabled) {
+				debug(`Copy from ${location} to ${this.options.pluginsPath}`);
+			}
 			await fs.copy(location, this.getPluginLocation(packageJson.name), { exclude: ["node_modules"] });
 		}
 
@@ -431,7 +437,9 @@ export class PluginManager {
 		if (!(await this.isAlreadyDownloaded(packageJson.name, packageJson.version))) {
 			await this.removeDownloaded(packageJson.name);
 
-			debug(`Create plugin ${name} to ${this.options.pluginsPath} from code`);
+			if (debug.enabled) {
+				debug(`Create plugin ${name} to ${this.options.pluginsPath} from code`);
+			}
 
 			const location = this.getPluginLocation(name);
 			await fs.ensureDir(location);
@@ -461,11 +469,17 @@ export class PluginManager {
 			const version = plugin.dependencies[key];
 
 			if (this.isModuleAvailableFromHost(key, version)) {
-				debug(`Installing dependencies of ${plugin.name}: ${key} is already available on host`);
+				if (debug.enabled) {
+					debug(`Installing dependencies of ${plugin.name}: ${key} is already available on host`);
+				}
 			} else if (this.alreadyInstalled(key, version, "satisfiesOrGreater")) {
-				debug(`Installing dependencies of ${plugin.name}: ${key} is already installed`);
+				if (debug.enabled) {
+					debug(`Installing dependencies of ${plugin.name}: ${key} is already installed`);
+				}
 			} else {
-				debug(`Installing dependencies of ${plugin.name}: ${key} ...`);
+				if (debug.enabled) {
+					debug(`Installing dependencies of ${plugin.name}: ${key} ...`);
+				}
 				await this.installLockFree(key, version);
 			}
 
@@ -598,13 +612,17 @@ export class PluginManager {
 
 		const resolvedPath = this.vm.resolve(plugin, filePath);
 
-		debug(`Loading ${filePath} of ${plugin.name} (${resolvedPath})...`);
+		if (debug.enabled) {
+			debug(`Loading ${filePath} of ${plugin.name} (${resolvedPath})...`);
+		}
 
 		return this.vm.load(plugin, resolvedPath);
 	}
 
 	private unload(plugin: IPluginInfo) {
-		debug(`Unloading ${plugin.name}...`);
+		if (debug.enabled) {
+			debug(`Unloading ${plugin.name}...`);
+		}
 		this.vm.unload(plugin);
 	}
 
@@ -629,13 +647,17 @@ export class PluginManager {
 	}
 
 	private syncLock() {
-		debug("Acquiring lock ...");
+		if (debug.enabled) {
+			debug("Acquiring lock ...");
+		}
 
 		const lockLocation = path.join(this.options.pluginsPath, "install.lock");
 		return new Promise<void>((resolve, reject) => {
 			lockFile.lock(lockLocation, { wait: this.options.lockWait, stale: this.options.lockStale }, (err) => {
 				if (err) {
-					debug("Failed to acquire lock", err);
+					if (debug.enabled) {
+						debug("Failed to acquire lock", err);
+					}
 					return reject("Failed to acquire lock: " + err.message);
 				}
 
@@ -645,13 +667,17 @@ export class PluginManager {
 	}
 
 	private syncUnlock() {
-		debug("Releasing lock ...");
+		if (debug.enabled) {
+			debug("Releasing lock ...");
+		}
 
 		const lockLocation = path.join(this.options.pluginsPath, "install.lock");
 		return new Promise<void>((resolve, reject) => {
 			lockFile.unlock(lockLocation, (err) => {
 				if (err) {
-					debug("Failed to release lock", err);
+					if (debug.enabled) {
+						debug("Failed to release lock", err);
+					}
 					return reject("Failed to release lock: " + err.message);
 				}
 

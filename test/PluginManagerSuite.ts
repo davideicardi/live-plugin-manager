@@ -643,6 +643,17 @@ describe("PluginManager:", function() {
 
 			assert.equal(pluginInstance.myVariable, "value1");
 		});
+
+		it("file should wins over folder with the same name", async function() {
+			const pluginPath = path.join(__dirname, "my-plugin-file-win-over-folder");
+			await manager.installFromPath(pluginPath);
+
+			const pluginInstance = manager.require("my-plugin-file-win-over-folder");
+			assert.isDefined(pluginInstance, "Plugin is not loaded");
+
+			assert.equal(pluginInstance, "i-am-the-file");
+		});
+
 	});
 
 	describe("scoped plugins", function() {

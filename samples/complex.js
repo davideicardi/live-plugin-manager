@@ -14,7 +14,7 @@ const manager = new index_1.PluginManager();
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         yield manager.install("forge-nodejs-sdk");
-        const _ = manager.require("forge-nodejs-sdk");
+        manager.require("forge-nodejs-sdk");
     });
 }
 run();

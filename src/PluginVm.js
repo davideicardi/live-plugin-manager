@@ -19,10 +19,14 @@ class PluginVm {
     load(pluginContext, filePath) {
         let moduleInstance = this.getCache(pluginContext, filePath);
         if (moduleInstance) {
-            debug(`${filePath} loaded from cache`);
+            if (debug.enabled) {
+                debug(`${filePath} loaded from cache`);
+            }
             return moduleInstance.exports;
         }
-        debug(`Loading ${filePath} ...`);
+        if (debug.enabled) {
+            debug(`Loading ${filePath} ...`);
+        }
         const sandbox = this.createModuleSandbox(pluginContext, filePath);
         moduleInstance = sandbox.module;
         const filePathExtension = path.extname(filePath).toLowerCase();
@@ -124,6 +128,9 @@ class PluginVm {
         const pluginSandbox = this.getPluginSandbox(pluginContext);
         const moduleDirname = path.dirname(filePath);
         const moduleRequire = (requiredName) => {
+            if (debug.enabled) {
+                debug(`Requiring '${requiredName}' from ${filePath}...`);
+            }
             return this.sandboxRequire(pluginContext, moduleDirname, requiredName);
         };
         // TODO Add missing module properties
@@ -174,27 +181,36 @@ class PluginVm {
     }
     sandboxRequire(pluginContext, moduleDirName, requiredName) {
         // I try to use a similar logic of https://nodejs.org/api/modules.html#modules_modules
-        debug(`Requiring '${requiredName}'...`);
         const fullName = this.sandboxResolve(pluginContext, moduleDirName, requiredName);
         // is an absolute file or directory that can be loaded
         if (path.isAbsolute(fullName)) {
-            debug(`Resolved ${requiredName} as file ${fullName}`);
+            if (debug.enabled) {
+                debug(`Resolved ${requiredName} as file ${fullName}`);
+            }
             return this.load(pluginContext, fullName);
         }
         if (this.manager.options.staticDependencies[requiredName]) {
-            debug(`Resolved ${requiredName} as static dependency`);
+            if (debug.enabled) {
+                debug(`Resolved ${requiredName} as static dependency`);
+            }
             return this.manager.options.staticDependencies[requiredName];
         }
         if (this.isPlugin(requiredName)) {
-            debug(`Resolved ${requiredName} as plugin`);
+            if (debug.enabled) {
+                debug(`Resolved ${requiredName} as plugin`);
+            }
             return this.manager.require(requiredName);
         }
         if (this.isCoreModule(requiredName)) {
-            debug(`Resolved ${requiredName} as core module`);
+            if (debug.enabled) {
+                debug(`Resolved ${requiredName} as core module`);
+            }
             return require(requiredName);
         }
         if (this.manager.options.hostRequire) {
-            debug(`Resolved ${requiredName} as host module`);
+            if (debug.enabled) {
+                debug(`Resolved ${requiredName} as host module`);
+            }
             return this.manager.options.hostRequire(requiredName);
         }
         throw new Error(`Module ${requiredName} not found, failed to load plugin ${pluginContext.name}`);
@@ -213,7 +229,7 @@ class PluginVm {
             return undefined;
         }
         const reqPathKind = checkPath(fullPath);
-        if (reqPathKind === "none") {
+        if (reqPathKind !== "file") {
             if (checkPath(fullPath + ".js") === "file") {
                 return fullPath + ".js";
             }
