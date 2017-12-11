@@ -204,7 +204,10 @@ export class PluginManager {
 		return this.sandboxTemplates.get(name);
 	}
 
-	alreadyInstalled(name: string, version?: string): IPluginInfo | undefined {
+	alreadyInstalled(
+		name: string,
+		version?: string,
+		mode: "satisfies" | "satisfiesOrGreater" = "satisfies"): IPluginInfo | undefined {
 		const installedInfo = this.getInfo(name);
 		if (installedInfo) {
 			if (!version) {
@@ -212,6 +215,8 @@ export class PluginManager {
 			}
 
 			if (semver.satisfies(installedInfo.version, version)) {
+				return installedInfo;
+			} else if (mode === "satisfiesOrGreater" && semver.gtr(installedInfo.version, version)) {
 				return installedInfo;
 			}
 		}
@@ -457,7 +462,7 @@ export class PluginManager {
 
 			if (this.isModuleAvailableFromHost(key, version)) {
 				debug(`Installing dependencies of ${plugin.name}: ${key} is already available on host`);
-			} else if (this.alreadyInstalled(key, version)) {
+			} else if (this.alreadyInstalled(key, version, "satisfiesOrGreater")) {
 				debug(`Installing dependencies of ${plugin.name}: ${key} is already installed`);
 			} else {
 				debug(`Installing dependencies of ${plugin.name}: ${key} ...`);

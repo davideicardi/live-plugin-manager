@@ -62,7 +62,7 @@ export declare class PluginManager {
     require(fullName: string): any;
     setSandboxTemplate(name: string, sandbox: PluginSandbox | undefined): void;
     getSandboxTemplate(name: string): PluginSandbox | undefined;
-    alreadyInstalled(name: string, version?: string): IPluginInfo | undefined;
+    alreadyInstalled(name: string, version?: string, mode?: "satisfies" | "satisfiesOrGreater"): IPluginInfo | undefined;
     getInfo(name: string): IPluginInfo | undefined;
     queryPackage(name: string, version?: string): Promise<PackageInfo>;
     queryPackageFromNpm(name: string, version?: string): Promise<PackageInfo>;

@@ -250,7 +250,7 @@ Usually you should add this to your `.gitignore` file:
 
 There are some known limitations when installing a package:
 
-- Different plugins cannot depends on different/incompatible modules. If plugin A require module x at version 1 and plugin B require modele X at version 2 then plugin A and plugin B cannot be installed simultaneously.
+- Different plugins cannot depends on different/incompatible modules. If plugin A require module x at version 1 and plugin B require modele X at version 2 then plugin A and plugin B cannot be installed simultaneously. Now version 2 of dependencies will be used and so this can cause problems on your code.
 - No `pre/post-install` scripts are executed (some packages use this scripts to build assets or for platform specific installation, so for this reason some packages are not supported)
 - C/C++ packages (`.node`) are not supported
 - Plugin dependencies can be specified only as NPM dependencies (version number) or github dependencies (owner/repo), url or other kind of dependencies are not supported

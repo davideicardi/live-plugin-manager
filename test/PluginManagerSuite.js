@@ -400,6 +400,24 @@ describe("PluginManager:", function () {
             chai_1.assert.isUndefined(manager.alreadyInstalled("moment", "=3.0.0"));
             chai_1.assert.isUndefined(manager.alreadyInstalled("moment", "^3.0.0"));
         });
+        it("alreadyInstalled function should support greater mode (for dependencies)", function () {
+            chai_1.assert.isDefined(manager.alreadyInstalled("moment", undefined, "satisfiesOrGreater"));
+            chai_1.assert.isDefined(manager.alreadyInstalled("moment", "2.18.1", "satisfiesOrGreater"));
+            chai_1.assert.isDefined(manager.alreadyInstalled("moment", "v2.18.1", "satisfiesOrGreater"));
+            chai_1.assert.isDefined(manager.alreadyInstalled("moment", "=2.18.1", "satisfiesOrGreater"));
+            chai_1.assert.isDefined(manager.alreadyInstalled("moment", ">=2.18.1", "satisfiesOrGreater"));
+            chai_1.assert.isDefined(manager.alreadyInstalled("moment", "^2.18.1", "satisfiesOrGreater"));
+            chai_1.assert.isDefined(manager.alreadyInstalled("moment", "^2.0.0", "satisfiesOrGreater"));
+            chai_1.assert.isDefined(manager.alreadyInstalled("moment", ">=1.0.0", "satisfiesOrGreater"));
+            // this is considered installed with this mode
+            chai_1.assert.isDefined(manager.alreadyInstalled("moment", "2.17.0", "satisfiesOrGreater"));
+            chai_1.assert.isDefined(manager.alreadyInstalled("moment", "1.17.0", "satisfiesOrGreater"));
+            chai_1.assert.isDefined(manager.alreadyInstalled("moment", "^1.17.0", "satisfiesOrGreater"));
+            chai_1.assert.isUndefined(manager.alreadyInstalled("moment", "2.19.0", "satisfiesOrGreater"));
+            chai_1.assert.isUndefined(manager.alreadyInstalled("moment", "3.0.0", "satisfiesOrGreater"));
+            chai_1.assert.isUndefined(manager.alreadyInstalled("moment", "=3.0.0", "satisfiesOrGreater"));
+            chai_1.assert.isUndefined(manager.alreadyInstalled("moment", "^3.0.0", "satisfiesOrGreater"));
+        });
         it("should be available", function () {
             return __awaiter(this, void 0, void 0, function* () {
                 const plugins = yield manager.list();
@@ -717,6 +735,19 @@ describe("PluginManager:", function () {
                     chai_1.assert.equal(pluginInstance, "a = v2");
                 });
             });
+            it("updating a package that need a prev version will not downgrade the dependency", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    yield manager.installFromPath(path.join(__dirname, "my-plugin-a@v2")); // update dependency to v2
+                    yield manager.uninstall("my-plugin-b");
+                    yield manager.installFromPath(path.join(__dirname, "my-plugin-b")); // depend on my-plugin-a@1.0.0
+                    chai_1.assert.equal(manager.list().length, 2);
+                    chai_1.assert.equal(manager.list()[0].name, "my-plugin-a");
+                    chai_1.assert.equal(manager.list()[0].version, "2.0.0");
+                    chai_1.assert.equal(manager.list()[1].name, "my-plugin-b");
+                    const initialPluginInstance = manager.require("my-plugin-b");
+                    chai_1.assert.equal(initialPluginInstance, "a = v2");
+                });
+            });
         });
         describe("given static dependencies", function () {
             beforeEach(function () {
@@ -738,7 +769,7 @@ describe("PluginManager:", function () {
                 });
             });
         });
-        describe("Not compatible dependencies", function () {
+        describe("Not compatible dependencies with host", function () {
             it("dependencies are installed", function () {
                 return __awaiter(this, void 0, void 0, function* () {
                     const pluginSourcePath = path.join(__dirname, "my-plugin-with-diff-dep");
@@ -825,7 +856,7 @@ describe("PluginManager:", function () {
             return __awaiter(this, void 0, void 0, function* () {
                 const info = yield manager.queryPackageFromNpm("@types/node", "^6.0.0");
                 chai_1.assert.equal(info.name, "@types/node");
-                chai_1.assert.equal(info.version, "6.0.92"); // this test can fail if @types/node publish a 6.x version
+                chai_1.assert.equal(info.version, "6.0.93"); // this test can fail if @types/node publish a 6.x version
             });
         });
     });

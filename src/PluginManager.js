@@ -175,13 +175,16 @@ class PluginManager {
     getSandboxTemplate(name) {
         return this.sandboxTemplates.get(name);
     }
-    alreadyInstalled(name, version) {
+    alreadyInstalled(name, version, mode = "satisfies") {
         const installedInfo = this.getInfo(name);
         if (installedInfo) {
             if (!version) {
                 return installedInfo;
             }
             if (semver.satisfies(installedInfo.version, version)) {
+                return installedInfo;
+            }
+            else if (mode === "satisfiesOrGreater" && semver.gtr(installedInfo.version, version)) {
                 return installedInfo;
             }
         }
@@ -380,7 +383,7 @@ class PluginManager {
                 if (this.isModuleAvailableFromHost(key, version)) {
                     debug(`Installing dependencies of ${plugin.name}: ${key} is already available on host`);
                 }
-                else if (this.alreadyInstalled(key, version)) {
+                else if (this.alreadyInstalled(key, version, "satisfiesOrGreater")) {
                     debug(`Installing dependencies of ${plugin.name}: ${key} is already installed`);
                 }
                 else {

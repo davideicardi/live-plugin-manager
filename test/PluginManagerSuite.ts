@@ -415,6 +415,27 @@ describe("PluginManager:", function() {
 			assert.isUndefined(manager.alreadyInstalled("moment", "^3.0.0"));
 		});
 
+		it("alreadyInstalled function should support greater mode (for dependencies)", function() {
+			assert.isDefined(manager.alreadyInstalled("moment", undefined, "satisfiesOrGreater"));
+			assert.isDefined(manager.alreadyInstalled("moment", "2.18.1", "satisfiesOrGreater"));
+			assert.isDefined(manager.alreadyInstalled("moment", "v2.18.1", "satisfiesOrGreater"));
+			assert.isDefined(manager.alreadyInstalled("moment", "=2.18.1", "satisfiesOrGreater"));
+			assert.isDefined(manager.alreadyInstalled("moment", ">=2.18.1", "satisfiesOrGreater"));
+			assert.isDefined(manager.alreadyInstalled("moment", "^2.18.1", "satisfiesOrGreater"));
+			assert.isDefined(manager.alreadyInstalled("moment", "^2.0.0", "satisfiesOrGreater"));
+			assert.isDefined(manager.alreadyInstalled("moment", ">=1.0.0", "satisfiesOrGreater"));
+
+			// this is considered installed with this mode
+			assert.isDefined(manager.alreadyInstalled("moment", "2.17.0", "satisfiesOrGreater"));
+			assert.isDefined(manager.alreadyInstalled("moment", "1.17.0", "satisfiesOrGreater"));
+			assert.isDefined(manager.alreadyInstalled("moment", "^1.17.0", "satisfiesOrGreater"));
+
+			assert.isUndefined(manager.alreadyInstalled("moment", "2.19.0", "satisfiesOrGreater"));
+			assert.isUndefined(manager.alreadyInstalled("moment", "3.0.0", "satisfiesOrGreater"));
+			assert.isUndefined(manager.alreadyInstalled("moment", "=3.0.0", "satisfiesOrGreater"));
+			assert.isUndefined(manager.alreadyInstalled("moment", "^3.0.0", "satisfiesOrGreater"));
+		});
+
 		it("should be available", async function() {
 			const plugins = await manager.list();
 			assert.equal(plugins.length, 1);
@@ -747,6 +768,20 @@ describe("PluginManager:", function() {
 				const pluginInstance = manager.require("my-plugin-b");
 				assert.equal(pluginInstance, "a = v2");
 			});
+
+			it("updating a package that need a prev version will not downgrade the dependency", async function() {
+				await manager.installFromPath(path.join(__dirname, "my-plugin-a@v2")); // update dependency to v2
+
+				await manager.uninstall("my-plugin-b");
+				await manager.installFromPath(path.join(__dirname, "my-plugin-b")); // depend on my-plugin-a@1.0.0
+
+				assert.equal(manager.list().length, 2);
+				assert.equal(manager.list()[0].name, "my-plugin-a");
+				assert.equal(manager.list()[0].version, "2.0.0");
+				assert.equal(manager.list()[1].name, "my-plugin-b");
+				const initialPluginInstance = manager.require("my-plugin-b");
+				assert.equal(initialPluginInstance, "a = v2");
+			});
 		});
 
 		describe("given static dependencies", function() {
@@ -772,7 +807,7 @@ describe("PluginManager:", function() {
 			});
 		});
 
-		describe("Not compatible dependencies", function() {
+		describe("Not compatible dependencies with host", function() {
 			it("dependencies are installed", async function() {
 				const pluginSourcePath = path.join(__dirname, "my-plugin-with-diff-dep");
 				await manager.installFromPath(pluginSourcePath);
@@ -853,7 +888,7 @@ describe("PluginManager:", function() {
 		it("get caret version range info for scoped packages", async function() {
 			const info = await manager.queryPackageFromNpm("@types/node", "^6.0.0");
 			assert.equal(info.name, "@types/node");
-			assert.equal(info.version, "6.0.92"); // this test can fail if @types/node publish a 6.x version
+			assert.equal(info.version, "6.0.93"); // this test can fail if @types/node publish a 6.x version
 		});
 	});
 
