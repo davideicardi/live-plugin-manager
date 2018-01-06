@@ -217,12 +217,12 @@ sandbox for all plugins using `options.sandbox` in the `PluginManager` construct
 
 This project use the following dependencies to do it's job:
 
-- [github](https://www.npmjs.com/package/github)
 - [vm](https://nodejs.org/api/vm.html): compiling and running plugin code within V8 Virtual Machine contexts
 - [lockfile](https://github.com/npm/lockfile): file system locking to prevent concurrent operations (see below)
 - [tar.gz](https://github.com/alanhoff/node-tar.gz): extract package file
 - [fs-extra](https://github.com/jprichardson/node-fs-extra): file system operations
 - [debug](https://github.com/visionmedia/debug): debug informations
+- (removed for now because I have problems with getArchiveLink api, 302 ...) [github](https://www.npmjs.com/package/github)
 - (removed for now because not very useful) [npm-registry-client](https://github.com/npm/npm-registry-client): npm registry handling
 
 While I have tried to mimic the standard Node.js module and package architecture there are some differences.

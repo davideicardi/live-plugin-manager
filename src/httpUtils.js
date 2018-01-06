@@ -18,10 +18,28 @@ function headersBearerAuth(token) {
     };
 }
 exports.headersBearerAuth = headersBearerAuth;
+function headersTokenAuth(token) {
+    return {
+        Authorization: "token " + token
+    };
+}
+exports.headersTokenAuth = headersTokenAuth;
+function headersBasicAuth(username, password) {
+    return {
+        Authorization: "Basic " + new Buffer(username + ":" + password).toString("base64")
+    };
+}
+exports.headersBasicAuth = headersBasicAuth;
 function httpJsonGet(sourceUrl, headers) {
     return __awaiter(this, void 0, void 0, function* () {
-        debug(`Get content from ${sourceUrl} ...`);
+        if (debug.enabled) {
+            debug(`Json GET ${sourceUrl} ...`);
+            debug("HEADERS", headers);
+        }
         const res = yield node_fetch_1.default(sourceUrl, { headers: Object.assign({}, headers) });
+        if (debug.enabled) {
+            debug("Response HEADERS", res.headers);
+        }
         if (!res.ok) {
             throw new Error(`Response error ${res.status} ${res.statusText}`);
         }
@@ -31,8 +49,14 @@ function httpJsonGet(sourceUrl, headers) {
 exports.httpJsonGet = httpJsonGet;
 function httpDownload(sourceUrl, destinationFile, headers) {
     return __awaiter(this, void 0, void 0, function* () {
-        debug(`Download content from ${sourceUrl} ...`);
+        if (debug.enabled) {
+            debug(`Download GET ${sourceUrl} ...`);
+            debug("HEADERS", headers);
+        }
         const res = yield node_fetch_1.default(sourceUrl, { headers: Object.assign({}, headers) });
+        if (debug.enabled) {
+            debug("Response HEADERS", res.headers);
+        }
         if (!res.ok) {
             throw new Error(`Response error ${res.status} ${res.statusText}`);
         }

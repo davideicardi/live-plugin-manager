@@ -874,7 +874,8 @@ describe("PluginManager:", function () {
             return __awaiter(this, void 0, void 0, function* () {
                 const info = yield manager.queryPackageFromNpm("@types/node", "^6.0.0");
                 chai_1.assert.equal(info.name, "@types/node");
-                chai_1.assert.equal(info.version, "6.0.93"); // this test can fail if @types/node publish a 6.x version
+                // TODO think of a better check...
+                chai_1.assert.equal(info.version, "6.0.96"); // this test can fail if @types/node publish a 6.x version
             });
         });
     });

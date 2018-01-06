@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { NpmRegistryConfig } from "./NpmRegistryClient";
 import { IPluginInfo } from "./PluginInfo";
-import * as GitHubApi from "github";
+import { GithubAuth } from "./GithubRegistryClient";
 import { PackageInfo } from "./PackageInfo";
 export interface PluginManagerOptions {
     cwd: string;
@@ -16,7 +16,7 @@ export interface PluginManagerOptions {
     staticDependencies: {
         [key: string]: any;
     };
-    githubAuthentication?: GitHubApi.Auth;
+    githubAuthentication?: GithubAuth;
     lockWait: number;
     lockStale: number;
 }

@@ -13,9 +13,28 @@ export function headersBearerAuth(token: string): Headers {
 	};
 }
 
+export function headersTokenAuth(token: string): Headers {
+	return {
+		Authorization: "token " + token
+	};
+}
+
+export function headersBasicAuth(username: string, password: string): Headers {
+	return {
+		Authorization: "Basic " + new Buffer(username + ":" + password).toString("base64")
+	};
+}
+
 export async function httpJsonGet<T>(sourceUrl: string, headers?: Headers): Promise<T | undefined> {
-	debug(`Get content from ${sourceUrl} ...`);
+	if (debug.enabled) {
+		debug(`Json GET ${sourceUrl} ...`);
+		debug("HEADERS", headers);
+	}
 	const res = await fetch(sourceUrl, { headers: {...headers} });
+
+	if (debug.enabled) {
+		debug("Response HEADERS", res.headers);
+	}
 
 	if (!res.ok) {
 		throw new Error(`Response error ${res.status} ${res.statusText}`);
@@ -25,8 +44,15 @@ export async function httpJsonGet<T>(sourceUrl: string, headers?: Headers): Prom
 }
 
 export async function httpDownload(sourceUrl: string, destinationFile: string, headers?: Headers): Promise<void> {
-	debug(`Download content from ${sourceUrl} ...`);
+	if (debug.enabled) {
+		debug(`Download GET ${sourceUrl} ...`);
+		debug("HEADERS", headers);
+	}
 	const res = await fetch(sourceUrl, { headers: {...headers} });
+
+	if (debug.enabled) {
+		debug("Response HEADERS", res.headers);
+	}
 
 	if (!res.ok) {
 		throw new Error(`Response error ${res.status} ${res.statusText}`);

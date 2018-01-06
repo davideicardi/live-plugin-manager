@@ -6,8 +6,7 @@ import {IPluginInfo} from "./PluginInfo";
 import * as lockFile from "lockfile";
 import * as semver from "semver";
 import * as Debug from "debug";
-import { GithubRegistryClient } from "./GithubRegistryClient";
-import * as GitHubApi from "github";
+import { GithubRegistryClient, GithubAuth } from "./GithubRegistryClient";
 import { PackageJsonInfo, PackageInfo } from "./PackageInfo";
 const debug = Debug("live-plugin-manager");
 
@@ -25,7 +24,7 @@ export interface PluginManagerOptions {
 	hostRequire?: NodeRequire;
 	ignoredDependencies: Array<string | RegExp>;
 	staticDependencies: { [key: string]: any; };
-	githubAuthentication?: GitHubApi.Auth;
+	githubAuthentication?: GithubAuth;
 	lockWait: number;
 	lockStale: number;
 }
