@@ -1069,6 +1069,24 @@ describe("PluginManager:", function () {
                 chai_1.assert.isUndefined(global.SOME_OTHER_KEY, "Host should not have it");
             });
         });
+        describe("NodeRequire object inside a plugin", function () {
+            it("require system module", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    const code = `module.exports = require("fs");`;
+                    yield manager.installFromCode("my-plugin-with-sandbox", code);
+                    const result = manager.require("my-plugin-with-sandbox");
+                    chai_1.assert.equal(result, require("fs"));
+                });
+            });
+            it("require.resolve system module", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    const code = `module.exports = require.resolve("fs");`;
+                    yield manager.installFromCode("my-plugin-with-sandbox", code);
+                    const result = manager.require("my-plugin-with-sandbox");
+                    chai_1.assert.equal(result, require.resolve("fs"));
+                });
+            });
+        });
     });
 });
 function getGithubAuth() {

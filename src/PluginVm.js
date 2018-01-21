@@ -43,6 +43,7 @@ class PluginVm {
         else {
             throw new Error("Invalid javascript file " + filePath);
         }
+        moduleInstance.loaded = true;
         return moduleInstance.exports;
     }
     resolve(pluginContext, filePath) {
@@ -107,6 +108,7 @@ class PluginVm {
     vmRunScriptInPlugin(pluginContext, filePath, code) {
         const sandbox = this.createModuleSandbox(pluginContext, filePath);
         this.vmRunScriptInSandbox(sandbox, filePath, code);
+        sandbox.module.loaded = true;
         return sandbox.module.exports;
     }
     getCache(pluginContext, filePath) {
@@ -127,22 +129,32 @@ class PluginVm {
     createModuleSandbox(pluginContext, filePath) {
         const pluginSandbox = this.getPluginSandbox(pluginContext);
         const moduleDirname = path.dirname(filePath);
-        const moduleRequire = (requiredName) => {
+        const moduleRequireFunction = (requiredName) => {
             if (debug.enabled) {
                 debug(`Requiring '${requiredName}' from ${filePath}...`);
             }
             return this.sandboxRequire(pluginContext, moduleDirname, requiredName);
         };
-        // TODO Add missing module properties
-        // tslint:disable-next-line:no-object-literal-type-assertion
         const myModule = {
             exports: {},
             filename: filePath,
-            // id: filePath,
-            // children: [],
-            // loaded: false,
-            require: moduleRequire,
+            id: filePath,
+            loaded: false,
+            require: moduleRequireFunction,
+            paths: [],
+            parent: module,
+            children: [],
         };
+        // tslint:disable-next-line:prefer-object-spread (here I get a ts error if using spread ... maybe it is a bug on ts?)
+        const moduleRequire = Object.assign(moduleRequireFunction, {
+            resolve: (id) => {
+                return this.sandboxResolve(pluginContext, moduleDirname, id);
+            },
+            cache: {},
+            // tslint:disable-next-line:no-object-literal-type-assertion
+            extensions: {},
+            main: module
+        });
         // assign missing https://nodejs.org/api/globals.html
         //  and other "not real global" objects
         const moduleSandbox = Object.assign({}, pluginSandbox, { module: myModule, __dirname: moduleDirname, __filename: filePath, require: moduleRequire });
@@ -205,7 +217,7 @@ class PluginVm {
             if (debug.enabled) {
                 debug(`Resolved ${requiredName} as core module`);
             }
-            return require(requiredName);
+            return require(requiredName); // I use system require
         }
         if (this.manager.options.hostRequire) {
             if (debug.enabled) {
@@ -297,7 +309,4 @@ function checkPath(fullPath) {
         return "none";
     }
 }
-// interface NodeModuleLight {
-// 	exports: any;
-// }
 //# sourceMappingURL=PluginVm.js.map

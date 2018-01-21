@@ -50,6 +50,8 @@ export class PluginVm {
 			throw new Error("Invalid javascript file " + filePath);
 		}
 
+		moduleInstance.loaded = true;
+
 		return moduleInstance.exports;
 	}
 
@@ -129,6 +131,8 @@ export class PluginVm {
 
 		this.vmRunScriptInSandbox(sandbox, filePath, code);
 
+		sandbox.module.loaded = true;
+
 		return sandbox.module.exports;
 	}
 
@@ -157,24 +161,37 @@ export class PluginVm {
 
 		const moduleDirname = path.dirname(filePath);
 
-		const moduleRequire: NodeRequireFunction = (requiredName: string) => {
+		const moduleRequireFunction: NodeRequireFunction = (requiredName: string) => {
 			if (debug.enabled) {
 				debug(`Requiring '${requiredName}' from ${filePath}...`);
 			}
 			return this.sandboxRequire(pluginContext, moduleDirname, requiredName);
 		};
 
-		// TODO Add missing module properties
-		// tslint:disable-next-line:no-object-literal-type-assertion
 		const myModule: NodeModule = {
 			exports: {},
 			filename: filePath,
-			// id: filePath,
-			// children: [],
-			// loaded: false,
-			require: moduleRequire,
-			// parent: null
-		} as NodeModule;
+			id: filePath,
+			loaded: false,
+			require: moduleRequireFunction,
+			paths: [], // TODO I should I populate this
+			parent: module, // TODO I assign parent to the current module...it is correct?
+			children: [], // TODO I should populate correctly this list...
+		};
+
+		// tslint:disable-next-line:prefer-object-spread (here I get a ts error if using spread ... maybe it is a bug on ts?)
+		const moduleRequire: NodeRequire = Object.assign(
+			moduleRequireFunction,
+			{
+				resolve: (id: string) => {
+					return this.sandboxResolve(pluginContext, moduleDirname, id);
+				},
+				cache: {}, // TODO This should be correctly populated
+				// tslint:disable-next-line:no-object-literal-type-assertion
+				extensions: {} as NodeExtensions, // Deprecated
+				main: module
+			}
+		);
 
 		// assign missing https://nodejs.org/api/globals.html
 		//  and other "not real global" objects
@@ -261,7 +278,7 @@ export class PluginVm {
 			if (debug.enabled) {
 				debug(`Resolved ${requiredName} as core module`);
 			}
-			return require(requiredName);
+			return require(requiredName); // I use system require
 		}
 
 		if (this.manager.options.hostRequire) {
@@ -385,9 +402,5 @@ interface ModuleSandbox extends NodeJS.Global {
 	module: NodeModule;
 	__dirname: string;
 	__filename: string;
-	require: NodeRequireFunction; // TODO This should be a NodeRequire (with resolve, ...)
+	require: NodeRequire;
 }
-
-// interface NodeModuleLight {
-// 	exports: any;
-// }

@@ -1131,6 +1131,26 @@ describe("PluginManager:", function() {
 				assert.isUndefined((global as any).SOME_OTHER_KEY, "Host should not have it");
 			});
 		});
+
+		describe("NodeRequire object inside a plugin", function() {
+			it("require system module", async function() {
+				const code = `module.exports = require("fs");`;
+
+				await manager.installFromCode("my-plugin-with-sandbox", code);
+
+				const result = manager.require("my-plugin-with-sandbox");
+				assert.equal(result, require("fs"));
+			});
+
+			it("require.resolve system module", async function() {
+				const code = `module.exports = require.resolve("fs");`;
+
+				await manager.installFromCode("my-plugin-with-sandbox", code);
+
+				const result = manager.require("my-plugin-with-sandbox");
+				assert.equal(result, require.resolve("fs"));
+			});
+		});
 	});
 });
 
