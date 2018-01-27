@@ -78,6 +78,7 @@ export declare class PluginManager {
     private installFromGithubLockFree(repository);
     private installFromCodeLockFree(name, code, version?);
     private installDependencies(plugin);
+    private unloadDependents(pluginName);
     private unloadWithDependents(plugin);
     private isModuleAvailableFromHost(name, version);
     private isValidPluginName(name);

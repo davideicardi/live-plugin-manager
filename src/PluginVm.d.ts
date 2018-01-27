@@ -18,6 +18,7 @@ export declare class PluginVm {
     private vmRunScriptInPlugin(pluginContext, filePath, code);
     private getCache(pluginContext, filePath);
     private setCache(pluginContext, filePath, instance);
+    private removeCache(pluginContext, filePath);
     private createModuleSandbox(pluginContext, filePath);
     private sandboxResolve(pluginContext, moduleDirName, requiredName);
     private sandboxRequire(pluginContext, moduleDirName, requiredName);

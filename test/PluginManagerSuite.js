@@ -339,6 +339,39 @@ describe("PluginManager:", function () {
                     throw new Error("Expected to fail");
                 });
             });
+            describe("given a plugin with an unknown dependency", function () {
+                beforeEach(function () {
+                    return __awaiter(this, void 0, void 0, function* () {
+                        const code = `module.exports = require("some-not-valid-dependency");`;
+                        yield manager.installFromCode("my-code-plugin", code);
+                    });
+                });
+                it("should give an error on require", function () {
+                    return __awaiter(this, void 0, void 0, function* () {
+                        try {
+                            manager.require("my-code-plugin");
+                        }
+                        catch (e) {
+                            return;
+                        }
+                        throw new Error("Expected to fail");
+                    });
+                });
+                it("after a failed require it shold fail also for next require", function () {
+                    return __awaiter(this, void 0, void 0, function* () {
+                        // there was a bug that cache a failed plugin also on error
+                        for (let i = 0; i < 10; i++) {
+                            try {
+                                manager.require("my-code-plugin");
+                            }
+                            catch (e) {
+                                continue;
+                            }
+                            throw new Error("Expected to fail");
+                        }
+                    });
+                });
+            });
         });
     });
     describe("run script", function () {
@@ -650,41 +683,79 @@ describe("PluginManager:", function () {
     describe("plugins dependencies", function () {
         this.slow(6000);
         describe("Npm dependencies", function () {
-            it("dependencies are installed", function () {
-                return __awaiter(this, void 0, void 0, function* () {
-                    const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
-                    yield manager.installFromPath(pluginSourcePath);
-                    chai_1.assert.equal(manager.list().length, 2);
-                    chai_1.assert.equal(manager.list()[0].name, "moment");
-                    chai_1.assert.equal(manager.list()[1].name, "my-plugin-with-dep");
+            describe("Given a package with npm dependencies", function () {
+                beforeEach(function () {
+                    return __awaiter(this, void 0, void 0, function* () {
+                        const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
+                        yield manager.installFromPath(pluginSourcePath);
+                    });
                 });
-            });
-            it("dependencies are available", function () {
-                return __awaiter(this, void 0, void 0, function* () {
-                    const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
-                    yield manager.installFromPath(pluginSourcePath);
-                    const pluginInstance = manager.require("my-plugin-with-dep");
-                    chai_1.assert.equal(pluginInstance.testDebug, require("debug")); // I expect to be exactly the same
-                    chai_1.assert.equal(pluginInstance.testMoment, "1981/10/06");
+                it("dependencies are installed", function () {
+                    return __awaiter(this, void 0, void 0, function* () {
+                        chai_1.assert.equal(manager.list().length, 2);
+                        chai_1.assert.equal(manager.list()[0].name, "moment");
+                        chai_1.assert.equal(manager.list()[1].name, "my-plugin-with-dep");
+                    });
                 });
-            });
-            it("by default @types dependencies are not installed", function () {
-                return __awaiter(this, void 0, void 0, function* () {
-                    const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
-                    yield manager.installFromPath(pluginSourcePath);
-                    for (const p of manager.list()) {
-                        chai_1.assert.notEqual(p.name, "@types/express");
-                    }
+                it("dependencies are available", function () {
+                    return __awaiter(this, void 0, void 0, function* () {
+                        const pluginInstance = manager.require("my-plugin-with-dep");
+                        chai_1.assert.equal(pluginInstance.testDebug, require("debug")); // I expect to be exactly the same
+                        chai_1.assert.equal(pluginInstance.testMoment, "1981/10/06");
+                    });
                 });
-            });
-            it("dependencies installed in the host are not installed but are available", function () {
-                return __awaiter(this, void 0, void 0, function* () {
-                    // debug package is already available in the host
-                    const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
-                    yield manager.installFromPath(pluginSourcePath);
-                    for (const p of manager.list()) {
-                        chai_1.assert.notEqual(p.name, "debug");
-                    }
+                it("by default @types dependencies are not installed", function () {
+                    return __awaiter(this, void 0, void 0, function* () {
+                        for (const p of manager.list()) {
+                            chai_1.assert.notEqual(p.name, "@types/express");
+                        }
+                    });
+                });
+                it("dependencies installed in the host are not installed but are available", function () {
+                    return __awaiter(this, void 0, void 0, function* () {
+                        // debug package is already available in the host
+                        for (const p of manager.list()) {
+                            chai_1.assert.notEqual(p.name, "debug");
+                        }
+                    });
+                });
+                describe("uninstalling a dependency (moment)", function () {
+                    beforeEach(function () {
+                        return __awaiter(this, void 0, void 0, function* () {
+                            yield manager.uninstall("moment");
+                        });
+                    });
+                    it("requiring the plugin will fail", function () {
+                        try {
+                            manager.require("my-plugin-with-dep");
+                        }
+                        catch (e) {
+                            return;
+                        }
+                        throw new Error("Excepted to fail");
+                    });
+                    it("if dependency is reinstalled plugin will work again", function () {
+                        return __awaiter(this, void 0, void 0, function* () {
+                            yield manager.installFromNpm("moment", "2.18.1");
+                            const pluginInstance = manager.require("my-plugin-with-dep");
+                            chai_1.assert.equal(pluginInstance.testMoment, "1981/10/06");
+                        });
+                    });
+                    it("after a plugin load error if dependency is reinstalled plugin will work again", function () {
+                        return __awaiter(this, void 0, void 0, function* () {
+                            let initialFailed = false;
+                            try {
+                                manager.require("my-plugin-with-dep");
+                            }
+                            catch (e) {
+                                initialFailed = true;
+                            }
+                            chai_1.assert.isTrue(initialFailed, "expected to fail to load without moment");
+                            yield manager.installFromNpm("moment", "2.18.1");
+                            const pluginInstance = manager.require("my-plugin-with-dep");
+                            chai_1.assert.equal(pluginInstance.testMoment, "1981/10/06");
+                        });
+                    });
                 });
             });
         });

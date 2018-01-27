@@ -350,6 +350,34 @@ describe("PluginManager:", function() {
 				}
 				throw new Error("Expected to fail");
 			});
+
+			describe("given a plugin with an unknown dependency", function() {
+				beforeEach(async function() {
+					const code = `module.exports = require("some-not-valid-dependency");`;
+					await manager.installFromCode("my-code-plugin", code);
+				});
+
+				it("should give an error on require", async function() {
+					try {
+						manager.require("my-code-plugin");
+					} catch (e) {
+						return;
+					}
+					throw new Error("Expected to fail");
+				});
+
+				it("after a failed require it shold fail also for next require", async function() {
+					// there was a bug that cache a failed plugin also on error
+					for (let i = 0; i < 10; i++) {
+						try {
+							manager.require("my-code-plugin");
+						} catch (e) {
+							continue;
+						}
+						throw new Error("Expected to fail");
+					}
+				});
+			});
 		});
 
 	});
@@ -682,43 +710,79 @@ describe("PluginManager:", function() {
 		this.slow(6000);
 
 		describe("Npm dependencies", function() {
-			it("dependencies are installed", async function() {
-				const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
-				await manager.installFromPath(pluginSourcePath);
 
-				assert.equal(manager.list().length, 2);
-				assert.equal(manager.list()[0].name, "moment");
-				assert.equal(manager.list()[1].name, "my-plugin-with-dep");
-			});
+			describe("Given a package with npm dependencies", function() {
+				beforeEach(async function() {
+					const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
+					await manager.installFromPath(pluginSourcePath);
+				});
 
-			it("dependencies are available", async function() {
-				const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
-				await manager.installFromPath(pluginSourcePath);
+				it("dependencies are installed", async function() {
+					assert.equal(manager.list().length, 2);
+					assert.equal(manager.list()[0].name, "moment");
+					assert.equal(manager.list()[1].name, "my-plugin-with-dep");
+				});
 
-				const pluginInstance = manager.require("my-plugin-with-dep");
+				it("dependencies are available", async function() {
+					const pluginInstance = manager.require("my-plugin-with-dep");
 
-				assert.equal(pluginInstance.testDebug, require("debug")); // I expect to be exactly the same
-				assert.equal(pluginInstance.testMoment, "1981/10/06");
-			});
+					assert.equal(pluginInstance.testDebug, require("debug")); // I expect to be exactly the same
+					assert.equal(pluginInstance.testMoment, "1981/10/06");
+				});
 
-			it("by default @types dependencies are not installed", async function() {
-				const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
-				await manager.installFromPath(pluginSourcePath);
+				it("by default @types dependencies are not installed", async function() {
+					for (const p of manager.list()) {
+						assert.notEqual(p.name, "@types/express");
+					}
+				});
 
-				for (const p of manager.list()) {
-					assert.notEqual(p.name, "@types/express");
-				}
-			});
+				it("dependencies installed in the host are not installed but are available", async function() {
+					// debug package is already available in the host
 
-			it("dependencies installed in the host are not installed but are available", async function() {
-				// debug package is already available in the host
+					for (const p of manager.list()) {
+						assert.notEqual(p.name, "debug");
+					}
+				});
 
-				const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
-				await manager.installFromPath(pluginSourcePath);
+				describe("uninstalling a dependency (moment)", function() {
+					beforeEach(async function() {
+						await manager.uninstall("moment");
+					});
 
-				for (const p of manager.list()) {
-					assert.notEqual(p.name, "debug");
-				}
+					it("requiring the plugin will fail", function() {
+						try {
+							manager.require("my-plugin-with-dep");
+						} catch (e) {
+							return;
+						}
+
+						throw new Error("Excepted to fail");
+					});
+
+					it("if dependency is reinstalled plugin will work again", async function() {
+						await manager.installFromNpm("moment", "2.18.1");
+
+						const pluginInstance = manager.require("my-plugin-with-dep");
+
+						assert.equal(pluginInstance.testMoment, "1981/10/06");
+					});
+
+					it("after a plugin load error if dependency is reinstalled plugin will work again", async function() {
+						let initialFailed = false;
+						try {
+							manager.require("my-plugin-with-dep");
+						} catch (e) {
+							initialFailed = true;
+						}
+						assert.isTrue(initialFailed, "expected to fail to load without moment");
+
+						await manager.installFromNpm("moment", "2.18.1");
+
+						const pluginInstance = manager.require("my-plugin-with-dep");
+
+						assert.equal(pluginInstance.testMoment, "1981/10/06");
+					});
+				});
 			});
 		});
 

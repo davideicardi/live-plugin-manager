@@ -489,14 +489,18 @@ export class PluginManager {
 		return dependencies;
 	}
 
-	private unloadWithDependents(plugin: IPluginInfo) {
-		this.unload(plugin);
-
+	private unloadDependents(pluginName: string) {
 		for (const installed of this.installedPlugins) {
-			if (installed.dependencies[plugin.name]) {
+			if (installed.dependencies[pluginName]) {
 				this.unloadWithDependents(installed);
 			}
 		}
+	}
+
+	private unloadWithDependents(plugin: IPluginInfo) {
+		this.unload(plugin);
+
+		this.unloadDependents(plugin.name);
 	}
 
 	private isModuleAvailableFromHost(name: string, version: string): boolean {
@@ -629,6 +633,8 @@ export class PluginManager {
 		await this.installDependencies(plugin);
 
 		this.installedPlugins.push(plugin);
+
+		// this.unloadDependents(plugin.name);
 
 		return plugin;
 	}

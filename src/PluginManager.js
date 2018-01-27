@@ -410,13 +410,16 @@ class PluginManager {
             return dependencies;
         });
     }
-    unloadWithDependents(plugin) {
-        this.unload(plugin);
+    unloadDependents(pluginName) {
         for (const installed of this.installedPlugins) {
-            if (installed.dependencies[plugin.name]) {
+            if (installed.dependencies[pluginName]) {
                 this.unloadWithDependents(installed);
             }
         }
+    }
+    unloadWithDependents(plugin) {
+        this.unload(plugin);
+        this.unloadDependents(plugin.name);
     }
     isModuleAvailableFromHost(name, version) {
         if (!this.options.hostRequire) {
@@ -530,6 +533,7 @@ class PluginManager {
         return __awaiter(this, void 0, void 0, function* () {
             yield this.installDependencies(plugin);
             this.installedPlugins.push(plugin);
+            // this.unloadDependents(plugin.name);
             return plugin;
         });
     }

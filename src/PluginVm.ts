@@ -42,7 +42,14 @@ export class PluginVm {
 			const code = fs.readFileSync(filePath, "utf8");
 			// note: I first put the object (before executing the script) in cache to support circular require
 			this.setCache(pluginContext, filePath, moduleInstance);
-			this.vmRunScriptInSandbox(sandbox, filePath, code);
+
+			try {
+				this.vmRunScriptInSandbox(sandbox, filePath, code);
+			} catch (e) {
+				// in case of error remove the cache
+				this.removeCache(pluginContext, filePath);
+				throw e;
+			}
 		} else if (filePathExtension === ".json") {
 			sandbox.module.exports = fs.readJsonSync(filePath);
 			this.setCache(pluginContext, filePath, moduleInstance);
@@ -153,6 +160,15 @@ export class PluginVm {
 		}
 
 		moduleCache.set(filePath, instance);
+	}
+
+	private removeCache(pluginContext: IPluginInfo, filePath: string): void {
+		const moduleCache = this.requireCache.get(pluginContext);
+		if (!moduleCache) {
+			return;
+		}
+
+		moduleCache.delete(filePath);
 	}
 
 	private createModuleSandbox(pluginContext: IPluginInfo, filePath: string): ModuleSandbox {
