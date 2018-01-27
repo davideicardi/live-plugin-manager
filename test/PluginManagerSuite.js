@@ -820,6 +820,91 @@ describe("PluginManager:", function () {
                 });
             });
         });
+        describe("given an host dependency", function () {
+            const hostDependencyDestPath = path.join(__dirname, "..", "node_modules", "host-dependency");
+            // given a dependency installed in the host
+            // with version 1
+            // note: I simulate an host dependency by manually copy it in the node_modules folder
+            before(function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    const hostDependencySourcePath = path.join(__dirname, "host-dependency@v1");
+                    yield fs.copy(hostDependencySourcePath, hostDependencyDestPath);
+                });
+            });
+            after(function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    yield fs.remove(hostDependencyDestPath);
+                });
+            });
+            it("it can be resolved", function () {
+                // tslint:disable-next-line:no-implicit-dependencies
+                const dependency = require("host-dependency");
+                chai_1.assert.isDefined(dependency);
+                chai_1.assert.equal(dependency, "v1.0.0");
+                // tslint:disable-next-line:no-implicit-dependencies no-submodule-imports
+                const dependencyPackage = require("host-dependency/package.json");
+                chai_1.assert.equal(dependencyPackage.version, "1.0.0");
+            });
+            describe("when installing plugin that depends on the host dependency", function () {
+                beforeEach(function () {
+                    return __awaiter(this, void 0, void 0, function* () {
+                        // this package depends on "host-dependency" at version ^1.0.0
+                        const pluginSourcePath = path.join(__dirname, "my-plugin-with-host-dep");
+                        yield manager.installFromPath(pluginSourcePath);
+                    });
+                });
+                it("dependency is not installed because already installed in host", function () {
+                    chai_1.assert.equal(manager.list().length, 1);
+                    chai_1.assert.equal(manager.list()[0].name, "my-plugin-with-host-dep");
+                });
+                it("it is resolved using the host dependency", function () {
+                    const pluginInstance = manager.require("my-plugin-with-host-dep");
+                    chai_1.assert.isDefined(pluginInstance);
+                    // tslint:disable-next-line:no-implicit-dependencies
+                    chai_1.assert.equal(pluginInstance.testHostDependency, require("host-dependency"));
+                    chai_1.assert.equal(pluginInstance.testHostDependency, "v1.0.0");
+                });
+                describe("when installing an update of the host dependency", function () {
+                    beforeEach(function () {
+                        return __awaiter(this, void 0, void 0, function* () {
+                            const pluginSourcePath = path.join(__dirname, "host-dependency@v1.0.1");
+                            yield manager.installFromPath(pluginSourcePath);
+                        });
+                    });
+                    it("dependency is installed/updated", function () {
+                        chai_1.assert.equal(manager.list().length, 2);
+                        chai_1.assert.equal(manager.list()[0].name, "my-plugin-with-host-dep");
+                        chai_1.assert.equal(manager.list()[1].name, "host-dependency");
+                        chai_1.assert.equal(manager.list()[1].version, "1.0.1");
+                    });
+                    it("the updated dependency is now used by all dependants", function () {
+                        const pluginInstance = manager.require("my-plugin-with-host-dep");
+                        chai_1.assert.isDefined(pluginInstance);
+                        // tslint:disable-next-line:no-implicit-dependencies
+                        chai_1.assert.notEqual(pluginInstance.testHostDependency, require("host-dependency"));
+                        chai_1.assert.equal(pluginInstance.testHostDependency, "v1.0.1");
+                    });
+                    describe("when uninstalling the update", function () {
+                        beforeEach(function () {
+                            return __awaiter(this, void 0, void 0, function* () {
+                                yield manager.uninstall("host-dependency");
+                            });
+                        });
+                        it("dependency is uninstalled", function () {
+                            chai_1.assert.equal(manager.list().length, 1);
+                            chai_1.assert.equal(manager.list()[0].name, "my-plugin-with-host-dep");
+                        });
+                        it("it is again resolved using the host dependency", function () {
+                            const pluginInstance = manager.require("my-plugin-with-host-dep");
+                            chai_1.assert.isDefined(pluginInstance);
+                            // tslint:disable-next-line:no-implicit-dependencies
+                            chai_1.assert.equal(pluginInstance.testHostDependency, require("host-dependency"));
+                            chai_1.assert.equal(pluginInstance.testHostDependency, "v1.0.0");
+                        });
+                    });
+                });
+            });
+        });
     });
     describe("query npm package", function () {
         it("get latest version info", function () {

@@ -329,7 +329,7 @@ export class PluginManager {
 		return this.addPlugin(pluginInfo);
 	}
 
-	/** Install from npm of from cache if already available */
+	/** Install from npm or from cache if already available */
 	private async installFromNpmLockFreeCache(name: string, version = NPM_LATEST_TAG): Promise<IPluginInfo> {
 		if (!this.isValidPluginName(name)) {
 			throw new Error(`Invalid plugin name '${name}'`);

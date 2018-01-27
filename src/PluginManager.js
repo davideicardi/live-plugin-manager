@@ -275,7 +275,7 @@ class PluginManager {
             return this.addPlugin(pluginInfo);
         });
     }
-    /** Install from npm of from cache if already available */
+    /** Install from npm or from cache if already available */
     installFromNpmLockFreeCache(name, version = NPM_LATEST_TAG) {
         return __awaiter(this, void 0, void 0, function* () {
             if (!this.isValidPluginName(name)) {

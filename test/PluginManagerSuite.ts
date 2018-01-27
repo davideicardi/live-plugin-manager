@@ -865,6 +865,100 @@ describe("PluginManager:", function() {
 				assert.notEqual(pluginDebugInstance.version, hostDebugInstance.version); // I expect to be different (v2 vs v3)
 			});
 		});
+
+		describe("given an host dependency", function() {
+			const hostDependencyDestPath = path.join(__dirname, "..", "node_modules", "host-dependency");
+
+			// given a dependency installed in the host
+			// with version 1
+			// note: I simulate an host dependency by manually copy it in the node_modules folder
+			before(async function() {
+				const hostDependencySourcePath = path.join(__dirname, "host-dependency@v1");
+				await fs.copy(hostDependencySourcePath, hostDependencyDestPath);
+			});
+
+			after(async function() {
+				await fs.remove(hostDependencyDestPath);
+			});
+
+			it("it can be resolved", function() {
+				// tslint:disable-next-line:no-implicit-dependencies
+				const dependency = require("host-dependency");
+				assert.isDefined(dependency);
+				assert.equal(dependency, "v1.0.0");
+				// tslint:disable-next-line:no-implicit-dependencies no-submodule-imports
+				const dependencyPackage = require("host-dependency/package.json");
+				assert.equal(dependencyPackage.version, "1.0.0");
+			});
+
+			describe("when installing plugin that depends on the host dependency", function() {
+				beforeEach(async function() {
+					// this package depends on "host-dependency" at version ^1.0.0
+					const pluginSourcePath = path.join(__dirname, "my-plugin-with-host-dep");
+					await manager.installFromPath(pluginSourcePath);
+				});
+
+				it("dependency is not installed because already installed in host", function() {
+					assert.equal(manager.list().length, 1);
+					assert.equal(manager.list()[0].name, "my-plugin-with-host-dep");
+				});
+
+				it("it is resolved using the host dependency", function() {
+					const pluginInstance = manager.require("my-plugin-with-host-dep");
+					assert.isDefined(pluginInstance);
+
+					// tslint:disable-next-line:no-implicit-dependencies
+					assert.equal(pluginInstance.testHostDependency, require("host-dependency"));
+
+					assert.equal(pluginInstance.testHostDependency, "v1.0.0");
+				});
+
+				describe("when installing an update of the host dependency", function() {
+					beforeEach(async function() {
+						const pluginSourcePath = path.join(__dirname, "host-dependency@v1.0.1");
+						await manager.installFromPath(pluginSourcePath);
+					});
+
+					it("dependency is installed/updated", function() {
+						assert.equal(manager.list().length, 2);
+						assert.equal(manager.list()[0].name, "my-plugin-with-host-dep");
+						assert.equal(manager.list()[1].name, "host-dependency");
+						assert.equal(manager.list()[1].version, "1.0.1");
+					});
+
+					it("the updated dependency is now used by all dependants", function() {
+						const pluginInstance = manager.require("my-plugin-with-host-dep");
+						assert.isDefined(pluginInstance);
+
+						// tslint:disable-next-line:no-implicit-dependencies
+						assert.notEqual(pluginInstance.testHostDependency, require("host-dependency"));
+
+						assert.equal(pluginInstance.testHostDependency, "v1.0.1");
+					});
+
+					describe("when uninstalling the update", function() {
+						beforeEach(async function() {
+							await manager.uninstall("host-dependency");
+						});
+
+						it("dependency is uninstalled", function() {
+							assert.equal(manager.list().length, 1);
+							assert.equal(manager.list()[0].name, "my-plugin-with-host-dep");
+						});
+
+						it("it is again resolved using the host dependency", function() {
+							const pluginInstance = manager.require("my-plugin-with-host-dep");
+							assert.isDefined(pluginInstance);
+
+							// tslint:disable-next-line:no-implicit-dependencies
+							assert.equal(pluginInstance.testHostDependency, require("host-dependency"));
+
+							assert.equal(pluginInstance.testHostDependency, "v1.0.0");
+						});
+					});
+				});
+			});
+		});
 	});
 
 	describe("query npm package", function() {

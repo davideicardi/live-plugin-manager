@@ -71,7 +71,7 @@ export declare class PluginManager {
     private uninstallLockFree(name);
     private installLockFree(name, version?);
     private installFromPathLockFree(location, options);
-    /** Install from npm of from cache if already available */
+    /** Install from npm or from cache if already available */
     private installFromNpmLockFreeCache(name, version?);
     /** Install from npm */
     private installFromNpmLockFreeDirect(name, version?);
