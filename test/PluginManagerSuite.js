@@ -788,8 +788,10 @@ describe("PluginManager:", function () {
             });
         });
         describe("Not compatible dependencies with host", function () {
+            // Note: Assume that host contains "debug" npm package at version 3
             it("dependencies are installed", function () {
                 return __awaiter(this, void 0, void 0, function* () {
+                    // this package contains "debug" at version 2 (different from the host)
                     const pluginSourcePath = path.join(__dirname, "my-plugin-with-diff-dep");
                     yield manager.installFromPath(pluginSourcePath);
                     chai_1.assert.equal(manager.list().length, 2);
@@ -803,6 +805,18 @@ describe("PluginManager:", function () {
                     yield manager.installFromPath(pluginSourcePath);
                     const pluginInstance = manager.require("my-plugin-with-diff-dep");
                     chai_1.assert.notEqual(pluginInstance.testDebug, require("debug")); // I expect to be different (v2 vs v3)
+                });
+            });
+            it("dependencies is not the same", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    const pluginSourcePath = path.join(__dirname, "my-plugin-with-diff-dep");
+                    yield manager.installFromPath(pluginSourcePath);
+                    const pluginDebugInstance = manager.require("debug/package.json");
+                    // tslint:disable-next-line:no-submodule-imports
+                    const hostDebugInstance = require("debug/package.json");
+                    chai_1.assert.equal(pluginDebugInstance.version, "2.6.9");
+                    chai_1.assert.equal(hostDebugInstance.version.substring(0, 1), "3");
+                    chai_1.assert.notEqual(pluginDebugInstance.version, hostDebugInstance.version); // I expect to be different (v2 vs v3)
                 });
             });
         });
