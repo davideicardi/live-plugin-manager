@@ -16,20 +16,19 @@ Main features are:
 - Install from filesystem
 - Install from github (branch, commit or tag)
 - Update/uninstall packages
-- Most Node.js packages can be installed
-  - No special configuration are required extension points
-  - See Known limitations
-- Plugins can have dependencies 
+- Any Node.js packages can be installed
+  - No special configuration is required
+- Installd packages can have dependencies 
   - dependencies are automatically installed
   - when updating a dependencies all dependents are reloaded
 - Support for concurrency operation on filesystem (cloud/webfarm scenario where file system is shared)
   - A filesystem lock is used to prevent multiple instances to work on the same filesystem in the same moment
-- Each plugin/package run in an semi isolated environment (VM sandbox)
-- You can pass environment variables for each plugin
+- Each package run in an semi isolated environment (VM sandbox)
+- Set different environment variables for each package
 - Implementated in Typescript
 - Fully tested (mocha tests)
 
-As usual there are some **known limitations**, see section at the end.
+There are some **known limitations**, see section at the end.
 
 ## Installation
 
