@@ -1086,7 +1086,7 @@ describe("PluginManager:", function() {
 			const info = await manager.queryPackageFromNpm("@types/node", "^6.0.0");
 			assert.equal(info.name, "@types/node");
 			// TODO think of a better check...
-			assert.equal(info.version, "6.0.96"); // this test can fail if @types/node publish a 6.x version
+			assert.equal(info.version, "6.0.101"); // this test can fail if @types/node publish a 6.x version
 		});
 	});
 
