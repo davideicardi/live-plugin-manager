@@ -9,8 +9,13 @@ export declare class NpmRegistryClient {
     private getNpmData(name);
 }
 export interface NpmRegistryConfig {
-    auth?: {
-        token: string;
-    };
+    auth?: NpmRegistryAuthToken | NpmRegistryAuthBasic;
     userAgent?: string;
+}
+export interface NpmRegistryAuthToken {
+    token: string;
+}
+export interface NpmRegistryAuthBasic {
+    username: string;
+    password: string;
 }

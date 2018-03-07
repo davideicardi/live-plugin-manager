@@ -25,8 +25,8 @@ class NpmRegistryClient {
             "accept": "application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8, */*",
             "user-agent": config.userAgent || "live-plugin-manager"
         };
-        this.defaultHeaders = config.auth
-            ? Object.assign({}, staticHeaders, httpUtils.headersBearerAuth(config.auth.token)) : Object.assign({}, staticHeaders);
+        const authHeader = createAuthHeader(config.auth);
+        this.defaultHeaders = Object.assign({}, staticHeaders, authHeader);
     }
     get(name, versionOrTag = "latest") {
         return __awaiter(this, void 0, void 0, function* () {
@@ -115,5 +115,25 @@ class NpmRegistryClient {
 exports.NpmRegistryClient = NpmRegistryClient;
 function encodeNpmName(name) {
     return name.replace("/", "%2F");
+}
+function createAuthHeader(auth) {
+    if (!auth) {
+        return {};
+    }
+    if (isTokenAuth(auth)) {
+        return httpUtils.headersBearerAuth(auth.token); // this should be a JWT I think...
+    }
+    else if (isBasicAuth(auth)) {
+        return httpUtils.headersBasicAuth(auth.username, auth.password);
+    }
+    else {
+        return {};
+    }
+}
+function isTokenAuth(arg) {
+    return arg.token !== undefined;
+}
+function isBasicAuth(arg) {
+    return arg.username !== undefined;
 }
 //# sourceMappingURL=NpmRegistryClient.js.map

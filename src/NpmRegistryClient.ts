@@ -18,9 +18,9 @@ export class NpmRegistryClient {
 			"user-agent": config.userAgent || "live-plugin-manager"
 		};
 
-		this.defaultHeaders = config.auth
-			? {...staticHeaders, ...httpUtils.headersBearerAuth(config.auth.token)}
-			: {...staticHeaders};
+		const authHeader = createAuthHeader(config.auth);
+
+		this.defaultHeaders = {...staticHeaders, ...authHeader};
 	}
 
 	async get(name: string, versionOrTag: string | null = "latest"): Promise<PackageInfo> {
@@ -143,9 +143,38 @@ function encodeNpmName(name: string) {
 
 export interface NpmRegistryConfig {
 	// actually this is used in the params
-	auth?: {
-		token: string;
-	};
+	auth?: NpmRegistryAuthToken | NpmRegistryAuthBasic;
 
 	userAgent?: string;
+}
+
+export interface NpmRegistryAuthToken {
+	token: string;
+}
+
+export interface NpmRegistryAuthBasic {
+	username: string;
+	password: string;
+}
+
+function createAuthHeader(auth?: NpmRegistryAuthToken | NpmRegistryAuthBasic): httpUtils.Headers {
+	if (!auth) {
+		return {};
+	}
+
+	if (isTokenAuth(auth)) {
+		return httpUtils.headersBearerAuth(auth.token); // this should be a JWT I think...
+	} else if (isBasicAuth(auth)) {
+		return httpUtils.headersBasicAuth(auth.username, auth.password);
+	} else {
+		return {};
+	}
+}
+
+function isTokenAuth(arg: NpmRegistryAuthToken | NpmRegistryAuthBasic): arg is NpmRegistryAuthToken {
+	return (arg as NpmRegistryAuthToken).token !== undefined;
+}
+
+function isBasicAuth(arg: NpmRegistryAuthToken | NpmRegistryAuthBasic): arg is NpmRegistryAuthBasic {
+	return (arg as NpmRegistryAuthBasic).username !== undefined;
 }
