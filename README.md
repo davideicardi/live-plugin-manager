@@ -223,7 +223,7 @@ This project use the following dependencies to do it's job:
 - [fs-extra](https://github.com/jprichardson/node-fs-extra): file system operations
 - [debug](https://github.com/visionmedia/debug): debug informations
 - (removed for now because I have problems with getArchiveLink api, 302 ...) [github](https://www.npmjs.com/package/github)
-- (removed for now because not very useful) [npm-registry-client](https://github.com/npm/npm-registry-client): npm registry handling
+- (removed for now because for some dependencies issues) [npm-registry-client](https://github.com/npm/npm-registry-client): npm registry handling
 
 While I have tried to mimic the standard Node.js module and package architecture there are some differences.
 First of all is the fact that plugins by definition are installed at runtime in contrast with a standard Node.js application where modules are installed before executin the node.js proccess.
@@ -250,7 +250,7 @@ Usually you should add this to your `.gitignore` file:
 
 There are some known limitations when installing a package:
 
-- Different plugins cannot depends on different/incompatible modules. If plugin A require module x at version 1 and plugin B require modele X at version 2 then plugin A and plugin B cannot be installed simultaneously. Now version 2 of dependencies will be used and so this can cause problems on your code.
+- Different plugins cannot depends on different/incompatible modules. If plugin A require module x at version 1 and plugin B require the same module X at version 2 then plugin A and plugin B cannot be installed simultaneously. Version 2 of module X will be used and this can cause problems on your code.
 - No `pre/post-install` scripts are executed (some packages use this scripts to build assets or for platform specific installation, so for this reason some packages are not supported)
 - C/C++ packages (`.node`) are not supported
 - Plugin dependencies can be specified only as NPM dependencies (version number) or github dependencies (owner/repo), url or other kind of dependencies are not supported
@@ -261,7 +261,7 @@ If you find other problems please open an issue.
 
 MIT License
 
-Copyright (c) 2017 Davide Icardi
+Copyright (c) 2018 Davide Icardi
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
