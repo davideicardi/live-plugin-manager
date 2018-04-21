@@ -12,6 +12,7 @@ const chai_1 = require("chai"); // tslint:disable-line:no-implicit-dependencies
 const path = require("path");
 const fs = require("fs-extra");
 const os = require("os");
+const semver = require("semver");
 const index_1 = require("../index");
 describe("PluginManager:", function () {
     this.timeout(15000);
@@ -1044,8 +1045,8 @@ describe("PluginManager:", function () {
             return __awaiter(this, void 0, void 0, function* () {
                 const info = yield manager.queryPackageFromNpm("@types/node", "^6.0.0");
                 chai_1.assert.equal(info.name, "@types/node");
-                // TODO think of a better check...
-                chai_1.assert.equal(info.version, "6.0.101"); // this test can fail if @types/node publish a 6.x version
+                chai_1.assert.isTrue(semver.gt(info.version, "6.0.0"), "Should get a version greater than 6.0.0");
+                chai_1.assert.isTrue(semver.lt(info.version, "7.0.0"), "Should get a version less than 7.0.0");
             });
         });
     });

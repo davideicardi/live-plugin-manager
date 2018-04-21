@@ -2,6 +2,7 @@ import { assert } from "chai"; // tslint:disable-line:no-implicit-dependencies
 import * as path from "path";
 import * as fs from "fs-extra";
 import * as os from "os";
+import * as semver from "semver";
 
 import {PluginManager, IPluginInfo} from "../index";
 
@@ -1085,8 +1086,9 @@ describe("PluginManager:", function() {
 		it("get caret version range info for scoped packages", async function() {
 			const info = await manager.queryPackageFromNpm("@types/node", "^6.0.0");
 			assert.equal(info.name, "@types/node");
-			// TODO think of a better check...
-			assert.equal(info.version, "6.0.101"); // this test can fail if @types/node publish a 6.x version
+
+			assert.isTrue(semver.gt(info.version, "6.0.0"), "Should get a version greater than 6.0.0");
+			assert.isTrue(semver.lt(info.version, "7.0.0"), "Should get a version less than 7.0.0");
 		});
 	});
 
