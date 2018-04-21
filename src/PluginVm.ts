@@ -177,37 +177,41 @@ export class PluginVm {
 
 		const moduleDirname = path.dirname(filePath);
 
-		const moduleRequireFunction: NodeRequireFunction = (requiredName: string) => {
-			if (debug.enabled) {
-				debug(`Requiring '${requiredName}' from ${filePath}...`);
+		const moduleResolve: RequireResolve = Object.assign(
+			(id: string) => {
+				return this.sandboxResolve(pluginContext, moduleDirname, id);
+			},
+			{
+				paths: (request: string) => null // TODO I should I populate this
 			}
-			return this.sandboxRequire(pluginContext, moduleDirname, requiredName);
-		};
+		);
+
+		const moduleRequire: NodeRequire = Object.assign(
+			(requiredName: string) => {
+				if (debug.enabled) {
+					debug(`Requiring '${requiredName}' from ${filePath}...`);
+				}
+				return this.sandboxRequire(pluginContext, moduleDirname, requiredName);
+			},
+			{
+				resolve: moduleResolve,
+				cache: {}, // TODO This should be correctly populated
+				// tslint:disable-next-line:no-object-literal-type-assertion
+				extensions: {} as NodeExtensions, // Deprecated
+				main: require.main // TODO assign the real main or consider main the current module (ie. module)?
+			}
+		);
 
 		const myModule: NodeModule = {
 			exports: {},
 			filename: filePath,
 			id: filePath,
 			loaded: false,
-			require: moduleRequireFunction,
+			require: moduleRequire,
 			paths: [], // TODO I should I populate this
 			parent: module, // TODO I assign parent to the current module...it is correct?
 			children: [], // TODO I should populate correctly this list...
 		};
-
-		// tslint:disable-next-line:prefer-object-spread (here I get a ts error if using spread ... maybe it is a bug on ts?)
-		const moduleRequire: NodeRequire = Object.assign(
-			moduleRequireFunction,
-			{
-				resolve: (id: string) => {
-					return this.sandboxResolve(pluginContext, moduleDirname, id);
-				},
-				cache: {}, // TODO This should be correctly populated
-				// tslint:disable-next-line:no-object-literal-type-assertion
-				extensions: {} as NodeExtensions, // Deprecated
-				main: module
-			}
-		);
 
 		// assign missing https://nodejs.org/api/globals.html
 		//  and other "not real global" objects

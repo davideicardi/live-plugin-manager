@@ -29,6 +29,8 @@ export class GithubRegistryClient {
 				default:
 					throw new Error("Auth type not supported");
 			}
+		} else {
+			this.headers = {};
 		}
 	}
 

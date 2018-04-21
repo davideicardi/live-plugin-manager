@@ -143,32 +143,33 @@ class PluginVm {
     createModuleSandbox(pluginContext, filePath) {
         const pluginSandbox = this.getPluginSandbox(pluginContext);
         const moduleDirname = path.dirname(filePath);
-        const moduleRequireFunction = (requiredName) => {
+        const moduleResolve = Object.assign((id) => {
+            return this.sandboxResolve(pluginContext, moduleDirname, id);
+        }, {
+            paths: (request) => null // TODO I should I populate this
+        });
+        const moduleRequire = Object.assign((requiredName) => {
             if (debug.enabled) {
                 debug(`Requiring '${requiredName}' from ${filePath}...`);
             }
             return this.sandboxRequire(pluginContext, moduleDirname, requiredName);
-        };
+        }, {
+            resolve: moduleResolve,
+            cache: {},
+            // tslint:disable-next-line:no-object-literal-type-assertion
+            extensions: {},
+            main: require.main // TODO assign the real main or consider main the current module (ie. module)?
+        });
         const myModule = {
             exports: {},
             filename: filePath,
             id: filePath,
             loaded: false,
-            require: moduleRequireFunction,
+            require: moduleRequire,
             paths: [],
             parent: module,
             children: [],
         };
-        // tslint:disable-next-line:prefer-object-spread (here I get a ts error if using spread ... maybe it is a bug on ts?)
-        const moduleRequire = Object.assign(moduleRequireFunction, {
-            resolve: (id) => {
-                return this.sandboxResolve(pluginContext, moduleDirname, id);
-            },
-            cache: {},
-            // tslint:disable-next-line:no-object-literal-type-assertion
-            extensions: {},
-            main: module
-        });
         // assign missing https://nodejs.org/api/globals.html
         //  and other "not real global" objects
         const moduleSandbox = Object.assign({}, pluginSandbox, { module: myModule, __dirname: moduleDirname, __filename: filePath, require: moduleRequire });

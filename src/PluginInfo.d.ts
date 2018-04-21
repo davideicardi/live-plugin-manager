@@ -1,4 +1,4 @@
-export declare class IPluginInfo {
+export interface IPluginInfo {
     readonly mainFile: string;
     readonly location: string;
     readonly name: string;

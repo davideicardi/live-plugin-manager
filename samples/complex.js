@@ -15,6 +15,7 @@ function run() {
     return __awaiter(this, void 0, void 0, function* () {
         yield manager.install("forge-nodejs-sdk");
         manager.require("forge-nodejs-sdk");
+        console.log("ok");
     });
 }
 run();

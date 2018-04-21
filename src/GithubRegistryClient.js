@@ -29,6 +29,9 @@ class GithubRegistryClient {
                     throw new Error("Auth type not supported");
             }
         }
+        else {
+            this.headers = {};
+        }
     }
     get(repository) {
         return __awaiter(this, void 0, void 0, function* () {
