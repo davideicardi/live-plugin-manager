@@ -84,20 +84,31 @@ export class GithubRegistryClient {
 }
 
 function extractRepositoryInfo(repository: string) {
-	const parts = repository.split("/");
-	if (parts.length !== 2) {
-		throw new Error("Invalid repository name");
-	}
+  const parts = repository.split("/");
+  let owner, repo, ref;
+  if (repository.indexOf("git://") >= 0) {
+    let repoParts = parts[4].split("#");
 
-	const repoParts = parts[1].split("#");
+    owner = parts[3];
+    repo = repoParts[0].replace(".git", "");
+    ref = repoParts[1];
+  } else if (parts.length !== 2) {
+    throw new Error("Invalid repository name");
+  } else {
+    let repoParts = parts[1].split("#");
 
-	const repoInfo = {
-		owner: parts[0],
-		repo: repoParts[0],
-		ref: repoParts[1] || "master"
-	};
+    owner = parts[0];
+    repo = repoParts[0];
+    ref = repoParts[1];
+  }
 
-	return repoInfo;
+  const repoInfo = {
+    owner: owner,
+    repo: repo,
+    ref: ref || "master"
+  };
+
+  return repoInfo;
 }
 
 export interface GithubAuthUserToken  {
