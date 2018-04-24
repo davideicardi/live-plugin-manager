@@ -72,27 +72,25 @@ function extractRepositoryInfo(repository) {
     const parts = repository.split("/");
     let owner, repo, ref;
     if (repository.indexOf("git://") >= 0) {
-      let repoParts = parts[4].split("#");
-
-      owner = parts[3];
-      repo = repoParts[0].replace(".git", "");
-      ref = repoParts[1];
-    } else if (parts.length !== 2) {
-        throw new Error("Invalid repository name");
-    } else {
-      let repoParts = parts[1].split("#");
-
-      owner = parts[0];
-      repo = repoParts[0];
-      ref = repoParts[1];
+        let repoParts = parts[4].split("#");
+        owner = parts[3];
+        repo = repoParts[0].replace(".git", "");
+        ref = repoParts[1];
     }
-
+    else if (parts.length !== 2) {
+        throw new Error("Invalid repository name");
+    }
+    else {
+        let repoParts = parts[1].split("#");
+        owner = parts[0];
+        repo = repoParts[0];
+        ref = repoParts[1];
+    }
     const repoInfo = {
         owner: owner,
         repo: repo,
         ref: ref || "master"
     };
-
     return repoInfo;
 }
 // | AuthOAuthToken
