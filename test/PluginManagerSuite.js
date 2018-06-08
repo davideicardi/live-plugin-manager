@@ -977,6 +977,18 @@ describe("PluginManager:", function () {
                 });
             });
         });
+        describe("when there are conflict between plugin's dependencies", function () {
+            it("each plugin will install a specific version", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    const plugin1 = path.join(__dirname, "my-plugin-with-conflict-dep1");
+                    yield manager.installFromPath(plugin1);
+                    const plugin2 = path.join(__dirname, "my-plugin-with-conflict-dep2");
+                    yield manager.installFromPath(plugin2);
+                    chai_1.assert.equal(manager.require("my-plugin-with-conflict-dep1"), "my-plugin-with-conflict-dep1 loaded debug@v2.0.0");
+                    chai_1.assert.equal(manager.require("my-plugin-with-conflict-dep2"), "my-plugin-with-conflict-dep2 loaded debug@v1.0.4");
+                });
+            });
+        });
     });
     describe("query npm package", function () {
         it("get latest version info", function () {
