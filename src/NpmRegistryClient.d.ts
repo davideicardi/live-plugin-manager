@@ -6,7 +6,7 @@ export declare class NpmRegistryClient {
     constructor(npmUrl: string, config: NpmRegistryConfig);
     get(name: string, versionOrTag?: string | null): Promise<PackageInfo>;
     download(destinationDirectory: string, packageInfo: PackageInfo): Promise<string>;
-    private getNpmData(name);
+    private getNpmData;
 }
 export interface NpmRegistryConfig {
     auth?: NpmRegistryAuthToken | NpmRegistryAuthBasic;

@@ -40,7 +40,7 @@ export async function httpJsonGet<T>(sourceUrl: string, headers?: Headers): Prom
 		throw new Error(`Response error ${res.status} ${res.statusText}`);
 	}
 
-	return res.json<T>();
+	return res.json();
 }
 
 export async function httpDownload(sourceUrl: string, destinationFile: string, headers?: Headers): Promise<void> {
