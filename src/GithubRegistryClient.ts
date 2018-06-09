@@ -4,6 +4,7 @@ import {Headers, headersBasicAuth, headersTokenAuth, httpJsonGet} from "./httpUt
 import * as Debug from "debug";
 import { downloadTarball, extractTarball } from "./tarballUtils";
 import { PackageJsonInfo } from "./PackageInfo";
+import { GitHubRef } from "./VersionRef";
 const debug = Debug("live-plugin-manager.GithubRegistryClient");
 
 export class GithubRegistryClient {
@@ -34,10 +35,10 @@ export class GithubRegistryClient {
 		}
 	}
 
-	async get(repository: string): Promise<PackageJsonInfo> {
-		const repoInfo = extractRepositoryInfo(repository);
+	async get(gitHubRef: GitHubRef): Promise<PackageJsonInfo> {
+		const repoInfo = gitHubRef.getInfo();
 
-		debug("Repository info: ", repoInfo);
+		debug("Getting repository info: ", repoInfo);
 
 		const urlPkg
 		= `https://raw.githubusercontent.com/${repoInfo.owner}/${repoInfo.repo}/${repoInfo.ref}/package.json`;
@@ -46,7 +47,7 @@ export class GithubRegistryClient {
 			urlPkg,
 			{...this.headers, accept: "application/vnd.github.v3+json"});
 		if (!pkgContent || !pkgContent.name || !pkgContent.version) {
-			throw new Error("Invalid plugin github repository " + repository);
+			throw new Error("Invalid plugin github repository " + gitHubRef.raw);
 		}
 
 		const urlArchiveLink
@@ -77,27 +78,6 @@ export class GithubRegistryClient {
 
 		return pluginDirectory;
 	}
-
-	isGithubRepo(version: string): boolean {
-		return version.indexOf("/") > 0;
-	}
-}
-
-function extractRepositoryInfo(repository: string) {
-	const parts = repository.split("/");
-	if (parts.length !== 2) {
-		throw new Error("Invalid repository name");
-	}
-
-	const repoParts = parts[1].split("#");
-
-	const repoInfo = {
-		owner: parts[0],
-		repo: repoParts[0],
-		ref: repoParts[1] || "master"
-	};
-
-	return repoInfo;
 }
 
 export interface GithubAuthUserToken  {

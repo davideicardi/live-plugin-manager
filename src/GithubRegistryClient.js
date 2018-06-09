@@ -33,14 +33,14 @@ class GithubRegistryClient {
             this.headers = {};
         }
     }
-    get(repository) {
+    get(gitHubRef) {
         return __awaiter(this, void 0, void 0, function* () {
-            const repoInfo = extractRepositoryInfo(repository);
-            debug("Repository info: ", repoInfo);
+            const repoInfo = gitHubRef.getInfo();
+            debug("Getting repository info: ", repoInfo);
             const urlPkg = `https://raw.githubusercontent.com/${repoInfo.owner}/${repoInfo.repo}/${repoInfo.ref}/package.json`;
             const pkgContent = yield httpUtils_1.httpJsonGet(urlPkg, Object.assign({}, this.headers, { accept: "application/vnd.github.v3+json" }));
             if (!pkgContent || !pkgContent.name || !pkgContent.version) {
-                throw new Error("Invalid plugin github repository " + repository);
+                throw new Error("Invalid plugin github repository " + gitHubRef.raw);
             }
             const urlArchiveLink = `https://api.github.com/repos/${repoInfo.owner}/${repoInfo.repo}/tarball/${repoInfo.ref}`;
             pkgContent.dist = { tarball: urlArchiveLink };
@@ -63,24 +63,8 @@ class GithubRegistryClient {
             return pluginDirectory;
         });
     }
-    isGithubRepo(version) {
-        return version.indexOf("/") > 0;
-    }
 }
 exports.GithubRegistryClient = GithubRegistryClient;
-function extractRepositoryInfo(repository) {
-    const parts = repository.split("/");
-    if (parts.length !== 2) {
-        throw new Error("Invalid repository name");
-    }
-    const repoParts = parts[1].split("#");
-    const repoInfo = {
-        owner: parts[0],
-        repo: repoParts[0],
-        ref: repoParts[1] || "master"
-    };
-    return repoInfo;
-}
 // | AuthOAuthToken
 // | AuthOAuthSecret
 // | AuthUserToken

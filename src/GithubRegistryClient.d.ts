@@ -1,10 +1,10 @@
 import { PackageJsonInfo } from "./PackageInfo";
+import { GitHubRef } from "./VersionRef";
 export declare class GithubRegistryClient {
     private headers;
     constructor(auth?: GithubAuth);
-    get(repository: string): Promise<PackageJsonInfo>;
+    get(gitHubRef: GitHubRef): Promise<PackageJsonInfo>;
     download(destinationDirectory: string, packageInfo: PackageJsonInfo): Promise<string>;
-    isGithubRepo(version: string): boolean;
 }
 export interface GithubAuthUserToken {
     type: "token";

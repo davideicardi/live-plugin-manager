@@ -6,6 +6,7 @@ import * as semVer from "semver";
 import * as httpUtils from "./httpUtils";
 import { PackageInfo } from "./PackageInfo";
 import * as Debug from "debug";
+import { NpmVersionRef } from "./VersionRef";
 const debug = Debug("live-plugin-manager.NpmRegistryClient");
 
 export class NpmRegistryClient {
@@ -23,18 +24,16 @@ export class NpmRegistryClient {
 		this.defaultHeaders = {...staticHeaders, ...authHeader};
 	}
 
-	async get(name: string, versionOrTag: string | null = "latest"): Promise<PackageInfo> {
-		debug(`Getting npm info for ${name}:${versionOrTag}...`);
+	async get(name: string, npmVersionRef: NpmVersionRef): Promise<PackageInfo> {
+		debug(`Getting npm info for ${name}:${npmVersionRef.raw}...`);
 
-		if (typeof versionOrTag !== "string") {
-			versionOrTag = "";
-		}
 		if (typeof name !== "string") {
 			throw new Error("Invalid package name");
 		}
 
 		const data = await this.getNpmData(name);
-		versionOrTag = versionOrTag.trim();
+
+		const versionOrTag = npmVersionRef.raw;
 
 		// check if there is a tag (es. latest)
 		const distTags = data["dist-tags"];

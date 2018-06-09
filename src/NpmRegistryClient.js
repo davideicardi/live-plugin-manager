@@ -28,17 +28,14 @@ class NpmRegistryClient {
         const authHeader = createAuthHeader(config.auth);
         this.defaultHeaders = Object.assign({}, staticHeaders, authHeader);
     }
-    get(name, versionOrTag = "latest") {
+    get(name, npmVersionRef) {
         return __awaiter(this, void 0, void 0, function* () {
-            debug(`Getting npm info for ${name}:${versionOrTag}...`);
-            if (typeof versionOrTag !== "string") {
-                versionOrTag = "";
-            }
+            debug(`Getting npm info for ${name}:${npmVersionRef.raw}...`);
             if (typeof name !== "string") {
                 throw new Error("Invalid package name");
             }
             const data = yield this.getNpmData(name);
-            versionOrTag = versionOrTag.trim();
+            const versionOrTag = npmVersionRef.raw;
             // check if there is a tag (es. latest)
             const distTags = data["dist-tags"];
             let version = distTags && distTags[versionOrTag];

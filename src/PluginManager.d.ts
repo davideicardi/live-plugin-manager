@@ -3,6 +3,7 @@ import { NpmRegistryConfig } from "./NpmRegistryClient";
 import { IPluginInfo } from "./PluginInfo";
 import { GithubAuth } from "./GithubRegistryClient";
 import { PackageInfo } from "./PackageInfo";
+import { VersionRef, VersionRange, GitHubRef, NpmVersionRef } from "./VersionRef";
 export interface PluginManagerOptions {
     cwd: string;
     pluginsPath: string;
@@ -35,20 +36,20 @@ export declare class PluginManager {
     private readonly githubRegistry;
     private readonly sandboxTemplates;
     constructor(options?: Partial<PluginManagerOptions>);
-    install(name: string, version?: string): Promise<IPluginInfo>;
+    install(name: string, versionRef?: VersionRef | string): Promise<IPluginInfo>;
     /**
      * Install a package from npm
      * @param name name of the package
      * @param version version of the package, default to "latest"
      */
-    installFromNpm(name: string, version?: string): Promise<IPluginInfo>;
+    installFromNpm(name: string, versionRef?: NpmVersionRef | string): Promise<IPluginInfo>;
     /**
      * Install a package from a local folder
      * @param location package local folder location
      * @param options options, if options.force == true then package is always reinstalled without version checking
      */
     installFromPath(location: string, options?: Partial<InstallFromPathOptions>): Promise<IPluginInfo>;
-    installFromGithub(repository: string): Promise<IPluginInfo>;
+    installFromGithub(gitHubRef: GitHubRef | string): Promise<IPluginInfo>;
     /**
      * Install a package by specifiing code directly. If no version is specified it will be always reinstalled.
      * @param name plugin name
@@ -62,11 +63,11 @@ export declare class PluginManager {
     require(fullName: string): any;
     setSandboxTemplate(name: string, sandbox: PluginSandbox | undefined): void;
     getSandboxTemplate(name: string): PluginSandbox | undefined;
-    alreadyInstalled(name: string, version?: string, mode?: "satisfies" | "satisfiesOrGreater"): IPluginInfo | undefined;
+    alreadyInstalled(name: string, version?: VersionRange | string, mode?: "satisfies" | "satisfiesOrGreater"): IPluginInfo | undefined;
     getInfo(name: string): IPluginInfo | undefined;
-    queryPackage(name: string, version?: string): Promise<PackageInfo>;
-    queryPackageFromNpm(name: string, version?: string): Promise<PackageInfo>;
-    queryPackageFromGithub(repository: string): Promise<PackageInfo>;
+    queryPackage(name: string, versionRef?: VersionRef | string): Promise<PackageInfo>;
+    queryPackageFromNpm(name: string, versionRef?: NpmVersionRef | string): Promise<PackageInfo>;
+    queryPackageFromGithub(repository: GitHubRef | string): Promise<PackageInfo>;
     runScript(code: string): any;
     private uninstallLockFree;
     private installLockFree;
@@ -81,11 +82,10 @@ export declare class PluginManager {
     private unloadDependents;
     private unloadWithDependents;
     private isModuleAvailableFromHost;
-    private isValidPluginName;
-    private validatePluginVersion;
     private getPluginLocation;
     private removeDownloaded;
     private isAlreadyDownloaded;
+    private getDownloadedPackages;
     private getDownloadedPackage;
     private readPackageJsonFromPath;
     private load;

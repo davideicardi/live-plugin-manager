@@ -2,12 +2,13 @@ import * as fs from "./fileSystem";
 import * as path from "path";
 import {NpmRegistryClient, NpmRegistryConfig} from "./NpmRegistryClient";
 import {PluginVm} from "./PluginVm";
-import {IPluginInfo} from "./PluginInfo";
+import {IPluginInfo, PluginName, PluginVersion} from "./PluginInfo";
 import * as lockFile from "lockfile";
 import * as semver from "semver";
 import * as Debug from "debug";
 import { GithubRegistryClient, GithubAuth } from "./GithubRegistryClient";
 import { PackageJsonInfo, PackageInfo } from "./PackageInfo";
+import { parseVersionRef, VersionRef, VersionRange, DistTag, GitHubRef, NpmVersionRef } from "./VersionRef";
 const debug = Debug("live-plugin-manager");
 
 const BASE_NPM_URL = "https://registry.npmjs.org";
@@ -50,8 +51,6 @@ const DefaultOptions: PluginManagerOptions = {
 	lockStale: 180000,
 };
 
-const NPM_LATEST_TAG = "latest";
-
 export interface InstallFromPathOptions {
 	force: boolean;
 }
@@ -75,12 +74,12 @@ export class PluginManager {
 		this.githubRegistry = new GithubRegistryClient(this.options.githubAuthentication);
 	}
 
-	async install(name: string, version?: string): Promise<IPluginInfo> {
+	async install(name: string, versionRef?: VersionRef | string): Promise<IPluginInfo> {
 		await fs.ensureDir(this.options.pluginsPath);
 
 		await this.syncLock();
 		try {
-			return await this.installLockFree(name, version);
+			return await this.installLockFree(name, versionRef);
 		} finally {
 			await this.syncUnlock();
 		}
@@ -91,12 +90,12 @@ export class PluginManager {
 	 * @param name name of the package
 	 * @param version version of the package, default to "latest"
 	 */
-	async installFromNpm(name: string, version = NPM_LATEST_TAG): Promise<IPluginInfo> {
+	async installFromNpm(name: string, versionRef?: NpmVersionRef | string): Promise<IPluginInfo> {
 		await fs.ensureDir(this.options.pluginsPath);
 
 		await this.syncLock();
 		try {
-			return await this.installFromNpmLockFreeCache(name, version);
+			return await this.installFromNpmLockFreeCache(name, NpmVersionRef.parse(versionRef));
 		} finally {
 			await this.syncUnlock();
 		}
@@ -118,12 +117,12 @@ export class PluginManager {
 		}
 	}
 
-	async installFromGithub(repository: string): Promise<IPluginInfo> {
+	async installFromGithub(gitHubRef: GitHubRef | string): Promise<IPluginInfo> {
 		await fs.ensureDir(this.options.pluginsPath);
 
 		await this.syncLock();
 		try {
-			return await this.installFromGithubLockFree(repository);
+			return await this.installFromGithubLockFree(GitHubRef.parse(gitHubRef));
 		} finally {
 			await this.syncUnlock();
 		}
@@ -205,7 +204,7 @@ export class PluginManager {
 
 	alreadyInstalled(
 		name: string,
-		version?: string,
+		version?: VersionRange | string,
 		mode: "satisfies" | "satisfiesOrGreater" = "satisfies"): IPluginInfo | undefined {
 		const installedInfo = this.getInfo(name);
 		if (installedInfo) {
@@ -213,9 +212,11 @@ export class PluginManager {
 				return installedInfo;
 			}
 
-			if (semver.satisfies(installedInfo.version, version)) {
+			const vRange = VersionRange.parse(version);
+
+			if (semver.satisfies(installedInfo.version, vRange.raw)) {
 				return installedInfo;
-			} else if (mode === "satisfiesOrGreater" && semver.gtr(installedInfo.version, version)) {
+			} else if (mode === "satisfiesOrGreater" && semver.gtr(installedInfo.version, vRange.raw)) {
 				return installedInfo;
 			}
 		}
@@ -227,32 +228,32 @@ export class PluginManager {
 		return this.installedPlugins.find((p) => p.name === name);
 	}
 
-	queryPackage(name: string, version?: string): Promise<PackageInfo> {
+	queryPackage(name: string, versionRef?: VersionRef | string): Promise<PackageInfo> {
 		if (!this.isValidPluginName(name)) {
 			throw new Error(`Invalid plugin name '${name}'`);
 		}
 
-		version = this.validatePluginVersion(version);
+		const versionRefObj = parseVersionRef(versionRef);
 
-		if (version && this.githubRegistry.isGithubRepo(version)) {
-			return this.queryPackageFromGithub(version);
+		if (GitHubRef.is(versionRefObj)) {
+			return this.queryPackageFromGithub(versionRefObj);
+		} else if (NpmVersionRef.is(versionRefObj)) {
+			return this.queryPackageFromNpm(name, versionRefObj);
+		} else {
+			throw new Error("Invalid version reference");
 		}
-
-		return this.queryPackageFromNpm(name, version);
 	}
 
-	queryPackageFromNpm(name: string, version = NPM_LATEST_TAG): Promise<PackageInfo> {
+	queryPackageFromNpm(name: string, versionRef?: NpmVersionRef | string): Promise<PackageInfo> {
 		if (!this.isValidPluginName(name)) {
 			throw new Error(`Invalid plugin name '${name}'`);
 		}
 
-		version = this.validatePluginVersion(version);
-
-		return this.npmRegistry.get(name, version);
+		return this.npmRegistry.get(name, NpmVersionRef.parse(versionRef));
 	}
 
-	queryPackageFromGithub(repository: string): Promise<PackageInfo> {
-		return this.githubRegistry.get(repository);
+	queryPackageFromGithub(repository: GitHubRef | string): Promise<PackageInfo> {
+		return this.githubRegistry.get(GitHubRef.parse(repository));
 	}
 
 	runScript(code: string): any {
@@ -279,18 +280,19 @@ export class PluginManager {
 		await this.deleteAndUnloadPlugin(info);
 	}
 
-	private async installLockFree(name: string, version?: string): Promise<IPluginInfo> {
+	private async installLockFree(name: string, versionRef?: VersionRef | string): Promise<IPluginInfo> {
 		if (!this.isValidPluginName(name)) {
 			throw new Error(`Invalid plugin name '${name}'`);
 		}
 
-		version = this.validatePluginVersion(version);
-
-		if (version && this.githubRegistry.isGithubRepo(version)) {
-			return this.installFromGithubLockFree(version);
+		const versionRefObj = parseVersionRef(versionRef);
+		if (GitHubRef.is(versionRefObj)) {
+			return this.installFromGithubLockFree(versionRefObj);
+		} else if (NpmVersionRef.is(versionRefObj)) {
+			return this.installFromNpmLockFreeCache(name, versionRefObj);
+		} else {
+			throw new Error("Invalid version reference");
 		}
-
-		return this.installFromNpmLockFreeCache(name, version);
 	}
 
 	private async installFromPathLockFree(
@@ -330,15 +332,13 @@ export class PluginManager {
 	}
 
 	/** Install from npm or from cache if already available */
-	private async installFromNpmLockFreeCache(name: string, version = NPM_LATEST_TAG): Promise<IPluginInfo> {
+	private async installFromNpmLockFreeCache(name: string, versionRef: NpmVersionRef): Promise<IPluginInfo> {
 		if (!this.isValidPluginName(name)) {
 			throw new Error(`Invalid plugin name '${name}'`);
 		}
 
-		version = this.validatePluginVersion(version);
-
 		// already installed satisfied version
-		const installedInfo = this.alreadyInstalled(name, version);
+		const installedInfo = this.alreadyInstalled(name, versionRef);
 		if (installedInfo) {
 			return installedInfo;
 		}
@@ -358,7 +358,7 @@ export class PluginManager {
 	}
 
 	/** Install from npm */
-	private async installFromNpmLockFreeDirect(name: string, version = NPM_LATEST_TAG): Promise<IPluginInfo> {
+	private async installFromNpmLockFreeDirect(name: string, version: NpmVersionRef): Promise<IPluginInfo> {
 		const registryInfo = await this.npmRegistry.get(name, version);
 
 		// already downloaded
@@ -374,8 +374,8 @@ export class PluginManager {
 		return this.addPlugin(pluginInfo);
 	}
 
-	private async installFromGithubLockFree(repository: string): Promise<IPluginInfo> {
-		const registryInfo = await this.githubRegistry.get(repository);
+	private async installFromGithubLockFree(gitHubRef: GitHubRef): Promise<IPluginInfo> {
+		const registryInfo = await this.githubRegistry.get(gitHubRef);
 
 		if (!this.isValidPluginName(registryInfo.name)) {
 			throw new Error(`Invalid plugin name '${name}'`);
@@ -522,65 +522,35 @@ export class PluginManager {
 		}
 	}
 
-	private isValidPluginName(name: string) {
-		if (typeof name !== "string") {
-			return false;
-		}
-
-		if (name.length === 0) {
-			return false;
-		}
-
-		// '/' is permitted to support scoped packages
-		if (name.startsWith(".")
-		|| name.indexOf("\\") >= 0) {
-			return false;
-		}
-
-		return true;
+	private getPluginLocation(name: PluginName, version: PluginVersion) {
+		return path.join(this.options.pluginsPath, name.raw, version.semver.raw);
 	}
 
-	private validatePluginVersion(version?: string): string {
-		version = version || NPM_LATEST_TAG;
-
-		if (typeof version !== "string") {
-			throw new Error("Invalid version");
-		}
-
-		return version;
-	}
-
-	private getPluginLocation(name: string) {
-		return path.join(this.options.pluginsPath, name);
-	}
-
-	private async removeDownloaded(name: string) {
-		const location = this.getPluginLocation(name);
+	private async removeDownloaded(name: PluginName, version: PluginVersion) {
+		const location = this.getPluginLocation(name, version);
 		if (!(await fs.directoryExists(location))) {
 			await fs.remove(location);
 		}
 	}
 
-	private async isAlreadyDownloaded(name: string, version: string): Promise<boolean> {
-		if (!version) {
-			version = ">0.0.1";
-		}
-
-		if (version === NPM_LATEST_TAG) {
+	private async isAlreadyDownloaded(name: PluginName, versionRef: VersionRef): Promise<boolean> {
+		if (!VersionRange.is(versionRef)) {
 			return false;
 		}
 
-		const packageJson = await this.getDownloadedPackage(name, version);
-		if (!packageJson) {
-			return false;
-		}
+		const packageJsonList = await this.getDownloadedPackages(name);
 
-		return packageJson.name === name
-			&& semver.satisfies(packageJson.version, version);
+		return packageJsonList.some((packageJson) =>
+			packageJson.name === name.raw
+				&& semver.satisfies(packageJson.version, versionRef.raw));
 	}
 
-	private async getDownloadedPackage(name: string, version: string): Promise<PackageInfo | undefined> {
-		const location = this.getPluginLocation(name);
+	private async getDownloadedPackages(name: PluginName): Promise<PackageInfo[]> {
+
+	}
+
+	private async getDownloadedPackage(name: PluginName, version: PluginVersion): Promise<PackageInfo | undefined> {
+		const location = this.getPluginLocation(name, version);
 		if (!(await fs.directoryExists(location))) {
 			return;
 		}
@@ -720,8 +690,8 @@ export class PluginManager {
 		return false;
 	}
 
-	private async createPluginInfo(name: string): Promise<IPluginInfo> {
-		const location = this.getPluginLocation(name);
+	private async createPluginInfo(name: PluginName, version: PluginVersion): Promise<IPluginInfo> {
+		const location = this.getPluginLocation(name, version);
 		const packageJson = await this.readPackageJsonFromPath(location);
 
 		const mainFile = path.normalize(path.join(location, packageJson.main || DefaultMainFile));
