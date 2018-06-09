@@ -12,6 +12,7 @@ const fs = require("./fileSystem");
 const path = require("path");
 const NpmRegistryClient_1 = require("./NpmRegistryClient");
 const PluginVm_1 = require("./PluginVm");
+const PluginInfo_1 = require("./PluginInfo");
 const lockFile = require("lockfile");
 const semver = require("semver");
 const Debug = require("debug");
@@ -191,13 +192,11 @@ class PluginManager {
         }
         return undefined;
     }
-    getInfo(name) {
-        return this.installedPlugins.find((p) => p.name === name);
+    getInfo(name, version) {
+        const pluginName = PluginInfo_1.PluginName.parse(name);
+        return this.installedPlugins.find((p) => p.match(pluginName, version));
     }
     queryPackage(name, versionRef) {
-        if (!this.isValidPluginName(name)) {
-            throw new Error(`Invalid plugin name '${name}'`);
-        }
         const versionRefObj = VersionRef_1.parseVersionRef(versionRef);
         if (VersionRef_1.GitHubRef.is(versionRefObj)) {
             return this.queryPackageFromGithub(versionRefObj);
@@ -210,10 +209,8 @@ class PluginManager {
         }
     }
     queryPackageFromNpm(name, versionRef) {
-        if (!this.isValidPluginName(name)) {
-            throw new Error(`Invalid plugin name '${name}'`);
-        }
-        return this.npmRegistry.get(name, VersionRef_1.NpmVersionRef.parse(versionRef));
+        const pluginName = PluginInfo_1.PluginName.parse(name);
+        return this.npmRegistry.get(pluginName, VersionRef_1.NpmVersionRef.parse(versionRef));
     }
     queryPackageFromGithub(repository) {
         return this.githubRegistry.get(VersionRef_1.GitHubRef.parse(repository));
@@ -221,11 +218,8 @@ class PluginManager {
     runScript(code) {
         return this.vm.runScript(code);
     }
-    uninstallLockFree(name) {
+    uninstallLockFree(name, version) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (!this.isValidPluginName(name)) {
-                throw new Error(`Invalid plugin name '${name}'`);
-            }
             if (debug.enabled) {
                 debug(`Uninstalling ${name}...`);
             }

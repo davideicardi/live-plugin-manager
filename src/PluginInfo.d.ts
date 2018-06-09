@@ -1,12 +1,13 @@
 import * as SemVer from "semver";
+import { VersionRange, VersionRef } from "./VersionRef";
 export interface IPluginInfo {
     readonly mainFile: string;
     readonly location: string;
-    readonly name: string;
-    readonly version: string;
-    readonly dependencies: {
-        [name: string]: string;
-    };
+    readonly name: PluginName;
+    readonly version: PluginVersion;
+    readonly requestedVersion: VersionRef;
+    readonly dependencies: Map<PluginName, VersionRef>;
+    match(name: PluginName, version?: PluginVersion | VersionRange): boolean;
 }
 export declare class PluginName {
     readonly raw: string;
@@ -15,6 +16,7 @@ export declare class PluginName {
     static is(value: PluginName): value is PluginName;
     private readonly isPluginName;
     protected constructor(raw: string);
+    toString(): string;
 }
 export declare class PluginVersion {
     readonly semver: SemVer.SemVer;
@@ -22,4 +24,15 @@ export declare class PluginVersion {
     static parse(value?: string | PluginVersion): PluginVersion;
     static is(value: PluginVersion): value is PluginVersion;
     protected constructor(semver: SemVer.SemVer);
+    toString(): string;
+}
+export declare class PluginInfo {
+    readonly mainFile: string;
+    readonly location: string;
+    readonly name: PluginName;
+    readonly version: PluginVersion;
+    readonly requestedVersion: VersionRef;
+    readonly dependencies: Map<PluginName, VersionRef>;
+    constructor(mainFile: string, location: string, name: PluginName, version: PluginVersion, requestedVersion: VersionRef, dependencies: Map<PluginName, VersionRef>);
+    match(name: PluginName, version?: PluginVersion | VersionRange): boolean;
 }

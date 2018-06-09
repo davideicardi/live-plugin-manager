@@ -7,6 +7,7 @@ import * as httpUtils from "./httpUtils";
 import { PackageInfo } from "./PackageInfo";
 import * as Debug from "debug";
 import { NpmVersionRef } from "./VersionRef";
+import { PluginName } from "./PluginInfo";
 const debug = Debug("live-plugin-manager.NpmRegistryClient");
 
 export class NpmRegistryClient {
@@ -24,14 +25,10 @@ export class NpmRegistryClient {
 		this.defaultHeaders = {...staticHeaders, ...authHeader};
 	}
 
-	async get(name: string, npmVersionRef: NpmVersionRef): Promise<PackageInfo> {
+	async get(name: PluginName, npmVersionRef: NpmVersionRef): Promise<PackageInfo> {
 		debug(`Getting npm info for ${name}:${npmVersionRef.raw}...`);
 
-		if (typeof name !== "string") {
-			throw new Error("Invalid package name");
-		}
-
-		const data = await this.getNpmData(name);
+		const data = await this.getNpmData(name.raw);
 
 		const versionOrTag = npmVersionRef.raw;
 

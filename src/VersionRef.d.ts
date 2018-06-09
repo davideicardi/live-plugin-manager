@@ -1,3 +1,4 @@
+import * as SemVer from "semver";
 export interface VersionRef {
     readonly raw: string;
 }
@@ -23,12 +24,12 @@ export declare class GitHubRef implements VersionRef {
     };
 }
 export declare class VersionRange extends NpmVersionRef {
-    readonly raw: string;
+    readonly range: SemVer.Range;
     static tryParse(value: string | VersionRange): VersionRange | undefined;
     static parse(value: string | VersionRange): VersionRange;
-    static is(versionRef: VersionRef): versionRef is VersionRange;
+    static is(versionRef: VersionRef | object): versionRef is VersionRange;
     private readonly isVersionRange;
-    protected constructor(raw: string);
+    protected constructor(range: SemVer.Range);
 }
 export declare class DistTag extends NpmVersionRef {
     readonly raw: string;

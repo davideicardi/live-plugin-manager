@@ -1,11 +1,12 @@
 import * as httpUtils from "./httpUtils";
 import { PackageInfo } from "./PackageInfo";
 import { NpmVersionRef } from "./VersionRef";
+import { PluginName } from "./PluginInfo";
 export declare class NpmRegistryClient {
     private readonly npmUrl;
     defaultHeaders: httpUtils.Headers;
     constructor(npmUrl: string, config: NpmRegistryConfig);
-    get(name: string, npmVersionRef: NpmVersionRef): Promise<PackageInfo>;
+    get(name: PluginName, npmVersionRef: NpmVersionRef): Promise<PackageInfo>;
     download(destinationDirectory: string, packageInfo: PackageInfo): Promise<string>;
     private getNpmData;
 }

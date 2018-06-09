@@ -76,9 +76,9 @@ class GitHubRef {
 }
 exports.GitHubRef = GitHubRef;
 class VersionRange extends NpmVersionRef {
-    constructor(raw) {
-        super(raw);
-        this.raw = raw;
+    constructor(range) {
+        super(range.raw);
+        this.range = range;
         this.isVersionRange = true;
     }
     static tryParse(value) {
@@ -86,7 +86,7 @@ class VersionRange extends NpmVersionRef {
             return value;
         }
         if (SemVer.validRange(value)) {
-            return new VersionRange(value);
+            return new VersionRange(new SemVer.Range(value));
         }
         return undefined;
     }

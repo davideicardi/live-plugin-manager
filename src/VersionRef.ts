@@ -94,7 +94,7 @@ export class VersionRange extends NpmVersionRef {
 		}
 
 		if (SemVer.validRange(value)) {
-			return new VersionRange(value);
+			return new VersionRange(new SemVer.Range(value));
 		}
 
 		return undefined;
@@ -106,13 +106,13 @@ export class VersionRange extends NpmVersionRef {
 		}
 		return res;
 	}
-	static is(versionRef: VersionRef): versionRef is VersionRange {
+	static is(versionRef: VersionRef | object): versionRef is VersionRange {
 		return (versionRef as VersionRange).isVersionRange;
 	}
 
 	private readonly isVersionRange = true;
-	protected constructor(readonly raw: string) {
-		super(raw);
+	protected constructor(readonly range: SemVer.Range) {
+		super(range.raw);
 	}
 }
 

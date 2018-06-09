@@ -1,11 +1,14 @@
 import * as SemVer from "semver";
+import { VersionRange, VersionRef } from "./VersionRef";
 
 export interface IPluginInfo {
 	readonly mainFile: string;
 	readonly location: string;
-	readonly name: string;
-	readonly version: string;
-	readonly dependencies: { [name: string]: string };
+	readonly name: PluginName;
+	readonly version: PluginVersion;
+	readonly requestedVersion: VersionRef;
+	readonly dependencies: Map<PluginName, VersionRef>;
+	match(name: PluginName, version?: PluginVersion | VersionRange): boolean;
 }
 
 export class PluginName {
@@ -38,6 +41,10 @@ export class PluginName {
 	private readonly isPluginName = true;
 	protected constructor(readonly raw: string) {
 	}
+
+	toString() {
+		return this.raw;
+	}
 }
 
 export class PluginVersion {
@@ -69,6 +76,37 @@ export class PluginVersion {
 	}
 
 	protected constructor(readonly semver: SemVer.SemVer) {
+	}
+
+	toString() {
+		return this.semver.raw;
+	}
+}
+
+export class PluginInfo {
+	constructor(
+		readonly mainFile: string,
+		readonly location: string,
+		readonly name: PluginName,
+		readonly version: PluginVersion,
+		readonly requestedVersion: VersionRef,
+		readonly dependencies: Map<PluginName, VersionRef>) {
+	}
+
+	match(name: PluginName, version?: PluginVersion | VersionRange): boolean {
+		if (this.name.raw !== name.raw) {
+			return false;
+		}
+
+		if (!version) {
+			return true;
+		}
+
+		const rangeVersion = VersionRange.is(version)
+			? version
+			: VersionRange.parse(version.semver.raw);
+
+		return rangeVersion.range.test(this.version.semver);
 	}
 }
 

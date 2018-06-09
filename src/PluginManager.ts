@@ -224,15 +224,13 @@ export class PluginManager {
 		return undefined;
 	}
 
-	getInfo(name: string): IPluginInfo | undefined {
-		return this.installedPlugins.find((p) => p.name === name);
+	getInfo(name: PluginName | string, version?: PluginVersion | VersionRange): IPluginInfo | undefined {
+		const pluginName = PluginName.parse(name);
+
+		return this.installedPlugins.find((p) => p.match(pluginName, version));
 	}
 
-	queryPackage(name: string, versionRef?: VersionRef | string): Promise<PackageInfo> {
-		if (!this.isValidPluginName(name)) {
-			throw new Error(`Invalid plugin name '${name}'`);
-		}
-
+	queryPackage(name: PluginName | string, versionRef?: VersionRef | string): Promise<PackageInfo> {
 		const versionRefObj = parseVersionRef(versionRef);
 
 		if (GitHubRef.is(versionRefObj)) {
@@ -244,12 +242,9 @@ export class PluginManager {
 		}
 	}
 
-	queryPackageFromNpm(name: string, versionRef?: NpmVersionRef | string): Promise<PackageInfo> {
-		if (!this.isValidPluginName(name)) {
-			throw new Error(`Invalid plugin name '${name}'`);
-		}
-
-		return this.npmRegistry.get(name, NpmVersionRef.parse(versionRef));
+	queryPackageFromNpm(name: PluginName | string, versionRef?: NpmVersionRef | string): Promise<PackageInfo> {
+		const pluginName = PluginName.parse(name);
+		return this.npmRegistry.get(pluginName, NpmVersionRef.parse(versionRef));
 	}
 
 	queryPackageFromGithub(repository: GitHubRef | string): Promise<PackageInfo> {
@@ -260,11 +255,7 @@ export class PluginManager {
 		return this.vm.runScript(code);
 	}
 
-	private async uninstallLockFree(name: string): Promise<void> {
-		if (!this.isValidPluginName(name)) {
-			throw new Error(`Invalid plugin name '${name}'`);
-		}
-
+	private async uninstallLockFree(name: PluginName, version: PluginVersion): Promise<void> {
 		if (debug.enabled) {
 			debug(`Uninstalling ${name}...`);
 		}

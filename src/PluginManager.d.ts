@@ -1,6 +1,6 @@
 /// <reference types="node" />
 import { NpmRegistryConfig } from "./NpmRegistryClient";
-import { IPluginInfo } from "./PluginInfo";
+import { IPluginInfo, PluginName, PluginVersion } from "./PluginInfo";
 import { GithubAuth } from "./GithubRegistryClient";
 import { PackageInfo } from "./PackageInfo";
 import { VersionRef, VersionRange, GitHubRef, NpmVersionRef } from "./VersionRef";
@@ -64,9 +64,9 @@ export declare class PluginManager {
     setSandboxTemplate(name: string, sandbox: PluginSandbox | undefined): void;
     getSandboxTemplate(name: string): PluginSandbox | undefined;
     alreadyInstalled(name: string, version?: VersionRange | string, mode?: "satisfies" | "satisfiesOrGreater"): IPluginInfo | undefined;
-    getInfo(name: string): IPluginInfo | undefined;
-    queryPackage(name: string, versionRef?: VersionRef | string): Promise<PackageInfo>;
-    queryPackageFromNpm(name: string, versionRef?: NpmVersionRef | string): Promise<PackageInfo>;
+    getInfo(name: PluginName | string, version?: PluginVersion | VersionRange): IPluginInfo | undefined;
+    queryPackage(name: PluginName | string, versionRef?: VersionRef | string): Promise<PackageInfo>;
+    queryPackageFromNpm(name: PluginName | string, versionRef?: NpmVersionRef | string): Promise<PackageInfo>;
     queryPackageFromGithub(repository: GitHubRef | string): Promise<PackageInfo>;
     runScript(code: string): any;
     private uninstallLockFree;
