@@ -51,9 +51,11 @@ class PluginManager {
     install(name, versionRef) {
         return __awaiter(this, void 0, void 0, function* () {
             yield fs.ensureDir(this.options.pluginsPath);
+            const pName = PluginInfo_1.PluginName.parse(name);
+            const pVersionRef = VersionRef_1.parseVersionRef(versionRef);
             yield this.syncLock();
             try {
-                return yield this.installLockFree(name, versionRef);
+                return yield this.installLockFree(pName, pVersionRef);
             }
             finally {
                 yield this.syncUnlock();
@@ -68,9 +70,11 @@ class PluginManager {
     installFromNpm(name, versionRef) {
         return __awaiter(this, void 0, void 0, function* () {
             yield fs.ensureDir(this.options.pluginsPath);
+            const pName = PluginInfo_1.PluginName.parse(name);
+            const pVersion = VersionRef_1.NpmVersionRef.parse(versionRef);
             yield this.syncLock();
             try {
-                return yield this.installFromNpmLockFreeCache(name, VersionRef_1.NpmVersionRef.parse(versionRef));
+                return yield this.installFromNpmLockFreeCache(pName, pVersion);
             }
             finally {
                 yield this.syncUnlock();
@@ -124,12 +128,24 @@ class PluginManager {
             }
         });
     }
-    uninstall(name) {
+    uninstall(name, version) {
         return __awaiter(this, void 0, void 0, function* () {
             yield fs.ensureDir(this.options.pluginsPath);
+            const pName = PluginInfo_1.PluginName.parse(name);
+            let pVersion;
+            if (!version) {
+                const pluginInstalled = this.getInfo(name);
+                if (!pluginInstalled) {
+                    return;
+                }
+                pVersion = pluginInstalled.version;
+            }
+            else {
+                pVersion = PluginInfo_1.PluginVersion.parse(version);
+            }
             yield this.syncLock();
             try {
-                return yield this.uninstallLockFree(name);
+                return yield this.uninstallLockFree(pName, pVersion);
             }
             finally {
                 yield this.syncUnlock();
@@ -143,7 +159,7 @@ class PluginManager {
             try {
                 // TODO First I should install dependents plugins??
                 for (const plugin of this.installedPlugins.slice().reverse()) {
-                    yield this.uninstallLockFree(plugin.name);
+                    yield this.uninstallLockFree(plugin.name, plugin.version);
                 }
             }
             finally {
@@ -167,34 +183,38 @@ class PluginManager {
         if (!info) {
             throw new Error(`${name} not installed`);
         }
+        const pName = PluginInfo_1.PluginName.parse(name);
+        const key = pName.raw;
         if (!sandbox) {
-            this.sandboxTemplates.delete(info.name);
+            this.sandboxTemplates.delete(key);
             return;
         }
-        this.sandboxTemplates.set(info.name, sandbox);
+        this.sandboxTemplates.set(key, sandbox);
     }
     getSandboxTemplate(name) {
-        return this.sandboxTemplates.get(name);
+        const pName = PluginInfo_1.PluginName.parse(name);
+        const key = pName.raw;
+        return this.sandboxTemplates.get(key);
     }
     alreadyInstalled(name, version, mode = "satisfies") {
         const installedInfo = this.getInfo(name);
-        if (installedInfo) {
-            if (!version) {
-                return installedInfo;
-            }
-            const vRange = VersionRef_1.VersionRange.parse(version);
-            if (semver.satisfies(installedInfo.version, vRange.raw)) {
-                return installedInfo;
-            }
-            else if (mode === "satisfiesOrGreater" && semver.gtr(installedInfo.version, vRange.raw)) {
-                return installedInfo;
-            }
+        if (!installedInfo) {
+            return undefined;
         }
-        return undefined;
+        if (!version) {
+            return installedInfo;
+        }
+        const vRange = VersionRef_1.VersionRange.parse(version);
+        if (installedInfo.satisfiesVersion(vRange, mode)) {
+            return installedInfo;
+        }
+        else {
+            return undefined;
+        }
     }
     getInfo(name, version) {
         const pluginName = PluginInfo_1.PluginName.parse(name);
-        return this.installedPlugins.find((p) => p.match(pluginName, version));
+        return this.installedPlugins.find((p) => p.satisfies(pluginName, version));
     }
     queryPackage(name, versionRef) {
         const versionRefObj = VersionRef_1.parseVersionRef(versionRef);
@@ -235,15 +255,11 @@ class PluginManager {
     }
     installLockFree(name, versionRef) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (!this.isValidPluginName(name)) {
-                throw new Error(`Invalid plugin name '${name}'`);
+            if (VersionRef_1.GitHubRef.is(versionRef)) {
+                return this.installFromGithubLockFree(versionRef);
             }
-            const versionRefObj = VersionRef_1.parseVersionRef(versionRef);
-            if (VersionRef_1.GitHubRef.is(versionRefObj)) {
-                return this.installFromGithubLockFree(versionRefObj);
-            }
-            else if (VersionRef_1.NpmVersionRef.is(versionRefObj)) {
-                return this.installFromNpmLockFreeCache(name, versionRefObj);
+            else if (VersionRef_1.NpmVersionRef.is(versionRef)) {
+                return this.installFromNpmLockFreeCache(name, versionRef);
             }
             else {
                 throw new Error("Invalid version reference");
@@ -253,38 +269,35 @@ class PluginManager {
     installFromPathLockFree(location, options) {
         return __awaiter(this, void 0, void 0, function* () {
             const packageJson = yield this.readPackageJsonFromPath(location);
-            if (!this.isValidPluginName(packageJson.name)) {
-                throw new Error(`Invalid plugin name '${packageJson.name}'`);
-            }
+            const pName = PluginInfo_1.PluginName.parse(packageJson.name);
+            const pVersion = PluginInfo_1.PluginVersion.parse(packageJson.version);
             // already installed satisfied version
             if (!options.force) {
-                const installedInfo = this.alreadyInstalled(packageJson.name, packageJson.version);
+                const installedInfo = this.alreadyInstalled(pName, pVersion);
                 if (installedInfo) {
                     return installedInfo;
                 }
             }
             // already installed not satisfied version
-            if (this.alreadyInstalled(packageJson.name)) {
-                yield this.uninstallLockFree(packageJson.name);
+            const installedInfoNsv = this.alreadyInstalled(pName);
+            if (installedInfoNsv) {
+                yield this.uninstallLockFree(installedInfoNsv.name, installedInfoNsv.version);
             }
             // already downloaded
-            if (options.force || !(yield this.isAlreadyDownloaded(packageJson.name, packageJson.version))) {
-                yield this.removeDownloaded(packageJson.name);
+            if (options.force || !(yield this.isAlreadyDownloaded(pName, pVersion))) {
+                yield this.removeDownloaded(pName, pVersion);
                 if (debug.enabled) {
                     debug(`Copy from ${location} to ${this.options.pluginsPath}`);
                 }
-                yield fs.copy(location, this.getPluginLocation(packageJson.name), { exclude: ["node_modules"] });
+                yield fs.copy(location, this.getPluginLocation(pName, pVersion), { exclude: ["node_modules"] });
             }
-            const pluginInfo = yield this.createPluginInfo(packageJson.name);
+            const pluginInfo = yield this.createPluginInfo(pName, pVersion);
             return this.addPlugin(pluginInfo);
         });
     }
     /** Install from npm or from cache if already available */
     installFromNpmLockFreeCache(name, versionRef) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (!this.isValidPluginName(name)) {
-                throw new Error(`Invalid plugin name '${name}'`);
-            }
             // already installed satisfied version
             const installedInfo = this.alreadyInstalled(name, versionRef);
             if (installedInfo) {

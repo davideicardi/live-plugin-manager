@@ -1,12 +1,14 @@
 import * as SemVer from "semver";
+import { PluginVersion } from "./PluginInfo";
+export declare type SatisfyMode = "satisfies" | "satisfiesOrGreater";
 export interface VersionRef {
     readonly raw: string;
 }
 export declare abstract class NpmVersionRef implements VersionRef {
     readonly raw: string;
-    static tryParse(value?: string | NpmVersionRef): NpmVersionRef | undefined;
-    static parse(value?: string | NpmVersionRef): NpmVersionRef;
-    static is(versionRef: VersionRef): versionRef is NpmVersionRef;
+    static tryParse(value?: string | NpmVersionRef | PluginVersion): NpmVersionRef | undefined;
+    static parse(value?: string | NpmVersionRef | PluginVersion): NpmVersionRef;
+    static is(value: any): value is NpmVersionRef;
     private readonly isNpmVersionRef;
     protected constructor(raw: string);
 }
@@ -25,9 +27,9 @@ export declare class GitHubRef implements VersionRef {
 }
 export declare class VersionRange extends NpmVersionRef {
     readonly range: SemVer.Range;
-    static tryParse(value: string | VersionRange): VersionRange | undefined;
-    static parse(value: string | VersionRange): VersionRange;
-    static is(versionRef: VersionRef | object): versionRef is VersionRange;
+    static tryParse(value: string | VersionRange | PluginVersion): VersionRange | undefined;
+    static parse(value: string | VersionRange | PluginVersion): VersionRange;
+    static is(value: any): value is VersionRange;
     private readonly isVersionRange;
     protected constructor(range: SemVer.Range);
 }

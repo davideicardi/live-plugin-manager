@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const SemVer = require("semver");
+const PluginInfo_1 = require("./PluginInfo");
 class NpmVersionRef {
     constructor(raw) {
         this.raw = raw;
@@ -10,18 +11,25 @@ class NpmVersionRef {
         if (!value) {
             return DistTag.LATEST;
         }
-        if (typeof value !== "string") {
+        if (this.is(value)) {
             return value;
         }
-        const distTag = DistTag.tryParse(value);
-        if (distTag) {
-            return distTag;
+        else if (typeof value === "string") {
+            const distTag = DistTag.tryParse(value);
+            if (distTag) {
+                return distTag;
+            }
+            const versionRange = VersionRange.tryParse(value);
+            if (versionRange) {
+                return versionRange;
+            }
         }
-        const versionRange = VersionRange.tryParse(value);
-        if (versionRange) {
-            return versionRange;
+        else if (PluginInfo_1.PluginVersion.is(value)) {
+            return this.tryParse(value.semver.raw);
         }
-        return undefined;
+        else {
+            return undefined;
+        }
     }
     static parse(value) {
         const res = this.tryParse(value);
@@ -30,8 +38,11 @@ class NpmVersionRef {
         }
         return res;
     }
-    static is(versionRef) {
-        return versionRef.isNpmVersionRef;
+    static is(value) {
+        if (!value) {
+            return false;
+        }
+        return value.isNpmVersionRef;
     }
 }
 exports.NpmVersionRef = NpmVersionRef;
@@ -82,13 +93,20 @@ class VersionRange extends NpmVersionRef {
         this.isVersionRange = true;
     }
     static tryParse(value) {
-        if (typeof value !== "string") {
+        if (this.is(value)) {
             return value;
         }
-        if (SemVer.validRange(value)) {
-            return new VersionRange(new SemVer.Range(value));
+        else if (PluginInfo_1.PluginVersion.is(value)) {
+            return this.tryParse(value.semver.raw);
         }
-        return undefined;
+        else if (typeof value === "string") {
+            if (SemVer.validRange(value)) {
+                return new VersionRange(new SemVer.Range(value));
+            }
+        }
+        else {
+            return undefined;
+        }
     }
     static parse(value) {
         const res = this.tryParse(value);
@@ -97,8 +115,11 @@ class VersionRange extends NpmVersionRef {
         }
         return res;
     }
-    static is(versionRef) {
-        return versionRef.isVersionRange;
+    static is(value) {
+        if (!value) {
+            return false;
+        }
+        return value.isVersionRange;
     }
 }
 exports.VersionRange = VersionRange;

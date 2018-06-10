@@ -59,6 +59,9 @@ class PluginVersion {
         return res;
     }
     static is(value) {
+        if (!value) {
+            return false;
+        }
         return !!value.semver;
     }
     toString() {
@@ -75,17 +78,29 @@ class PluginInfo {
         this.requestedVersion = requestedVersion;
         this.dependencies = dependencies;
     }
-    match(name, version) {
+    satisfies(name, version, mode = "satisfies") {
         if (this.name.raw !== name.raw) {
             return false;
         }
         if (!version) {
             return true;
         }
+        return this.satisfiesVersion(version, mode);
+    }
+    satisfiesVersion(version, mode = "satisfies") {
         const rangeVersion = VersionRef_1.VersionRange.is(version)
             ? version
             : VersionRef_1.VersionRange.parse(version.semver.raw);
-        return rangeVersion.range.test(this.version.semver);
+        const result = SemVer.satisfies(this.version.semver, rangeVersion.range);
+        if (result) {
+            return true;
+        }
+        else if (mode === "satisfiesOrGreater") {
+            return SemVer.gtr(this.version.semver, rangeVersion.range);
+        }
+        else {
+            return false;
+        }
     }
 }
 exports.PluginInfo = PluginInfo;

@@ -4,4 +4,4 @@ export {IPluginInfo} from "./src/PluginInfo";
 export {PackageInfo, PackageJsonInfo} from "./src/PackageInfo";
 export {NpmRegistryConfig, NpmRegistryAuthBasic, NpmRegistryAuthToken} from "./src/NpmRegistryClient";
 export {GithubAuth} from "./src/GithubRegistryClient";
-export * from "./src/VersionReference";
+export * from "./src/VersionRef";

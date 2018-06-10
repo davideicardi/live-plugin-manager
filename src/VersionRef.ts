@@ -1,39 +1,47 @@
 import * as SemVer from "semver";
+import { PluginVersion } from "./PluginInfo";
+
+export type SatisfyMode = "satisfies" | "satisfiesOrGreater";
 
 export interface VersionRef {
 	readonly raw: string;
 }
 
 export abstract class NpmVersionRef implements VersionRef {
-	static tryParse(value?: string | NpmVersionRef): NpmVersionRef | undefined {
+	static tryParse(value?: string | NpmVersionRef | PluginVersion): NpmVersionRef | undefined {
 		if (!value) {
 			return DistTag.LATEST;
 		}
 
-		if (typeof value !== "string") {
+		if (this.is(value)) {
 			return value;
+		} else if (typeof value === "string") {
+			const distTag = DistTag.tryParse(value);
+			if (distTag) {
+				return distTag;
+			}
+			const versionRange = VersionRange.tryParse(value);
+			if (versionRange) {
+				return versionRange;
+			}
+		} else if (PluginVersion.is(value)) {
+			return this.tryParse(value.semver.raw);
+		} else {
+			return undefined;
 		}
-
-		const distTag = DistTag.tryParse(value);
-		if (distTag) {
-			return distTag;
-		}
-		const versionRange = VersionRange.tryParse(value);
-		if (versionRange) {
-			return versionRange;
-		}
-
-		return undefined;
 	}
-	static parse(value?: string | NpmVersionRef): NpmVersionRef {
+	static parse(value?: string | NpmVersionRef | PluginVersion): NpmVersionRef {
 		const res = this.tryParse(value);
 		if (!res) {
 			throw new Error(`Invalid npm version reference ${value}`);
 		}
 		return res;
 	}
-	static is(versionRef: VersionRef): versionRef is NpmVersionRef {
-		return (versionRef as NpmVersionRef).isNpmVersionRef;
+	static is(value: any): value is NpmVersionRef {
+		if (!value) {
+			return false;
+		}
+		return (value as NpmVersionRef).isNpmVersionRef;
 	}
 
 	private readonly isNpmVersionRef = true;
@@ -88,26 +96,31 @@ export class GitHubRef implements VersionRef {
 }
 
 export class VersionRange extends NpmVersionRef {
-	static tryParse(value: string | VersionRange): VersionRange | undefined {
-		if (typeof value !== "string") {
+	static tryParse(value: string | VersionRange | PluginVersion): VersionRange | undefined {
+		if (this.is(value)) {
 			return value;
+		} else if (PluginVersion.is(value)) {
+			return this.tryParse(value.semver.raw);
+		} else if (typeof value === "string") {
+			if (SemVer.validRange(value)) {
+				return new VersionRange(new SemVer.Range(value));
+			}
+		} else {
+			return undefined;
 		}
-
-		if (SemVer.validRange(value)) {
-			return new VersionRange(new SemVer.Range(value));
-		}
-
-		return undefined;
 	}
-	static parse(value: string | VersionRange): VersionRange {
+	static parse(value: string | VersionRange | PluginVersion): VersionRange {
 		const res = this.tryParse(value);
 		if (!res) {
 			throw new Error(`Invalid version range ${value}`);
 		}
 		return res;
 	}
-	static is(versionRef: VersionRef | object): versionRef is VersionRange {
-		return (versionRef as VersionRange).isVersionRange;
+	static is(value: any): value is VersionRange {
+		if (!value) {
+			return false;
+		}
+		return (value as VersionRange).isVersionRange;
 	}
 
 	private readonly isVersionRange = true;

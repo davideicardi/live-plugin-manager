@@ -3,7 +3,7 @@ import { NpmRegistryConfig } from "./NpmRegistryClient";
 import { IPluginInfo, PluginName, PluginVersion } from "./PluginInfo";
 import { GithubAuth } from "./GithubRegistryClient";
 import { PackageInfo } from "./PackageInfo";
-import { VersionRef, VersionRange, GitHubRef, NpmVersionRef } from "./VersionRef";
+import { VersionRef, VersionRange, GitHubRef, NpmVersionRef, SatisfyMode } from "./VersionRef";
 export interface PluginManagerOptions {
     cwd: string;
     pluginsPath: string;
@@ -36,7 +36,7 @@ export declare class PluginManager {
     private readonly githubRegistry;
     private readonly sandboxTemplates;
     constructor(options?: Partial<PluginManagerOptions>);
-    install(name: string, versionRef?: VersionRef | string): Promise<IPluginInfo>;
+    install(name: PluginName | string, versionRef?: VersionRef | string): Promise<IPluginInfo>;
     /**
      * Install a package from npm
      * @param name name of the package
@@ -57,13 +57,13 @@ export declare class PluginManager {
      * @param version optional version, if omitted no version check is performed
      */
     installFromCode(name: string, code: string, version?: string): Promise<IPluginInfo>;
-    uninstall(name: string): Promise<void>;
+    uninstall(name: PluginName | string, version?: PluginVersion | string): Promise<void>;
     uninstallAll(): Promise<void>;
     list(): IPluginInfo[];
     require(fullName: string): any;
-    setSandboxTemplate(name: string, sandbox: PluginSandbox | undefined): void;
-    getSandboxTemplate(name: string): PluginSandbox | undefined;
-    alreadyInstalled(name: string, version?: VersionRange | string, mode?: "satisfies" | "satisfiesOrGreater"): IPluginInfo | undefined;
+    setSandboxTemplate(name: PluginName | string, sandbox: PluginSandbox | undefined): void;
+    getSandboxTemplate(name: PluginName | string): PluginSandbox | undefined;
+    alreadyInstalled(name: PluginName | string, version?: PluginVersion | VersionRange | string, mode?: SatisfyMode): IPluginInfo | undefined;
     getInfo(name: PluginName | string, version?: PluginVersion | VersionRange): IPluginInfo | undefined;
     queryPackage(name: PluginName | string, versionRef?: VersionRef | string): Promise<PackageInfo>;
     queryPackageFromNpm(name: PluginName | string, versionRef?: NpmVersionRef | string): Promise<PackageInfo>;

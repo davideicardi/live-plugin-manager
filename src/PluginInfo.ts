@@ -1,5 +1,5 @@
 import * as SemVer from "semver";
-import { VersionRange, VersionRef } from "./VersionRef";
+import { VersionRange, VersionRef, SatisfyMode } from "./VersionRef";
 
 export interface IPluginInfo {
 	readonly mainFile: string;
@@ -8,7 +8,13 @@ export interface IPluginInfo {
 	readonly version: PluginVersion;
 	readonly requestedVersion: VersionRef;
 	readonly dependencies: Map<PluginName, VersionRef>;
-	match(name: PluginName, version?: PluginVersion | VersionRange): boolean;
+	satisfies(
+		name: PluginName,
+		version?: PluginVersion | VersionRange,
+		mode?: SatisfyMode): boolean;
+	satisfiesVersion(
+		version: PluginVersion | VersionRange,
+		mode?: SatisfyMode): boolean;
 }
 
 export class PluginName {
@@ -71,7 +77,10 @@ export class PluginVersion {
 		}
 		return res;
 	}
-	static is(value: PluginVersion): value is PluginVersion {
+	static is(value: any): value is PluginVersion {
+		if (!value) {
+			return false;
+		}
 		return !!value.semver;
 	}
 
@@ -93,7 +102,10 @@ export class PluginInfo {
 		readonly dependencies: Map<PluginName, VersionRef>) {
 	}
 
-	match(name: PluginName, version?: PluginVersion | VersionRange): boolean {
+	satisfies(
+		name: PluginName,
+		version?: PluginVersion | VersionRange,
+		mode: SatisfyMode = "satisfies"): boolean {
 		if (this.name.raw !== name.raw) {
 			return false;
 		}
@@ -102,11 +114,25 @@ export class PluginInfo {
 			return true;
 		}
 
+		return this.satisfiesVersion(version, mode);
+	}
+
+	satisfiesVersion(
+		version: PluginVersion | VersionRange,
+		mode: SatisfyMode = "satisfies"): boolean {
 		const rangeVersion = VersionRange.is(version)
 			? version
 			: VersionRange.parse(version.semver.raw);
 
-		return rangeVersion.range.test(this.version.semver);
+		const result = SemVer.satisfies(this.version.semver, rangeVersion.range);
+
+		if (result) {
+			return true;
+		} else if (mode === "satisfiesOrGreater") {
+			return SemVer.gtr(this.version.semver, rangeVersion.range);
+		} else {
+			return false;
+		}
 	}
 }
 
