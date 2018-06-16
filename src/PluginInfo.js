@@ -88,15 +88,23 @@ class PluginInfo {
         return this.satisfiesVersion(version, mode);
     }
     satisfiesVersion(version, mode = "satisfies") {
-        const rangeVersion = VersionRef_1.VersionRange.is(version)
-            ? version
-            : VersionRef_1.VersionRange.parse(version.semver.raw);
-        const result = SemVer.satisfies(this.version.semver, rangeVersion.range);
+        if (VersionRef_1.VersionRange.is(version)) {
+            return this.satisfiesVersionRange(version, mode);
+        }
+        if (PluginVersion.is(version)) {
+            return this.satisfiesVersionRange(VersionRef_1.VersionRange.parse(version), mode);
+        }
+        // TODO Maybe here I should always return false,
+        // because if there is a github or dist tag I should always reinstall?
+        return version.raw === this.requestedVersion.raw;
+    }
+    satisfiesVersionRange(version, mode = "satisfies") {
+        const result = SemVer.satisfies(this.version.semver, version.range);
         if (result) {
             return true;
         }
         else if (mode === "satisfiesOrGreater") {
-            return SemVer.gtr(this.version.semver, rangeVersion.range);
+            return SemVer.gtr(this.version.semver, version.range);
         }
         else {
             return false;
@@ -104,6 +112,14 @@ class PluginInfo {
     }
 }
 exports.PluginInfo = PluginInfo;
+function pluginCompare(a, b) {
+    const nameCompare = a.name.raw.localeCompare(b.name.raw);
+    if (nameCompare !== 0) {
+        return nameCompare;
+    }
+    return SemVer.compare(a.version.semver, b.version.semver);
+}
+exports.pluginCompare = pluginCompare;
 // TODO Eval to be more strict...
 function isValidPluginName(name) {
     if (typeof name !== "string") {

@@ -7,7 +7,7 @@ export declare class NpmRegistryClient {
     defaultHeaders: httpUtils.Headers;
     constructor(npmUrl: string, config: NpmRegistryConfig);
     get(name: PluginName, npmVersionRef: NpmVersionRef): Promise<PackageInfo>;
-    download(destinationDirectory: string, packageInfo: PackageInfo): Promise<string>;
+    download(pluginDirectory: string, packageInfo: PackageInfo): Promise<string>;
     private getNpmData;
 }
 export interface NpmRegistryConfig {

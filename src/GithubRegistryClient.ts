@@ -59,7 +59,7 @@ export class GithubRegistryClient {
 	}
 
 	async download(
-		destinationDirectory: string,
+		pluginDirectory: string,
 		packageInfo: PackageJsonInfo): Promise<string> {
 
 		if (!packageInfo.dist || !packageInfo.dist.tarball) {
@@ -67,8 +67,6 @@ export class GithubRegistryClient {
 		}
 
 		const tgzFile = await downloadTarball(packageInfo.dist.tarball);
-
-		const pluginDirectory = path.join(destinationDirectory, packageInfo.name);
 
 		try {
 			await extractTarball(tgzFile, pluginDirectory);

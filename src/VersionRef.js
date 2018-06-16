@@ -69,6 +69,9 @@ class GitHubRef {
         return res;
     }
     static is(versionRef) {
+        if (!versionRef) {
+            return false;
+        }
         return versionRef.isGitHubRef;
     }
     getInfo() {
@@ -147,6 +150,9 @@ class DistTag extends NpmVersionRef {
         return res;
     }
     static is(versionRef) {
+        if (!versionRef) {
+            return false;
+        }
         return versionRef.isDistTag;
     }
 }
@@ -164,16 +170,19 @@ function tryParseVersionRef(rawValue) {
     if (!rawValue) {
         return DistTag.LATEST;
     }
-    if (typeof rawValue !== "string") {
-        if (!rawValue.raw) {
-            throw new Error("Invalid version reference");
-        }
-        return rawValue; // it should be already a VersionRef
+    if (typeof rawValue === "string") {
+        // We should support all these types:
+        //  https://docs.npmjs.com/files/package.json#dependencies
+        return GitHubRef.tryParse(rawValue)
+            || NpmVersionRef.tryParse(rawValue);
     }
-    // We should support all these types:
-    //  https://docs.npmjs.com/files/package.json#dependencies
-    return GitHubRef.tryParse(rawValue)
-        || NpmVersionRef.tryParse(rawValue);
+    if (PluginInfo_1.PluginVersion.is(rawValue)) {
+        return VersionRange.tryParse(rawValue);
+    }
+    if (!rawValue.raw) {
+        return undefined;
+    }
+    return rawValue; // it should be already a VersionRef
 }
 exports.tryParseVersionRef = tryParseVersionRef;
 //# sourceMappingURL=VersionRef.js.map

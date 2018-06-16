@@ -1,5 +1,5 @@
 import * as SemVer from "semver";
-import { VersionRange, VersionRef, SatisfyMode } from "./VersionRef";
+import { VersionRef, SatisfyMode } from "./VersionRef";
 export interface IPluginInfo {
     readonly mainFile: string;
     readonly location: string;
@@ -7,8 +7,8 @@ export interface IPluginInfo {
     readonly version: PluginVersion;
     readonly requestedVersion: VersionRef;
     readonly dependencies: Map<PluginName, VersionRef>;
-    satisfies(name: PluginName, version?: PluginVersion | VersionRange, mode?: SatisfyMode): boolean;
-    satisfiesVersion(version: PluginVersion | VersionRange, mode?: SatisfyMode): boolean;
+    satisfies(name: PluginName, version?: PluginVersion | VersionRef, mode?: SatisfyMode): boolean;
+    satisfiesVersion(version: PluginVersion | VersionRef, mode?: SatisfyMode): boolean;
 }
 export declare class PluginName {
     readonly raw: string;
@@ -35,6 +35,8 @@ export declare class PluginInfo {
     readonly requestedVersion: VersionRef;
     readonly dependencies: Map<PluginName, VersionRef>;
     constructor(mainFile: string, location: string, name: PluginName, version: PluginVersion, requestedVersion: VersionRef, dependencies: Map<PluginName, VersionRef>);
-    satisfies(name: PluginName, version?: PluginVersion | VersionRange, mode?: SatisfyMode): boolean;
-    satisfiesVersion(version: PluginVersion | VersionRange, mode?: SatisfyMode): boolean;
+    satisfies(name: PluginName, version?: PluginVersion | VersionRef, mode?: SatisfyMode): boolean;
+    satisfiesVersion(version: PluginVersion | VersionRef, mode?: SatisfyMode): boolean;
+    private satisfiesVersionRange;
 }
+export declare function pluginCompare(a: IPluginInfo, b: IPluginInfo): number;

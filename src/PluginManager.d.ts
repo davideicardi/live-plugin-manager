@@ -56,14 +56,14 @@ export declare class PluginManager {
      * @param code code to be loaded, equivalent to index.js
      * @param version optional version, if omitted no version check is performed
      */
-    installFromCode(name: string, code: string, version?: string): Promise<IPluginInfo>;
+    installFromCode(name: PluginName | string, code: string, version?: PluginVersion | string): Promise<IPluginInfo>;
     uninstall(name: PluginName | string, version?: PluginVersion | string): Promise<void>;
     uninstallAll(): Promise<void>;
     list(): IPluginInfo[];
     require(fullName: string): any;
     setSandboxTemplate(name: PluginName | string, sandbox: PluginSandbox | undefined): void;
     getSandboxTemplate(name: PluginName | string): PluginSandbox | undefined;
-    alreadyInstalled(name: PluginName | string, version?: PluginVersion | VersionRange | string, mode?: SatisfyMode): IPluginInfo | undefined;
+    alreadyInstalled(name: PluginName | string, version?: PluginVersion | VersionRef | string, mode?: SatisfyMode): IPluginInfo | undefined;
     getInfo(name: PluginName | string, version?: PluginVersion | VersionRange): IPluginInfo | undefined;
     queryPackage(name: PluginName | string, versionRef?: VersionRef | string): Promise<PackageInfo>;
     queryPackageFromNpm(name: PluginName | string, versionRef?: NpmVersionRef | string): Promise<PackageInfo>;
@@ -72,12 +72,10 @@ export declare class PluginManager {
     private uninstallLockFree;
     private installLockFree;
     private installFromPathLockFree;
-    /** Install from npm or from cache if already available */
-    private installFromNpmLockFreeCache;
-    /** Install from npm */
-    private installFromNpmLockFreeDirect;
+    private installFromNpmLockFree;
     private installFromGithubLockFree;
     private installFromCodeLockFree;
+    private tryInstallFromCache;
     private installDependencies;
     private unloadDependents;
     private unloadWithDependents;

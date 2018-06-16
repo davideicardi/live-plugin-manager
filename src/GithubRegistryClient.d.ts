@@ -4,7 +4,7 @@ export declare class GithubRegistryClient {
     private headers;
     constructor(auth?: GithubAuth);
     get(gitHubRef: GitHubRef): Promise<PackageJsonInfo>;
-    download(destinationDirectory: string, packageInfo: PackageJsonInfo): Promise<string>;
+    download(pluginDirectory: string, packageInfo: PackageJsonInfo): Promise<string>;
 }
 export interface GithubAuthUserToken {
     type: "token";

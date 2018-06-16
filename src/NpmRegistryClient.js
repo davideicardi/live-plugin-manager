@@ -9,7 +9,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const urlJoin = require("url-join");
-const path = require("path");
 const fs = require("./fileSystem");
 const tarballUtils_1 = require("./tarballUtils");
 const semVer = require("semver");
@@ -66,13 +65,12 @@ class NpmRegistryClient {
             };
         });
     }
-    download(destinationDirectory, packageInfo) {
+    download(pluginDirectory, packageInfo) {
         return __awaiter(this, void 0, void 0, function* () {
             if (!packageInfo.dist || !packageInfo.dist.tarball) {
                 throw new Error("Invalid dist.tarball property");
             }
             const tgzFile = yield tarballUtils_1.downloadTarball(packageInfo.dist.tarball, this.defaultHeaders);
-            const pluginDirectory = path.join(destinationDirectory, packageInfo.name);
             try {
                 yield tarballUtils_1.extractTarball(tgzFile, pluginDirectory);
             }

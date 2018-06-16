@@ -72,7 +72,7 @@ export class NpmRegistryClient {
 	}
 
 	async download(
-		destinationDirectory: string,
+		pluginDirectory: string,
 		packageInfo: PackageInfo): Promise<string> {
 
 		if (!packageInfo.dist || !packageInfo.dist.tarball) {
@@ -81,7 +81,6 @@ export class NpmRegistryClient {
 
 		const tgzFile = await downloadTarball(packageInfo.dist.tarball, this.defaultHeaders);
 
-		const pluginDirectory = path.join(destinationDirectory, packageInfo.name);
 		try {
 			await extractTarball(tgzFile, pluginDirectory);
 		} finally {

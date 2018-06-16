@@ -10,10 +10,10 @@ export interface IPluginInfo {
 	readonly dependencies: Map<PluginName, VersionRef>;
 	satisfies(
 		name: PluginName,
-		version?: PluginVersion | VersionRange,
+		version?: PluginVersion | VersionRef,
 		mode?: SatisfyMode): boolean;
 	satisfiesVersion(
-		version: PluginVersion | VersionRange,
+		version: PluginVersion | VersionRef,
 		mode?: SatisfyMode): boolean;
 }
 
@@ -104,7 +104,7 @@ export class PluginInfo {
 
 	satisfies(
 		name: PluginName,
-		version?: PluginVersion | VersionRange,
+		version?: PluginVersion | VersionRef,
 		mode: SatisfyMode = "satisfies"): boolean {
 		if (this.name.raw !== name.raw) {
 			return false;
@@ -118,22 +118,44 @@ export class PluginInfo {
 	}
 
 	satisfiesVersion(
-		version: PluginVersion | VersionRange,
+		version: PluginVersion | VersionRef,
 		mode: SatisfyMode = "satisfies"): boolean {
-		const rangeVersion = VersionRange.is(version)
-			? version
-			: VersionRange.parse(version.semver.raw);
+		if (VersionRange.is(version)) {
+			return this.satisfiesVersionRange(version, mode);
+		}
 
-		const result = SemVer.satisfies(this.version.semver, rangeVersion.range);
+		if (PluginVersion.is(version)) {
+			return this.satisfiesVersionRange(VersionRange.parse(version), mode);
+		}
+
+		// TODO Maybe here I should always return false,
+		// because if there is a github or dist tag I should always reinstall?
+		return version.raw === this.requestedVersion.raw;
+	}
+
+	private satisfiesVersionRange(
+		version: VersionRange,
+		mode: SatisfyMode = "satisfies"): boolean {
+
+		const result = SemVer.satisfies(this.version.semver, version.range);
 
 		if (result) {
 			return true;
 		} else if (mode === "satisfiesOrGreater") {
-			return SemVer.gtr(this.version.semver, rangeVersion.range);
+			return SemVer.gtr(this.version.semver, version.range);
 		} else {
 			return false;
 		}
 	}
+}
+
+export function pluginCompare(a: IPluginInfo, b: IPluginInfo): number {
+	const nameCompare = a.name.raw.localeCompare(b.name.raw);
+	if (nameCompare !== 0) {
+		return nameCompare;
+	}
+
+	return SemVer.compare(a.version.semver, b.version.semver);
 }
 
 // TODO Eval to be more strict...

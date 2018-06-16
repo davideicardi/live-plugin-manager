@@ -74,7 +74,7 @@ class PluginManager {
             const pVersion = VersionRef_1.NpmVersionRef.parse(versionRef);
             yield this.syncLock();
             try {
-                return yield this.installFromNpmLockFreeCache(pName, pVersion);
+                return yield this.installFromNpmLockFree(pName, pVersion);
             }
             finally {
                 yield this.syncUnlock();
@@ -119,9 +119,13 @@ class PluginManager {
     installFromCode(name, code, version) {
         return __awaiter(this, void 0, void 0, function* () {
             yield fs.ensureDir(this.options.pluginsPath);
+            const pName = PluginInfo_1.PluginName.parse(name);
+            const pVersion = version
+                ? PluginInfo_1.PluginVersion.parse(version)
+                : undefined;
             yield this.syncLock();
             try {
-                return yield this.installFromCodeLockFree(name, code, version);
+                return yield this.installFromCodeLockFree(pName, code, pVersion);
             }
             finally {
                 yield this.syncUnlock();
@@ -197,20 +201,12 @@ class PluginManager {
         return this.sandboxTemplates.get(key);
     }
     alreadyInstalled(name, version, mode = "satisfies") {
-        const installedInfo = this.getInfo(name);
-        if (!installedInfo) {
-            return undefined;
-        }
-        if (!version) {
-            return installedInfo;
-        }
-        const vRange = VersionRef_1.VersionRange.parse(version);
-        if (installedInfo.satisfiesVersion(vRange, mode)) {
-            return installedInfo;
-        }
-        else {
-            return undefined;
-        }
+        const pName = PluginInfo_1.PluginName.parse(name);
+        const pVersion = VersionRef_1.parseVersionRef(version);
+        const validPlugins = this.installedPlugins
+            .filter((p) => p.satisfies(pName, pVersion))
+            .sort(PluginInfo_1.pluginCompare);
+        return validPlugins[validPlugins.length - 1];
     }
     getInfo(name, version) {
         const pluginName = PluginInfo_1.PluginName.parse(name);
@@ -259,7 +255,7 @@ class PluginManager {
                 return this.installFromGithubLockFree(versionRef);
             }
             else if (VersionRef_1.NpmVersionRef.is(versionRef)) {
-                return this.installFromNpmLockFreeCache(name, versionRef);
+                return this.installFromNpmLockFree(name, versionRef);
             }
             else {
                 throw new Error("Invalid version reference");
@@ -277,125 +273,114 @@ class PluginManager {
                 if (installedInfo) {
                     return installedInfo;
                 }
-            }
-            // already installed not satisfied version
-            const installedInfoNsv = this.alreadyInstalled(pName);
-            if (installedInfoNsv) {
-                yield this.uninstallLockFree(installedInfoNsv.name, installedInfoNsv.version);
-            }
-            // already downloaded
-            if (options.force || !(yield this.isAlreadyDownloaded(pName, pVersion))) {
-                yield this.removeDownloaded(pName, pVersion);
-                if (debug.enabled) {
-                    debug(`Copy from ${location} to ${this.options.pluginsPath}`);
+                const fromCache = yield this.tryInstallFromCache(name, pVersion);
+                if (fromCache) {
+                    return fromCache;
                 }
-                yield fs.copy(location, this.getPluginLocation(pName, pVersion), { exclude: ["node_modules"] });
             }
+            if (debug.enabled) {
+                debug(`Copy from ${location} to ${this.options.pluginsPath}`);
+            }
+            yield fs.copy(location, this.getPluginLocation(pName, pVersion), { exclude: ["node_modules"] });
             const pluginInfo = yield this.createPluginInfo(pName, pVersion);
             return this.addPlugin(pluginInfo);
         });
     }
-    /** Install from npm or from cache if already available */
-    installFromNpmLockFreeCache(name, versionRef) {
+    installFromNpmLockFree(name, versionRef) {
         return __awaiter(this, void 0, void 0, function* () {
             // already installed satisfied version
             const installedInfo = this.alreadyInstalled(name, versionRef);
             if (installedInfo) {
                 return installedInfo;
             }
-            if (this.alreadyInstalled(name)) {
-                // already installed not satisfied version, then uninstall it first
-                yield this.uninstallLockFree(name);
+            const fromCache = yield this.tryInstallFromCache(name, versionRef);
+            if (fromCache) {
+                return fromCache;
             }
-            if (this.options.npmInstallMode === "useCache"
-                && (yield this.isAlreadyDownloaded(name, version))) {
-                const pluginInfo = yield this.createPluginInfo(name);
-                return this.addPlugin(pluginInfo);
-            }
-            return this.installFromNpmLockFreeDirect(name, version);
-        });
-    }
-    /** Install from npm */
-    installFromNpmLockFreeDirect(name, version) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const registryInfo = yield this.npmRegistry.get(name, version);
-            // already downloaded
-            if (!(yield this.isAlreadyDownloaded(registryInfo.name, registryInfo.version))) {
-                yield this.removeDownloaded(registryInfo.name);
-                yield this.npmRegistry.download(this.options.pluginsPath, registryInfo);
-            }
-            const pluginInfo = yield this.createPluginInfo(registryInfo.name);
+            const registryInfo = yield this.npmRegistry.get(name, versionRef);
+            const pName = PluginInfo_1.PluginName.parse(registryInfo.name);
+            const pVersion = PluginInfo_1.PluginVersion.parse(registryInfo.version);
+            const pluginDir = this.getPluginLocation(pName, pVersion);
+            yield this.npmRegistry.download(pluginDir, registryInfo);
+            const pluginInfo = yield this.createPluginInfo(pName, pVersion);
             return this.addPlugin(pluginInfo);
         });
     }
     installFromGithubLockFree(gitHubRef) {
         return __awaiter(this, void 0, void 0, function* () {
             const registryInfo = yield this.githubRegistry.get(gitHubRef);
-            if (!this.isValidPluginName(registryInfo.name)) {
-                throw new Error(`Invalid plugin name '${name}'`);
-            }
-            // already installed satisfied version
-            const installedInfo = this.alreadyInstalled(registryInfo.name, registryInfo.version);
+            const pName = PluginInfo_1.PluginName.parse(registryInfo.name);
+            const pVersion = PluginInfo_1.PluginVersion.parse(registryInfo.version);
+            // already installed
+            const installedInfo = this.alreadyInstalled(pName, pVersion);
             if (installedInfo) {
                 return installedInfo;
             }
-            // already installed not satisfied version
-            if (this.alreadyInstalled(registryInfo.name)) {
-                yield this.uninstallLockFree(registryInfo.name);
+            const fromCache = yield this.tryInstallFromCache(name, pVersion);
+            if (fromCache) {
+                return fromCache;
             }
-            // already downloaded
-            if (!(yield this.isAlreadyDownloaded(registryInfo.name, registryInfo.version))) {
-                yield this.removeDownloaded(registryInfo.name);
-                yield this.githubRegistry.download(this.options.pluginsPath, registryInfo);
-            }
-            const pluginInfo = yield this.createPluginInfo(registryInfo.name);
+            const pluginDir = this.getPluginLocation(pName, pVersion);
+            yield this.githubRegistry.download(pluginDir, registryInfo);
+            const pluginInfo = yield this.createPluginInfo(pName, pVersion);
             return this.addPlugin(pluginInfo);
         });
     }
-    installFromCodeLockFree(name, code, version = "0.0.0") {
+    installFromCodeLockFree(name, code, version) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (!this.isValidPluginName(name)) {
-                throw new Error(`Invalid plugin name '${name}'`);
-            }
-            if (!semver.valid(version)) {
-                throw new Error(`Invalid plugin version '${version}'`);
-            }
-            const packageJson = {
-                name,
-                version
-            };
-            // already installed satisfied version
-            if (version !== "0.0.0") {
-                const installedInfo = this.alreadyInstalled(packageJson.name, packageJson.version);
+            // If a version is specified
+            if (version) {
+                // already installed satisfied version
+                const installedInfo = this.alreadyInstalled(name, version);
                 if (installedInfo) {
                     return installedInfo;
                 }
-            }
-            // already installed not satisfied version
-            if (this.alreadyInstalled(packageJson.name)) {
-                yield this.uninstallLockFree(packageJson.name);
-            }
-            // already created
-            if (!(yield this.isAlreadyDownloaded(packageJson.name, packageJson.version))) {
-                yield this.removeDownloaded(packageJson.name);
-                if (debug.enabled) {
-                    debug(`Create plugin ${name} to ${this.options.pluginsPath} from code`);
+                // already created
+                const fromCache = yield this.tryInstallFromCache(name, version);
+                if (fromCache) {
+                    return fromCache;
                 }
-                const location = this.getPluginLocation(name);
-                yield fs.ensureDir(location);
-                yield fs.writeFile(path.join(location, DefaultMainFile), code);
-                yield fs.writeFile(path.join(location, "package.json"), JSON.stringify(packageJson));
             }
-            const pluginInfo = yield this.createPluginInfo(packageJson.name);
+            else {
+                version = PluginInfo_1.PluginVersion.parse("0.0.0");
+            }
+            if (debug.enabled) {
+                debug(`Create plugin ${name} to ${this.options.pluginsPath} from code`);
+            }
+            const packageJson = {
+                name: name.raw,
+                version: version.semver.raw
+            };
+            const location = this.getPluginLocation(name, version);
+            yield fs.ensureDir(location);
+            yield fs.writeFile(path.join(location, DefaultMainFile), code);
+            yield fs.writeFile(path.join(location, "package.json"), JSON.stringify(packageJson));
+            const pluginInfo = yield this.createPluginInfo(name, version);
             return this.addPlugin(pluginInfo);
+        });
+    }
+    tryInstallFromCache(name, version) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (this.options.npmInstallMode === "useCache") {
+                const packageAlreadyDownloaded = yield this.getDownloadedPackage(name, version);
+                if (packageAlreadyDownloaded) {
+                    const pluginInfo = yield this.createPluginInfo(PluginInfo_1.PluginName.parse(packageAlreadyDownloaded.name), PluginInfo_1.PluginVersion.parse(packageAlreadyDownloaded.version));
+                    return this.addPlugin(pluginInfo);
+                }
+            }
+            // remove already downloaded if any
+            if (PluginInfo_1.PluginVersion.is(version)) {
+                yield this.removeDownloaded(name, version);
+            }
+            return undefined;
         });
     }
     installDependencies(plugin) {
         return __awaiter(this, void 0, void 0, function* () {
+            const resolvedDependencies = new Map();
             if (!plugin.dependencies) {
-                return {};
+                return resolvedDependencies;
             }
-            const dependencies = {};
             for (const key in plugin.dependencies) {
                 if (!plugin.dependencies.hasOwnProperty(key)) {
                     continue;
@@ -423,7 +408,7 @@ class PluginManager {
                 // NOTE: maybe here I should put the actual version?
                 dependencies[key] = version;
             }
-            return dependencies;
+            return resolvedDependencies;
         });
     }
     unloadDependents(pluginName) {
@@ -465,33 +450,36 @@ class PluginManager {
             }
         });
     }
-    isAlreadyDownloaded(name, versionRef) {
+    isAlreadyDownloaded(name, version) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (!VersionRef_1.VersionRange.is(versionRef)) {
-                return false;
-            }
-            const packageJsonList = yield this.getDownloadedPackages(name);
-            return packageJsonList.some((packageJson) => packageJson.name === name.raw
-                && semver.satisfies(packageJson.version, versionRef.raw));
+            return !!(yield this.getDownloadedPackage(name, version));
         });
     }
     getDownloadedPackages(name) {
         return __awaiter(this, void 0, void 0, function* () {
+            // Plugin inside not valid folder names should not be returned
+            // // check that the directory location is correct
+            // const location = this.getPluginLocation(name, version);
+            // if (!(await fs.directoryExists(location))) {
+            // 	return;
+            // }
+            // try {
+            // 	const packageJson = await this.readPackageJsonFromPath(location);
+            // 	return packageJson;
+            // } catch (e) {
+            // 	return;
+            // }
         });
     }
     getDownloadedPackage(name, version) {
         return __awaiter(this, void 0, void 0, function* () {
-            const location = this.getPluginLocation(name, version);
-            if (!(yield fs.directoryExists(location))) {
-                return;
+            if (!VersionRef_1.VersionRange.is(version) && !PluginInfo_1.PluginVersion.is(version)) {
+                return undefined;
             }
-            try {
-                const packageJson = yield this.readPackageJsonFromPath(location);
-                return packageJson;
-            }
-            catch (e) {
-                return;
-            }
+            const pVersionRange = VersionRef_1.VersionRange.parse(version);
+            const packageJsonList = yield this.getDownloadedPackages(name);
+            return packageJsonList.find((packageJson) => packageJson.name === name.raw
+                && semver.satisfies(packageJson.version, pVersionRange.range));
         });
     }
     readPackageJsonFromPath(location) {

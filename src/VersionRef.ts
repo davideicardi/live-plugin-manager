@@ -69,7 +69,10 @@ export class GitHubRef implements VersionRef {
 		}
 		return res;
 	}
-	static is(versionRef: VersionRef): versionRef is GitHubRef {
+	static is(versionRef: any): versionRef is GitHubRef {
+		if (!versionRef) {
+			return false;
+		}
 		return (versionRef as GitHubRef).isGitHubRef;
 	}
 
@@ -151,7 +154,10 @@ export class DistTag extends NpmVersionRef {
 		}
 		return res;
 	}
-	static is(versionRef: VersionRef): versionRef is DistTag {
+	static is(versionRef: any): versionRef is DistTag {
+		if (!versionRef) {
+			return false;
+		}
 		return (versionRef as DistTag).isDistTag;
 	}
 
@@ -161,7 +167,7 @@ export class DistTag extends NpmVersionRef {
 	}
 }
 
-export function parseVersionRef(rawValue?: string | VersionRef): VersionRef {
+export function parseVersionRef(rawValue?: string | VersionRef | PluginVersion): VersionRef {
 	const ref = tryParseVersionRef(rawValue);
 	if (!ref) {
 		throw new Error(`Invalid version reference ${rawValue}`);
@@ -170,20 +176,26 @@ export function parseVersionRef(rawValue?: string | VersionRef): VersionRef {
 	return ref;
 }
 
-export function tryParseVersionRef(rawValue?: string | VersionRef): VersionRef | undefined {
+export function tryParseVersionRef(rawValue?: string | VersionRef | PluginVersion): VersionRef | undefined {
 	if (!rawValue) {
 		return DistTag.LATEST;
 	}
-	if (typeof rawValue !== "string") {
-		if (!rawValue.raw) {
-			throw new Error("Invalid version reference");
-		}
-		return rawValue; // it should be already a VersionRef
+
+	if (typeof rawValue === "string") {
+		// We should support all these types:
+		//  https://docs.npmjs.com/files/package.json#dependencies
+
+		return GitHubRef.tryParse(rawValue)
+			|| NpmVersionRef.tryParse(rawValue);
 	}
 
-	// We should support all these types:
-	//  https://docs.npmjs.com/files/package.json#dependencies
+	if (PluginVersion.is(rawValue)) {
+		return VersionRange.tryParse(rawValue);
+	}
 
-	return GitHubRef.tryParse(rawValue)
-		|| NpmVersionRef.tryParse(rawValue);
+	if (!rawValue.raw) {
+		return undefined;
+	}
+
+	return rawValue; // it should be already a VersionRef
 }

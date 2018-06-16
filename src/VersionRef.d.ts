@@ -16,7 +16,7 @@ export declare class GitHubRef implements VersionRef {
     readonly raw: string;
     static tryParse(value: string | GitHubRef): GitHubRef | undefined;
     static parse(value: string | GitHubRef): GitHubRef;
-    static is(versionRef: VersionRef): versionRef is GitHubRef;
+    static is(versionRef: any): versionRef is GitHubRef;
     private readonly isGitHubRef;
     protected constructor(raw: string);
     getInfo(): {
@@ -38,9 +38,9 @@ export declare class DistTag extends NpmVersionRef {
     static readonly LATEST: DistTag;
     static tryParse(value: string | DistTag): DistTag | undefined;
     static parse(value: string | DistTag): DistTag;
-    static is(versionRef: VersionRef): versionRef is DistTag;
+    static is(versionRef: any): versionRef is DistTag;
     private readonly isDistTag;
     protected constructor(raw: string);
 }
-export declare function parseVersionRef(rawValue?: string | VersionRef): VersionRef;
-export declare function tryParseVersionRef(rawValue?: string | VersionRef): VersionRef | undefined;
+export declare function parseVersionRef(rawValue?: string | VersionRef | PluginVersion): VersionRef;
+export declare function tryParseVersionRef(rawValue?: string | VersionRef | PluginVersion): VersionRef | undefined;
