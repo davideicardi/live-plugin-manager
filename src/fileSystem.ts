@@ -3,8 +3,27 @@ import * as path from "path";
 
 export {createWriteStream} from "fs-extra";
 
+// TODO To test
+export function pathsAreEqual(fsPath1: string, fsPath2: string): boolean {
+	fsPath1 = path.normalize(fsPath1);
+	fsPath2 = path.normalize(fsPath2);
+
+	return path.basename(fsPath1) === path.basename(fsPath2)
+		&& path.dirname(fsPath1) === path.dirname(fsPath2);
+}
+
 export function remove(fsPath: string): Promise<void> {
 	return fs.remove(fsPath);
+}
+
+export async function getDirectories(fsPath: string): Promise<string[]> {
+	const dirContent = await fs.readdir(fsPath);
+
+	return Promise.all(dirContent
+		.map((d) => path.join(fsPath, d))
+		.filter((fullPath) => {
+			return directoryExists(fullPath);
+		}));
 }
 
 export async function directoryExists(fsPath: string): Promise<boolean> {

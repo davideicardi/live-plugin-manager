@@ -3,7 +3,7 @@ import { NpmRegistryConfig } from "./NpmRegistryClient";
 import { IPluginInfo, PluginName, PluginVersion } from "./PluginInfo";
 import { GithubAuth } from "./GithubRegistryClient";
 import { PackageInfo } from "./PackageInfo";
-import { VersionRef, VersionRange, GitHubRef, NpmVersionRef, SatisfyMode } from "./VersionRef";
+import { VersionRef, VersionRange, GitHubRef, NpmVersionRef } from "./VersionRef";
 export interface PluginManagerOptions {
     cwd: string;
     pluginsPath: string;
@@ -63,7 +63,7 @@ export declare class PluginManager {
     require(fullName: string): any;
     setSandboxTemplate(name: PluginName | string, sandbox: PluginSandbox | undefined): void;
     getSandboxTemplate(name: PluginName | string): PluginSandbox | undefined;
-    alreadyInstalled(name: PluginName | string, version?: PluginVersion | VersionRef | string, mode?: SatisfyMode): IPluginInfo | undefined;
+    alreadyInstalled(name: PluginName | string, version?: PluginVersion | VersionRef | string): IPluginInfo | undefined;
     getInfo(name: PluginName | string, version?: PluginVersion | VersionRange): IPluginInfo | undefined;
     queryPackage(name: PluginName | string, versionRef?: VersionRef | string): Promise<PackageInfo>;
     queryPackageFromNpm(name: PluginName | string, versionRef?: NpmVersionRef | string): Promise<PackageInfo>;
@@ -77,12 +77,10 @@ export declare class PluginManager {
     private installFromCodeLockFree;
     private tryInstallFromCache;
     private installDependencies;
-    private unloadDependents;
     private unloadWithDependents;
     private isModuleAvailableFromHost;
     private getPluginLocation;
     private removeDownloaded;
-    private isAlreadyDownloaded;
     private getDownloadedPackages;
     private getDownloadedPackage;
     private readPackageJsonFromPath;

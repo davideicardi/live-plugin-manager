@@ -1,5 +1,7 @@
 export { createWriteStream } from "fs-extra";
+export declare function pathsAreEqual(fsPath1: string, fsPath2: string): boolean;
 export declare function remove(fsPath: string): Promise<void>;
+export declare function getDirectories(fsPath: string): Promise<string[]>;
 export declare function directoryExists(fsPath: string): Promise<boolean>;
 export declare function fileExists(fsPath: string): Promise<boolean>;
 export declare function ensureDir(fsPath: string): Promise<void>;

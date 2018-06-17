@@ -2,7 +2,7 @@ import * as fs from "./fileSystem";
 import * as path from "path";
 import {NpmRegistryClient, NpmRegistryConfig} from "./NpmRegistryClient";
 import {PluginVm} from "./PluginVm";
-import {IPluginInfo, PluginName, PluginVersion, pluginCompare} from "./PluginInfo";
+import {IPluginInfo, PluginName, PluginVersion, pluginCompare, PluginDependency, PluginInfo} from "./PluginInfo";
 import * as lockFile from "lockfile";
 import * as semver from "semver";
 import * as Debug from "debug";
@@ -243,8 +243,7 @@ export class PluginManager {
 
 	alreadyInstalled(
 		name: PluginName | string,
-		version?: PluginVersion | VersionRef | string,
-		mode: SatisfyMode = "satisfies"): IPluginInfo | undefined {
+		version?: PluginVersion | VersionRef | string): IPluginInfo | undefined {
 
 		const pName = PluginName.parse(name);
 		const pVersion = parseVersionRef(version);
@@ -338,7 +337,7 @@ export class PluginManager {
 		}
 		await fs.copy(location, this.getPluginLocation(pName, pVersion), { exclude: ["node_modules"] });
 
-		const pluginInfo = await this.createPluginInfo(pName, pVersion);
+		const pluginInfo = await this.createPluginInfo(pName, pVersion, VersionRange.parse(pVersion));
 		return this.addPlugin(pluginInfo);
 	}
 
@@ -364,7 +363,7 @@ export class PluginManager {
 			pluginDir,
 			registryInfo);
 
-		const pluginInfo = await this.createPluginInfo(pName, pVersion);
+		const pluginInfo = await this.createPluginInfo(pName, pVersion, versionRef);
 		return this.addPlugin(pluginInfo);
 	}
 
@@ -390,7 +389,7 @@ export class PluginManager {
 			pluginDir,
 			registryInfo);
 
-		const pluginInfo = await this.createPluginInfo(pName, pVersion);
+		const pluginInfo = await this.createPluginInfo(pName, pVersion, gitHubRef);
 		return this.addPlugin(pluginInfo);
 	}
 
@@ -426,7 +425,7 @@ export class PluginManager {
 		await fs.writeFile(path.join(location, DefaultMainFile), code);
 		await fs.writeFile(path.join(location, "package.json"), JSON.stringify(packageJson));
 
-		const pluginInfo = await this.createPluginInfo(name, version);
+		const pluginInfo = await this.createPluginInfo(name, version, VersionRange.parse(version));
 		return this.addPlugin(pluginInfo);
 	}
 
@@ -436,8 +435,10 @@ export class PluginManager {
 		if (this.options.npmInstallMode === "useCache") {
 			const packageAlreadyDownloaded = await this.getDownloadedPackage(name, version);
 			if (packageAlreadyDownloaded) {
+				const pName = PluginName.parse(packageAlreadyDownloaded.name);
+				const pVersion = PluginVersion.parse(packageAlreadyDownloaded.version);
 				const pluginInfo = await this.createPluginInfo(
-					PluginName.parse(packageAlreadyDownloaded.name), PluginVersion.parse(packageAlreadyDownloaded.version));
+					pName, pVersion, VersionRange.parse(pVersion));
 				return this.addPlugin(pluginInfo);
 			}
 		}
@@ -450,49 +451,39 @@ export class PluginManager {
 		return undefined;
 	}
 
-	private async installDependencies(plugin: IPluginInfo): Promise<Map<PluginName, PluginVersion>> {
-		const resolvedDependencies = new Map<PluginName, PluginVersion>();
+	private async installDependencies(plugin: IPluginInfo): Promise<void> {
+		for (const dependency of plugin.dependencies) {
+			dependency.resolvedMode = undefined;
+			dependency.resolvedAs = undefined;
 
-		if (!plugin.dependencies) {
-			return resolvedDependencies;
-		}
+			const dName = dependency.name;
+			const dVersion = dependency.versionRef;
 
-		for (const key in plugin.dependencies) {
-			if (!plugin.dependencies.hasOwnProperty(key)) {
-				continue;
-			}
-			if (this.shouldIgnore(key)) {
-				continue;
-			}
-
-			const version = plugin.dependencies[key];
-
-			if (this.isModuleAvailableFromHost(key, version)) {
+			if (this.shouldIgnore(dName)) {
 				if (debug.enabled) {
-					debug(`Installing dependencies of ${plugin.name}: ${key} is already available on host`);
+					debug(`Installing dependencies of ${plugin.name}: ${dName} is ignored`);
 				}
-			} else if (this.alreadyInstalled(key, version, "satisfiesOrGreater")) {
+				dependency.resolvedMode = "ignored";
+			} else if (this.isModuleAvailableFromHost(dName, dVersion)) {
 				if (debug.enabled) {
-					debug(`Installing dependencies of ${plugin.name}: ${key} is already installed`);
+					debug(`Installing dependencies of ${plugin.name}: ${dName}@${dVersion} is already available on host`);
 				}
+				dependency.resolvedMode = "fromHost";
 			} else {
-				if (debug.enabled) {
-					debug(`Installing dependencies of ${plugin.name}: ${key} ...`);
+				const installed = this.alreadyInstalled(dName, dVersion);
+				if (installed) {
+					if (debug.enabled) {
+						debug(`Installing dependencies of ${plugin.name}: ${dName}@${dVersion} is already installed`);
+					}
+					dependency.resolvedAs = installed;
+					dependency.resolvedMode = "fromPlugin";
+				} else {
+					if (debug.enabled) {
+						debug(`Installing dependencies of ${plugin.name}: ${dName}@${dVersion} ...`);
+					}
+					dependency.resolvedAs = await this.installLockFree(dName, dVersion);
+					dependency.resolvedMode = "fromPlugin";
 				}
-				await this.installLockFree(key, version);
-			}
-
-			// NOTE: maybe here I should put the actual version?
-			dependencies[key] = version;
-		}
-
-		return resolvedDependencies;
-	}
-
-	private unloadDependents(pluginName: string) {
-		for (const installed of this.installedPlugins) {
-			if (installed.dependencies[pluginName]) {
-				this.unloadWithDependents(installed);
 			}
 		}
 	}
@@ -500,23 +491,27 @@ export class PluginManager {
 	private unloadWithDependents(plugin: IPluginInfo) {
 		this.unload(plugin);
 
-		this.unloadDependents(plugin.name);
+		// Unload any other plugins that depends on the specified plugin passed
+		//  recursively unload other dependedents
+		for (const installed of this.installedPlugins) {
+			if (installed.dependencies.some((d) => d.resolvedAs === plugin)) {
+				this.unloadWithDependents(installed);
+			}
+		}
 	}
 
-	private isModuleAvailableFromHost(name: string, version: string): boolean {
+	private isModuleAvailableFromHost(name: PluginName, version: VersionRef): boolean {
 		if (!this.options.hostRequire) {
 			return false;
 		}
+		if (!VersionRange.is(version)) {
+			return false;
+		}
 
-		// TODO Here I should check also if version is compatible?
-		// I can resolve the module, get the corresponding package.json
-		//  load it and get the version, then use
-		// if (semver.satisfies(installedInfo.version, version))
-		// to check if compatible...
-
+		// TODO Here I should check these values for performance?
 		try {
-			const modulePackage = this.options.hostRequire(name + "/package.json") as PackageInfo;
-			return semver.satisfies(modulePackage.version, version);
+			const modulePackage = this.options.hostRequire(name.raw + "/package.json") as PackageInfo;
+			return semver.satisfies(modulePackage.version, version.range);
 		} catch (e) {
 			return false;
 		}
@@ -533,30 +528,30 @@ export class PluginManager {
 		}
 	}
 
-	private async isAlreadyDownloaded(
-		name: PluginName,
-		version: PluginVersion | VersionRef): Promise<boolean> {
-		return !!(await this.getDownloadedPackage(name, version));
-	}
-
 	private async getDownloadedPackages(name: PluginName): Promise<PackageInfo[]> {
-		// Plugin inside not valid folder names should not be returned
+		const downloadedDirs = await fs.getDirectories(this.options.pluginsPath);
 
-		// // check that the directory location is correct
+		const downloadedPcks = await Promise.all(downloadedDirs.map(async (downloadPath) => {
+			try {
+				const packageJson = await this.readPackageJsonFromPath(downloadPath);
 
+				const pName = PluginName.parse(packageJson.name);
+				const pVersion = PluginVersion.parse(packageJson.version);
+				const expectedLocation = this.getPluginLocation(pName, pVersion);
 
-		// const location = this.getPluginLocation(name, version);
-		// if (!(await fs.directoryExists(location))) {
-		// 	return;
-		// }
+				if (fs.pathsAreEqual(downloadPath, expectedLocation)) {
+					return packageJson;
+				} else {
+					return undefined;
+				}
+			} catch (e) {
+				// Plugin inside not valid folder names should not be returned
+				return undefined;
+			}
+		}));
 
-		// try {
-		// 	const packageJson = await this.readPackageJsonFromPath(location);
-
-		// 	return packageJson;
-		// } catch (e) {
-		// 	return;
-		// }
+		return downloadedPcks
+			.filter((p) => p) as PackageInfo[];
 	}
 
 	private async getDownloadedPackage(
@@ -615,8 +610,6 @@ export class PluginManager {
 
 		this.installedPlugins.push(plugin);
 
-		// this.unloadDependents(plugin.name);
-
 		return plugin;
 	}
 
@@ -625,7 +618,7 @@ export class PluginManager {
 		if (index >= 0) {
 			this.installedPlugins.splice(index, 1);
 		}
-		this.sandboxTemplates.delete(plugin.name);
+		this.sandboxTemplates.delete(plugin.name.raw);
 
 		this.unloadWithDependents(plugin);
 
@@ -672,17 +665,17 @@ export class PluginManager {
 		});
 	}
 
-	private shouldIgnore(name: string): boolean {
+	private shouldIgnore(name: PluginName): boolean {
 		for (const p of this.options.ignoredDependencies) {
 			let ignoreMe = false;
 			if (p instanceof RegExp) {
-				ignoreMe = p.test(name);
+				ignoreMe = p.test(name.raw);
 				if (ignoreMe) {
 					return true;
 				}
 			}
 
-			ignoreMe = new RegExp(p).test(name);
+			ignoreMe = new RegExp(p).test(name.raw);
 			if (ignoreMe) {
 				return true;
 			}
@@ -693,7 +686,7 @@ export class PluginManager {
 				continue;
 			}
 
-			if (key === name) {
+			if (key === name.raw) {
 				return true;
 			}
 		}
@@ -701,18 +694,37 @@ export class PluginManager {
 		return false;
 	}
 
-	private async createPluginInfo(name: PluginName, version: PluginVersion): Promise<IPluginInfo> {
+	private async createPluginInfo(
+		name: PluginName,
+		version: PluginVersion,
+		requestedVersion: VersionRef): Promise<IPluginInfo> {
 		const location = this.getPluginLocation(name, version);
 		const packageJson = await this.readPackageJsonFromPath(location);
 
 		const mainFile = path.normalize(path.join(location, packageJson.main || DefaultMainFile));
 
-		return {
-			name: packageJson.name,
-			version: packageJson.version,
-			location,
+		const dependenciesList = packageJson.dependencies || {};
+		const dependencies = new Array<PluginDependency>();
+		for (const key in dependenciesList) {
+			if (!dependenciesList.hasOwnProperty(key)) {
+				continue;
+			}
+
+			const pName = PluginName.parse(key);
+			const pVersion = parseVersionRef(dependenciesList[key]);
+			dependencies.push({
+				name: pName,
+				versionRef: pVersion
+			});
+		}
+
+		return new PluginInfo(
 			mainFile,
-			dependencies: packageJson.dependencies || {}
-		};
+			location,
+			name,
+			version,
+			requestedVersion,
+			dependencies
+			);
 	}
 }

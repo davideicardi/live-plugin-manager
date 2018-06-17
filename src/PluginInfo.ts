@@ -1,13 +1,21 @@
 import * as SemVer from "semver";
 import { VersionRange, VersionRef, SatisfyMode } from "./VersionRef";
 
+export interface PluginDependency {
+	name: PluginName;
+	versionRef: VersionRef;
+
+	resolvedAs?: IPluginInfo;
+	resolvedMode?: "ignored" | "fromHost" | "fromPlugin";
+}
+
 export interface IPluginInfo {
 	readonly mainFile: string;
 	readonly location: string;
 	readonly name: PluginName;
 	readonly version: PluginVersion;
 	readonly requestedVersion: VersionRef;
-	readonly dependencies: Map<PluginName, VersionRef>;
+	readonly dependencies: PluginDependency[];
 	satisfies(
 		name: PluginName,
 		version?: PluginVersion | VersionRef,
@@ -92,16 +100,17 @@ export class PluginVersion {
 	}
 }
 
-export class PluginInfo {
+export class PluginInfo implements IPluginInfo {
 	constructor(
 		readonly mainFile: string,
 		readonly location: string,
 		readonly name: PluginName,
 		readonly version: PluginVersion,
 		readonly requestedVersion: VersionRef,
-		readonly dependencies: Map<PluginName, VersionRef>) {
+		readonly dependencies: PluginDependency[]) {
 	}
 
+	// TODO To test
 	satisfies(
 		name: PluginName,
 		version?: PluginVersion | VersionRef,
@@ -117,6 +126,7 @@ export class PluginInfo {
 		return this.satisfiesVersion(version, mode);
 	}
 
+	// TODO To test
 	satisfiesVersion(
 		version: PluginVersion | VersionRef,
 		mode: SatisfyMode = "satisfies"): boolean {

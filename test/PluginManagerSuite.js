@@ -14,6 +14,7 @@ const fs = require("fs-extra");
 const os = require("os");
 const semver = require("semver");
 const index_1 = require("../index");
+// TODO To test installation of different version of the same plugin
 describe("PluginManager:", function () {
     this.timeout(15000);
     this.slow(3000);

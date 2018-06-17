@@ -1,12 +1,18 @@
 import * as SemVer from "semver";
 import { VersionRef, SatisfyMode } from "./VersionRef";
+export interface PluginDependency {
+    name: PluginName;
+    versionRef: VersionRef;
+    resolvedAs?: IPluginInfo;
+    resolvedMode?: "ignored" | "fromHost" | "fromPlugin";
+}
 export interface IPluginInfo {
     readonly mainFile: string;
     readonly location: string;
     readonly name: PluginName;
     readonly version: PluginVersion;
     readonly requestedVersion: VersionRef;
-    readonly dependencies: Map<PluginName, VersionRef>;
+    readonly dependencies: PluginDependency[];
     satisfies(name: PluginName, version?: PluginVersion | VersionRef, mode?: SatisfyMode): boolean;
     satisfiesVersion(version: PluginVersion | VersionRef, mode?: SatisfyMode): boolean;
 }
@@ -27,14 +33,14 @@ export declare class PluginVersion {
     protected constructor(semver: SemVer.SemVer);
     toString(): string;
 }
-export declare class PluginInfo {
+export declare class PluginInfo implements IPluginInfo {
     readonly mainFile: string;
     readonly location: string;
     readonly name: PluginName;
     readonly version: PluginVersion;
     readonly requestedVersion: VersionRef;
-    readonly dependencies: Map<PluginName, VersionRef>;
-    constructor(mainFile: string, location: string, name: PluginName, version: PluginVersion, requestedVersion: VersionRef, dependencies: Map<PluginName, VersionRef>);
+    readonly dependencies: PluginDependency[];
+    constructor(mainFile: string, location: string, name: PluginName, version: PluginVersion, requestedVersion: VersionRef, dependencies: PluginDependency[]);
     satisfies(name: PluginName, version?: PluginVersion | VersionRef, mode?: SatisfyMode): boolean;
     satisfiesVersion(version: PluginVersion | VersionRef, mode?: SatisfyMode): boolean;
     private satisfiesVersionRange;

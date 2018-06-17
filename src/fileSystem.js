@@ -12,10 +12,29 @@ const fs = require("fs-extra");
 const path = require("path");
 var fs_extra_1 = require("fs-extra");
 exports.createWriteStream = fs_extra_1.createWriteStream;
+// TODO To test
+function pathsAreEqual(fsPath1, fsPath2) {
+    fsPath1 = path.normalize(fsPath1);
+    fsPath2 = path.normalize(fsPath2);
+    return path.basename(fsPath1) === path.basename(fsPath2)
+        && path.dirname(fsPath1) === path.dirname(fsPath2);
+}
+exports.pathsAreEqual = pathsAreEqual;
 function remove(fsPath) {
     return fs.remove(fsPath);
 }
 exports.remove = remove;
+function getDirectories(fsPath) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const dirContent = yield fs.readdir(fsPath);
+        return Promise.all(dirContent
+            .map((d) => path.join(fsPath, d))
+            .filter((fullPath) => {
+            return directoryExists(fullPath);
+        }));
+    });
+}
+exports.getDirectories = getDirectories;
 function directoryExists(fsPath) {
     return __awaiter(this, void 0, void 0, function* () {
         try {

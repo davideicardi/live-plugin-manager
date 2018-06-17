@@ -1,4 +1,3 @@
-import * as path from "path";
 import * as fs from "./fileSystem";
 import {Headers, headersBasicAuth, headersTokenAuth, httpJsonGet} from "./httpUtils";
 import * as Debug from "debug";

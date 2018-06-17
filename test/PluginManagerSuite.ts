@@ -6,6 +6,9 @@ import * as semver from "semver";
 
 import {PluginManager, IPluginInfo} from "../index";
 
+// TODO To test installation of different version of the same plugin
+
+
 describe("PluginManager:", function() {
 	this.timeout(15000);
 	this.slow(3000);

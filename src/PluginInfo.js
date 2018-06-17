@@ -78,6 +78,7 @@ class PluginInfo {
         this.requestedVersion = requestedVersion;
         this.dependencies = dependencies;
     }
+    // TODO To test
     satisfies(name, version, mode = "satisfies") {
         if (this.name.raw !== name.raw) {
             return false;
@@ -87,6 +88,7 @@ class PluginInfo {
         }
         return this.satisfiesVersion(version, mode);
     }
+    // TODO To test
     satisfiesVersion(version, mode = "satisfies") {
         if (VersionRef_1.VersionRange.is(version)) {
             return this.satisfiesVersionRange(version, mode);

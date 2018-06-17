@@ -1,6 +1,8 @@
 import * as SemVer from "semver";
 import { PluginVersion } from "./PluginInfo";
 
+// TODO To test all
+
 export type SatisfyMode = "satisfies" | "satisfiesOrGreater";
 
 export interface VersionRef {
