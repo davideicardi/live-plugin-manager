@@ -12,8 +12,10 @@ export interface PluginDependency {
 export interface IPluginInfo {
 	readonly mainFile: string;
 	readonly location: string;
-	readonly name: PluginName;
-	readonly version: PluginVersion;
+	readonly name: string;
+	readonly version: string;
+	readonly pluginName: PluginName;
+	readonly pluginVersion: PluginVersion;
 	readonly requestedVersion: VersionRef;
 	readonly dependencies: PluginDependency[];
 	satisfies(
@@ -101,13 +103,18 @@ export class PluginVersion {
 }
 
 export class PluginInfo implements IPluginInfo {
+	readonly name: string;
+	readonly version: string;
+
 	constructor(
 		readonly mainFile: string,
 		readonly location: string,
-		readonly name: PluginName,
-		readonly version: PluginVersion,
+		readonly pluginName: PluginName,
+		readonly pluginVersion: PluginVersion,
 		readonly requestedVersion: VersionRef,
 		readonly dependencies: PluginDependency[]) {
+		this.name = pluginName.toString();
+		this.version = pluginVersion.toString();
 	}
 
 	// TODO To test
@@ -115,7 +122,7 @@ export class PluginInfo implements IPluginInfo {
 		name: PluginName,
 		version?: PluginVersion | VersionRef,
 		mode: SatisfyMode = "satisfies"): boolean {
-		if (this.name.raw !== name.raw) {
+		if (this.pluginName.raw !== name.raw) {
 			return false;
 		}
 
@@ -147,12 +154,12 @@ export class PluginInfo implements IPluginInfo {
 		version: VersionRange,
 		mode: SatisfyMode = "satisfies"): boolean {
 
-		const result = SemVer.satisfies(this.version.semver, version.range);
+		const result = SemVer.satisfies(this.pluginVersion.semver, version.range);
 
 		if (result) {
 			return true;
 		} else if (mode === "satisfiesOrGreater") {
-			return SemVer.gtr(this.version.semver, version.range);
+			return SemVer.gtr(this.pluginVersion.semver, version.range);
 		} else {
 			return false;
 		}
@@ -160,12 +167,12 @@ export class PluginInfo implements IPluginInfo {
 }
 
 export function pluginCompare(a: IPluginInfo, b: IPluginInfo): number {
-	const nameCompare = a.name.raw.localeCompare(b.name.raw);
+	const nameCompare = a.pluginName.raw.localeCompare(b.pluginName.raw);
 	if (nameCompare !== 0) {
 		return nameCompare;
 	}
 
-	return SemVer.compare(a.version.semver, b.version.semver);
+	return SemVer.compare(a.pluginVersion.semver, b.pluginVersion.semver);
 }
 
 // TODO Eval to be more strict...

@@ -70,17 +70,19 @@ class PluginVersion {
 }
 exports.PluginVersion = PluginVersion;
 class PluginInfo {
-    constructor(mainFile, location, name, version, requestedVersion, dependencies) {
+    constructor(mainFile, location, pluginName, pluginVersion, requestedVersion, dependencies) {
         this.mainFile = mainFile;
         this.location = location;
-        this.name = name;
-        this.version = version;
+        this.pluginName = pluginName;
+        this.pluginVersion = pluginVersion;
         this.requestedVersion = requestedVersion;
         this.dependencies = dependencies;
+        this.name = pluginName.toString();
+        this.version = pluginVersion.toString();
     }
     // TODO To test
     satisfies(name, version, mode = "satisfies") {
-        if (this.name.raw !== name.raw) {
+        if (this.pluginName.raw !== name.raw) {
             return false;
         }
         if (!version) {
@@ -101,12 +103,12 @@ class PluginInfo {
         return version.raw === this.requestedVersion.raw;
     }
     satisfiesVersionRange(version, mode = "satisfies") {
-        const result = SemVer.satisfies(this.version.semver, version.range);
+        const result = SemVer.satisfies(this.pluginVersion.semver, version.range);
         if (result) {
             return true;
         }
         else if (mode === "satisfiesOrGreater") {
-            return SemVer.gtr(this.version.semver, version.range);
+            return SemVer.gtr(this.pluginVersion.semver, version.range);
         }
         else {
             return false;
@@ -115,11 +117,11 @@ class PluginInfo {
 }
 exports.PluginInfo = PluginInfo;
 function pluginCompare(a, b) {
-    const nameCompare = a.name.raw.localeCompare(b.name.raw);
+    const nameCompare = a.pluginName.raw.localeCompare(b.pluginName.raw);
     if (nameCompare !== 0) {
         return nameCompare;
     }
-    return SemVer.compare(a.version.semver, b.version.semver);
+    return SemVer.compare(a.pluginVersion.semver, b.pluginVersion.semver);
 }
 exports.pluginCompare = pluginCompare;
 // TODO Eval to be more strict...

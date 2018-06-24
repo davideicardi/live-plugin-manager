@@ -3,7 +3,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const vm = require("vm");
 const fs = require("fs-extra");
 const path = require("path");
+const PluginInfo_1 = require("./PluginInfo");
 const Debug = require("debug");
+const VersionRef_1 = require("./VersionRef");
 const debug = Debug("live-plugin-manager.PluginVm");
 const SCOPED_REGEX = /^(@[a-zA-Z0-9-_]+\/[a-zA-Z0-9-_]+)(.*)/;
 class PluginVm {
@@ -58,16 +60,12 @@ class PluginVm {
     }
     runScript(code) {
         const name = "dynamic-" + Date.now;
-        const filePath = path.join(this.manager.options.pluginsPath, name + ".js");
-        const pluginContext = {
-            location: path.join(this.manager.options.pluginsPath, name),
-            mainFile: filePath,
-            name,
-            version: "1.0.0",
-            dependencies: {}
-        };
+        const version = "9.9.9";
+        const location = path.join(this.manager.options.pluginsPath, name, version);
+        const mainFile = path.join(location, "ghost.js");
+        const pluginContext = new PluginInfo_1.PluginInfo(mainFile, location, PluginInfo_1.PluginName.parse(name), PluginInfo_1.PluginVersion.parse(version), VersionRef_1.parseVersionRef(version), []);
         try {
-            return this.vmRunScriptInPlugin(pluginContext, filePath, code);
+            return this.vmRunScriptInPlugin(pluginContext, mainFile, code);
         }
         finally {
             this.unload(pluginContext);
@@ -192,7 +190,7 @@ class PluginVm {
             if (isDirectory) {
                 return isDirectory;
             }
-            throw new Error(`Cannot find ${requiredName} in plugin ${pluginContext.name}`);
+            throw new Error(`Cannot find ${requiredName} in plugin ${pluginContext.pluginName}`);
         }
         if (this.isPlugin(requiredName)) {
             return requiredName;
@@ -240,7 +238,7 @@ class PluginVm {
             }
             return this.manager.options.hostRequire(requiredName);
         }
-        throw new Error(`Module ${requiredName} not found, failed to load plugin ${pluginContext.name}`);
+        throw new Error(`Module ${requiredName} not found, failed to load plugin ${pluginContext.pluginName}`);
     }
     isCoreModule(requiredName) {
         return this.manager.options.requireCoreModules
@@ -287,7 +285,7 @@ class PluginVm {
     getPluginSandbox(pluginContext) {
         let pluginSandbox = this.sandboxCache.get(pluginContext);
         if (!pluginSandbox) {
-            const srcSandboxTemplate = this.manager.getSandboxTemplate(pluginContext.name)
+            const srcSandboxTemplate = this.manager.getSandboxTemplate(pluginContext.pluginName)
                 || this.manager.options.sandbox;
             pluginSandbox = this.createGlobalSandbox(srcSandboxTemplate);
             this.sandboxCache.set(pluginContext, pluginSandbox);

@@ -1,10 +1,10 @@
 import * as vm from "vm";
 import * as fs from "fs-extra";
 import * as path from "path";
-import {PluginManager} from "./PluginManager";
-import {IPluginInfo} from "./PluginInfo";
+import {PluginManager, PluginSandbox} from "./PluginManager";
+import {IPluginInfo, PluginInfo, PluginName, PluginVersion} from "./PluginInfo";
 import * as Debug from "debug";
-import { PluginSandbox } from "../index";
+import { parseVersionRef } from "./VersionRef";
 const debug = Debug("live-plugin-manager.PluginVm");
 
 const SCOPED_REGEX = /^(@[a-zA-Z0-9-_]+\/[a-zA-Z0-9-_]+)(.*)/;
@@ -68,17 +68,20 @@ export class PluginVm {
 
 	runScript(code: string): any {
 		const name = "dynamic-" + Date.now;
-		const filePath = path.join(this.manager.options.pluginsPath, name + ".js");
-		const pluginContext: IPluginInfo = {
-			location: path.join(this.manager.options.pluginsPath, name),
-			mainFile: filePath,
-			name,
-			version: "1.0.0",
-			dependencies: {}
-		};
+		const version = "9.9.9";
+		const location = path.join(this.manager.options.pluginsPath, name, version);
+		const mainFile = path.join(location, "ghost.js");
+		const pluginContext = new PluginInfo(
+			mainFile,
+			location,
+			PluginName.parse(name),
+			PluginVersion.parse(version),
+			parseVersionRef(version),
+			[]
+		);
 
 		try {
-			return this.vmRunScriptInPlugin(pluginContext, filePath, code);
+			return this.vmRunScriptInPlugin(pluginContext, mainFile, code);
 		} finally {
 			this.unload(pluginContext);
 		}
@@ -248,7 +251,7 @@ export class PluginVm {
 				return isDirectory;
 			}
 
-			throw new Error(`Cannot find ${requiredName} in plugin ${pluginContext.name}`);
+			throw new Error(`Cannot find ${requiredName} in plugin ${pluginContext.pluginName}`);
 		}
 
 		if (this.isPlugin(requiredName)) {
@@ -308,7 +311,7 @@ export class PluginVm {
 			return this.manager.options.hostRequire(requiredName);
 		}
 
-		throw new Error(`Module ${requiredName} not found, failed to load plugin ${pluginContext.name}`);
+		throw new Error(`Module ${requiredName} not found, failed to load plugin ${pluginContext.pluginName}`);
 	}
 
 	private isCoreModule(requiredName: string): boolean {
@@ -371,7 +374,7 @@ export class PluginVm {
 	private getPluginSandbox(pluginContext: IPluginInfo): NodeJS.Global {
 		let pluginSandbox = this.sandboxCache.get(pluginContext);
 		if (!pluginSandbox) {
-			const srcSandboxTemplate = this.manager.getSandboxTemplate(pluginContext.name)
+			const srcSandboxTemplate = this.manager.getSandboxTemplate(pluginContext.pluginName)
 			|| this.manager.options.sandbox;
 
 			pluginSandbox = this.createGlobalSandbox(srcSandboxTemplate);

@@ -145,8 +145,23 @@ describe("PluginManager:", function() {
 		});
 
 		describe("from npm", function() {
+
 			it("installing from a not valid npm url", async function() {
 				manager = new PluginManager({
+					npmRegistryUrl: "http://www.davideicardi.com/some-not-existing-registry/"
+				});
+				try {
+					await manager.installFromNpm("moment");
+				} catch (e) {
+					return;
+				}
+
+				throw new Error("Expected to throw");
+			});
+
+			it("installing from a not valid npm url (with a redirect)", async function() {
+				manager = new PluginManager({
+					// NOTE: I assume that davideicardi.com redirect to www.davideicardi.com
 					npmRegistryUrl: "http://davideicardi.com/some-not-existing-registry/"
 				});
 				try {
@@ -445,27 +460,6 @@ describe("PluginManager:", function() {
 			assert.isUndefined(manager.alreadyInstalled("moment", "3.0.0"));
 			assert.isUndefined(manager.alreadyInstalled("moment", "=3.0.0"));
 			assert.isUndefined(manager.alreadyInstalled("moment", "^3.0.0"));
-		});
-
-		it("alreadyInstalled function should support greater mode (for dependencies)", function() {
-			assert.isDefined(manager.alreadyInstalled("moment", undefined, "satisfiesOrGreater"));
-			assert.isDefined(manager.alreadyInstalled("moment", "2.18.1", "satisfiesOrGreater"));
-			assert.isDefined(manager.alreadyInstalled("moment", "v2.18.1", "satisfiesOrGreater"));
-			assert.isDefined(manager.alreadyInstalled("moment", "=2.18.1", "satisfiesOrGreater"));
-			assert.isDefined(manager.alreadyInstalled("moment", ">=2.18.1", "satisfiesOrGreater"));
-			assert.isDefined(manager.alreadyInstalled("moment", "^2.18.1", "satisfiesOrGreater"));
-			assert.isDefined(manager.alreadyInstalled("moment", "^2.0.0", "satisfiesOrGreater"));
-			assert.isDefined(manager.alreadyInstalled("moment", ">=1.0.0", "satisfiesOrGreater"));
-
-			// this is considered installed with this mode
-			assert.isDefined(manager.alreadyInstalled("moment", "2.17.0", "satisfiesOrGreater"));
-			assert.isDefined(manager.alreadyInstalled("moment", "1.17.0", "satisfiesOrGreater"));
-			assert.isDefined(manager.alreadyInstalled("moment", "^1.17.0", "satisfiesOrGreater"));
-
-			assert.isUndefined(manager.alreadyInstalled("moment", "2.19.0", "satisfiesOrGreater"));
-			assert.isUndefined(manager.alreadyInstalled("moment", "3.0.0", "satisfiesOrGreater"));
-			assert.isUndefined(manager.alreadyInstalled("moment", "=3.0.0", "satisfiesOrGreater"));
-			assert.isUndefined(manager.alreadyInstalled("moment", "^3.0.0", "satisfiesOrGreater"));
 		});
 
 		it("should be available", async function() {

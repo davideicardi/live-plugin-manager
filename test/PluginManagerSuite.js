@@ -146,6 +146,21 @@ describe("PluginManager:", function () {
             it("installing from a not valid npm url", function () {
                 return __awaiter(this, void 0, void 0, function* () {
                     manager = new index_1.PluginManager({
+                        npmRegistryUrl: "http://www.davideicardi.com/some-not-existing-registry/"
+                    });
+                    try {
+                        yield manager.installFromNpm("moment");
+                    }
+                    catch (e) {
+                        return;
+                    }
+                    throw new Error("Expected to throw");
+                });
+            });
+            it("installing from a not valid npm url (with a redirect)", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    manager = new index_1.PluginManager({
+                        // NOTE: I assume that davideicardi.com redirect to www.davideicardi.com
                         npmRegistryUrl: "http://davideicardi.com/some-not-existing-registry/"
                     });
                     try {
@@ -434,24 +449,6 @@ describe("PluginManager:", function () {
             chai_1.assert.isUndefined(manager.alreadyInstalled("moment", "3.0.0"));
             chai_1.assert.isUndefined(manager.alreadyInstalled("moment", "=3.0.0"));
             chai_1.assert.isUndefined(manager.alreadyInstalled("moment", "^3.0.0"));
-        });
-        it("alreadyInstalled function should support greater mode (for dependencies)", function () {
-            chai_1.assert.isDefined(manager.alreadyInstalled("moment", undefined, "satisfiesOrGreater"));
-            chai_1.assert.isDefined(manager.alreadyInstalled("moment", "2.18.1", "satisfiesOrGreater"));
-            chai_1.assert.isDefined(manager.alreadyInstalled("moment", "v2.18.1", "satisfiesOrGreater"));
-            chai_1.assert.isDefined(manager.alreadyInstalled("moment", "=2.18.1", "satisfiesOrGreater"));
-            chai_1.assert.isDefined(manager.alreadyInstalled("moment", ">=2.18.1", "satisfiesOrGreater"));
-            chai_1.assert.isDefined(manager.alreadyInstalled("moment", "^2.18.1", "satisfiesOrGreater"));
-            chai_1.assert.isDefined(manager.alreadyInstalled("moment", "^2.0.0", "satisfiesOrGreater"));
-            chai_1.assert.isDefined(manager.alreadyInstalled("moment", ">=1.0.0", "satisfiesOrGreater"));
-            // this is considered installed with this mode
-            chai_1.assert.isDefined(manager.alreadyInstalled("moment", "2.17.0", "satisfiesOrGreater"));
-            chai_1.assert.isDefined(manager.alreadyInstalled("moment", "1.17.0", "satisfiesOrGreater"));
-            chai_1.assert.isDefined(manager.alreadyInstalled("moment", "^1.17.0", "satisfiesOrGreater"));
-            chai_1.assert.isUndefined(manager.alreadyInstalled("moment", "2.19.0", "satisfiesOrGreater"));
-            chai_1.assert.isUndefined(manager.alreadyInstalled("moment", "3.0.0", "satisfiesOrGreater"));
-            chai_1.assert.isUndefined(manager.alreadyInstalled("moment", "=3.0.0", "satisfiesOrGreater"));
-            chai_1.assert.isUndefined(manager.alreadyInstalled("moment", "^3.0.0", "satisfiesOrGreater"));
         });
         it("should be available", function () {
             return __awaiter(this, void 0, void 0, function* () {
