@@ -6,9 +6,17 @@
     "allowSyntheticDefaultImports": true,
     "strict": true,
     "noUnusedLocals": true,
-
     "sourceMap": true,
-    "declaration": true
+    "declaration": true,
+    "types": [
+      "debug",
+      "fs-extra",
+      "lockfile",
+      "semver",
+      "tar",
+      "url-join",
+      "node-fetch"
+    ]
   },
   "exclude": [
     "samples/plugins",

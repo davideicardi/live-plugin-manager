@@ -186,7 +186,6 @@ export class PluginVm {
 			}
 		);
 
-		//@ts-ignore
 		const moduleRequire: NodeRequire = Object.assign(
 			(requiredName: string) => {
 				if (debug.enabled) {
