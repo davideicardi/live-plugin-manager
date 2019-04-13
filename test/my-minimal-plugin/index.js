@@ -1,2 +1,0 @@
-
-exports.myVariable = "value1";

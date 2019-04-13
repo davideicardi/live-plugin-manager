@@ -4,7 +4,7 @@ import * as path from "path";
 import {PluginManager} from "./PluginManager";
 import {IPluginInfo} from "./PluginInfo";
 import * as Debug from "debug";
-import { PluginSandbox } from "../index";
+import { PluginSandbox } from "./index";
 const debug = Debug("live-plugin-manager.PluginVm");
 
 const SCOPED_REGEX = /^(@[a-zA-Z0-9-_]+\/[a-zA-Z0-9-_]+)(.*)/;

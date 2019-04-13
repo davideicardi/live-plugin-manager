@@ -8,19 +8,24 @@
     "noUnusedLocals": true,
     "sourceMap": true,
     "declaration": true,
+    "rootDir": "src",
+    "outDir": "lib",
     "types": [
+      "chai",
       "debug",
       "fs-extra",
       "lockfile",
+      "mocha",
+      "node",
+      "node-fetch",
       "semver",
       "tar",
-      "url-join",
-      "node-fetch"
+      "url-join"
     ]
   },
   "exclude": [
-    "samples/plugins",
-    "test/plugins",
+    "samples",
+    "test",
     "node_modules",
     "plugin_packages",
     "**/*.d.ts"

@@ -1,6 +1,6 @@
 // tslint:disable:no-console
 
-import {PluginManager} from "../index";
+import {PluginManager} from "../src/index";
 
 const manager = new PluginManager();
 
