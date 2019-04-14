@@ -9,19 +9,7 @@
     "sourceMap": true,
     "declaration": true,
     "rootDir": "src",
-    "outDir": "lib",
-    "types": [
-      "chai",
-      "debug",
-      "fs-extra",
-      "lockfile",
-      "mocha",
-      "node",
-      "node-fetch",
-      "semver",
-      "tar",
-      "url-join"
-    ]
+    "outDir": "lib"
   },
   "exclude": [
     "samples",

@@ -1,4 +1,4 @@
-import urlJoin from "url-join";
+import * as urlJoin from "url-join";
 import * as path from "path";
 import * as fs from "./fileSystem";
 import { downloadTarball, extractTarball } from "./tarballUtils";
