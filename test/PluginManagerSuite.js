@@ -866,9 +866,10 @@ describe("PluginManager:", function () {
                     // this package contains "debug" at version 2 (different from the host)
                     const pluginSourcePath = path.join(__dirname, "my-plugin-with-diff-dep");
                     yield manager.installFromPath(pluginSourcePath);
-                    chai_1.assert.equal(manager.list().length, 2);
-                    chai_1.assert.equal(manager.list()[0].name, "debug");
-                    chai_1.assert.equal(manager.list()[1].name, "my-plugin-with-diff-dep");
+                    chai_1.assert.equal(manager.list().length, 3);
+                    chai_1.assert.equal(manager.list()[0].name, "ms"); // this is a dependency of debug
+                    chai_1.assert.equal(manager.list()[1].name, "debug");
+                    chai_1.assert.equal(manager.list()[2].name, "my-plugin-with-diff-dep");
                 });
             });
             it("dependencies are available", function () {
@@ -887,7 +888,7 @@ describe("PluginManager:", function () {
                     // tslint:disable-next-line:no-submodule-imports
                     const hostDebugInstance = require("debug/package.json");
                     chai_1.assert.equal(pluginDebugInstance.version, "2.6.9");
-                    chai_1.assert.equal(hostDebugInstance.version.substring(0, 1), "3");
+                    chai_1.assert.equal(hostDebugInstance.version.substring(0, 1), "4");
                     chai_1.assert.notEqual(pluginDebugInstance.version, hostDebugInstance.version); // I expect to be different (v2 vs v3)
                 });
             });
@@ -1280,6 +1281,6 @@ function sleep(ms) {
 }
 process.on("unhandledRejection", (reason, p) => {
     // tslint:disable-next-line:no-console
-    console.log("Unhandled Rejection at: Promise", p, "reason:", reason.stack);
+    console.log("Unhandled Rejection at: Promise", p, "reason:", (reason && reason.stack));
 });
 //# sourceMappingURL=PluginManagerSuite.js.map

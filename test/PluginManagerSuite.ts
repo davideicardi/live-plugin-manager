@@ -902,9 +902,10 @@ describe("PluginManager:", function() {
 				const pluginSourcePath = path.join(__dirname, "my-plugin-with-diff-dep");
 				await manager.installFromPath(pluginSourcePath);
 
-				assert.equal(manager.list().length, 2);
-				assert.equal(manager.list()[0].name, "debug");
-				assert.equal(manager.list()[1].name, "my-plugin-with-diff-dep");
+				assert.equal(manager.list().length, 3);
+				assert.equal(manager.list()[0].name, "ms"); // this is a dependency of debug
+				assert.equal(manager.list()[1].name, "debug");
+				assert.equal(manager.list()[2].name, "my-plugin-with-diff-dep");
 			});
 
 			it("dependencies are available", async function() {
@@ -925,7 +926,7 @@ describe("PluginManager:", function() {
 				const hostDebugInstance = require("debug/package.json");
 
 				assert.equal(pluginDebugInstance.version, "2.6.9");
-				assert.equal(hostDebugInstance.version.substring(0, 1), "3");
+				assert.equal(hostDebugInstance.version.substring(0, 1), "4");
 
 				assert.notEqual(pluginDebugInstance.version, hostDebugInstance.version); // I expect to be different (v2 vs v3)
 			});
@@ -1352,7 +1353,7 @@ function sleep(ms: number) {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-process.on("unhandledRejection", (reason, p) => {
+process.on("unhandledRejection", (reason: any, p) => {
 	// tslint:disable-next-line:no-console
-	console.log("Unhandled Rejection at: Promise", p, "reason:", reason.stack);
+	console.log("Unhandled Rejection at: Promise", p, "reason:", (reason && reason.stack));
 });
