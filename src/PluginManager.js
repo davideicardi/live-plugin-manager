@@ -316,7 +316,7 @@ class PluginManager {
         return __awaiter(this, void 0, void 0, function* () {
             const registryInfo = yield this.githubRegistry.get(repository);
             if (!this.isValidPluginName(registryInfo.name)) {
-                throw new Error(`Invalid plugin name '${name}'`);
+                throw new Error(`Invalid plugin name '${registryInfo.name}'`);
             }
             // already installed satisfied version
             const installedInfo = this.alreadyInstalled(registryInfo.name, registryInfo.version);

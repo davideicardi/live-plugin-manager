@@ -378,7 +378,7 @@ export class PluginManager {
 		const registryInfo = await this.githubRegistry.get(repository);
 
 		if (!this.isValidPluginName(registryInfo.name)) {
-			throw new Error(`Invalid plugin name '${name}'`);
+			throw new Error(`Invalid plugin name '${registryInfo.name}'`);
 		}
 
 		// already installed satisfied version
