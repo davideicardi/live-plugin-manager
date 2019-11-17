@@ -192,6 +192,19 @@ class PluginVm {
             if (isDirectory) {
                 return isDirectory;
             }
+            // check relative path to main entry point if plugin root fails
+			const subDirPath = path.resolve(path.dirname(pluginContext.mainFile), requiredName);
+			if (!subDirPath.startsWith(pluginContext.location)) {
+			    throw new Error("Cannot require a module outside a plugin");
+			}
+			const subDirFile = this.tryResolveAsFile(subDirPath);
+			if (subDirFile) {
+			    return subDirFile;
+			}
+			const isSubdirectory = this.tryResolveAsDirectory(subDirPath);
+			if (isSubdirectory) {
+			    return isSubdirectory;
+			}
             throw new Error(`Cannot find ${requiredName} in plugin ${pluginContext.name}`);
         }
         if (this.isPlugin(requiredName)) {
