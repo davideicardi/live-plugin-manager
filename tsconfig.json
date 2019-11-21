@@ -1,22 +1,22 @@
 {
-    "compilerOptions": {
-        "module": "commonjs",
-        "target": "es2015",
-        "moduleResolution": "node",
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "es2015",
+    "moduleResolution": "node",
 
-        "strict": true,
-        "noUnusedLocals": true,
+    "strict": true,
+    "noUnusedLocals": true,
 
-        "sourceMap": true,
-        "declaration": true,
+    "sourceMap": true,
+    "declaration": true,
 
-        "esModuleInterop": true
-    },
-    "exclude": [
-        "samples/plugins",
-        "test/plugins",
-        "node_modules",
-        "plugin_packages",
-        "**/*.d.ts"
-    ]
+    "esModuleInterop": true
+  },
+  "exclude": [
+    "samples/plugins",
+    "test/plugins",
+    "node_modules",
+    "plugin_packages",
+    "**/*.d.ts"
+  ]
 }
