@@ -7,12 +7,19 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
+    result["default"] = mod;
+    return result;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const chai_1 = require("chai"); // tslint:disable-line:no-implicit-dependencies
-const path = require("path");
-const fs = require("fs-extra");
-const os = require("os");
-const semver = require("semver");
+const path = __importStar(require("path"));
+const fs = __importStar(require("fs-extra"));
+const os = __importStar(require("os"));
+const semver = __importStar(require("semver"));
 const index_1 = require("../index");
 describe("PluginManager:", function () {
     this.timeout(15000);

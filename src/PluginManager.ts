@@ -5,7 +5,7 @@ import {PluginVm} from "./PluginVm";
 import {IPluginInfo} from "./PluginInfo";
 import * as lockFile from "lockfile";
 import * as semver from "semver";
-import * as Debug from "debug";
+import Debug from "debug";
 import { GithubRegistryClient, GithubAuth } from "./GithubRegistryClient";
 import { PackageJsonInfo, PackageInfo } from "./PackageInfo";
 const debug = Debug("live-plugin-manager");

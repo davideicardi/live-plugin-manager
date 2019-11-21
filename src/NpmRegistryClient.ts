@@ -5,7 +5,7 @@ import { downloadTarball, extractTarball } from "./tarballUtils";
 import * as semVer from "semver";
 import * as httpUtils from "./httpUtils";
 import { PackageInfo } from "./PackageInfo";
-import * as Debug from "debug";
+import Debug from "debug";
 const debug = Debug("live-plugin-manager.NpmRegistryClient");
 
 export class NpmRegistryClient {
