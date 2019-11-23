@@ -1,10 +1,20 @@
 "use strict";
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
+    result["default"] = mod;
+    return result;
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-const vm = require("vm");
-const fs = require("fs-extra");
-const path = require("path");
-const Debug = require("debug");
-const debug = Debug("live-plugin-manager.PluginVm");
+const vm = __importStar(require("vm"));
+const fs = __importStar(require("fs-extra"));
+const path = __importStar(require("path"));
+const debug_1 = __importDefault(require("debug"));
+const debug = debug_1.default("live-plugin-manager.PluginVm");
 const SCOPED_REGEX = /^(@[a-zA-Z0-9-_]+\/[a-zA-Z0-9-_]+)(.*)/;
 class PluginVm {
     constructor(manager) {

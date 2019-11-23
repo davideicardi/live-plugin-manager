@@ -3,7 +3,7 @@ import * as fs from "fs-extra";
 import * as path from "path";
 import {PluginManager} from "./PluginManager";
 import {IPluginInfo} from "./PluginInfo";
-import * as Debug from "debug";
+import Debug from "debug";
 import { PluginSandbox } from "../index";
 const debug = Debug("live-plugin-manager.PluginVm");
 

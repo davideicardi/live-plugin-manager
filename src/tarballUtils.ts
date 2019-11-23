@@ -2,7 +2,7 @@ import * as os from "os";
 import * as path from "path";
 import * as fs from "./fileSystem";
 import * as tar from "tar";
-import * as Debug from "debug";
+import Debug from "debug";
 import * as httpUtils from "./httpUtils";
 const debug = Debug("live-plugin-manager.TarballUtils");
 
