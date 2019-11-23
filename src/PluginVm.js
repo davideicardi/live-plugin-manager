@@ -182,7 +182,7 @@ class PluginVm {
         };
         // assign missing https://nodejs.org/api/globals.html
         //  and other "not real global" objects
-        const moduleSandbox = Object.assign({}, pluginSandbox, { module: myModule, __dirname: moduleDirname, __filename: filePath, require: moduleRequire });
+        const moduleSandbox = Object.assign(Object.assign({}, pluginSandbox), { module: myModule, __dirname: moduleDirname, __filename: filePath, require: moduleRequire });
         return moduleSandbox;
     }
     sandboxResolve(pluginContext, moduleDirName, requiredName) {
@@ -307,7 +307,11 @@ class PluginVm {
     createGlobalSandbox(sandboxTemplate) {
         const srcGlobal = sandboxTemplate.global || global;
         const srcEnv = sandboxTemplate.env || global.process.env;
-        const sandbox = Object.assign({}, srcGlobal, { process: Object.create(srcGlobal.process) });
+        const sandbox = Object.assign(Object.assign({}, srcGlobal), { 
+            // https://stackoverflow.com/questions/59009214/some-properties-of-the-global-instance-are-not-copied-by-spread-operator-or-by-o
+            Array: srcGlobal.Array, ArrayBuffer: srcGlobal.ArrayBuffer, Boolean: srcGlobal.Boolean, Buffer: srcGlobal.Buffer, DataView: srcGlobal.DataView, Date: srcGlobal.Date, Error: srcGlobal.Error, EvalError: srcGlobal.EvalError, Float32Array: srcGlobal.Float32Array, Float64Array: srcGlobal.Float64Array, Function: srcGlobal.Function, Infinity: srcGlobal.Infinity, Int16Array: srcGlobal.Int16Array, Int32Array: srcGlobal.Int32Array, Int8Array: srcGlobal.Int8Array, Intl: srcGlobal.Intl, JSON: srcGlobal.JSON, Map: srcGlobal.Map, Math: srcGlobal.Math, NaN: srcGlobal.NaN, Number: srcGlobal.Number, Object: srcGlobal.Object, Promise: srcGlobal.Promise, RangeError: srcGlobal.RangeError, ReferenceError: srcGlobal.ReferenceError, RegExp: srcGlobal.RegExp, Set: srcGlobal.Set, String: srcGlobal.String, Symbol: srcGlobal.Symbol, SyntaxError: srcGlobal.SyntaxError, TypeError: srcGlobal.TypeError, URIError: srcGlobal.URIError, Uint16Array: srcGlobal.Uint16Array, Uint32Array: srcGlobal.Uint32Array, Uint8Array: srcGlobal.Uint8Array, Uint8ClampedArray: srcGlobal.Uint8ClampedArray, WeakMap: srcGlobal.WeakMap, WeakSet: srcGlobal.WeakSet, 
+            // create a new instance, but if process is undefined just use null, because undefined is not permitted
+            process: Object.create(srcGlobal.process || null) });
         // override the global obj to "unlink" it from the original global obj
         //  and make it unique for each sandbox
         sandbox.global = sandbox;

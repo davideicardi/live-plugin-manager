@@ -1,6 +1,3 @@
-
-
-
 exports.myGlobals = {
   __dirname,
   __filename,

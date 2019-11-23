@@ -1,9 +1,10 @@
 "use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
         function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
@@ -30,10 +31,10 @@ class GithubRegistryClient {
             debug(`Authenticating github api with ${auth.type}...`);
             switch (auth.type) {
                 case "token":
-                    this.headers = Object.assign({}, httpUtils_1.headersTokenAuth(auth.token), { "user-agent": "live-plugin-manager" });
+                    this.headers = Object.assign(Object.assign({}, httpUtils_1.headersTokenAuth(auth.token)), { "user-agent": "live-plugin-manager" });
                     break;
                 case "basic":
-                    this.headers = Object.assign({}, httpUtils_1.headersBasicAuth(auth.username, auth.password), { "user-agent": "live-plugin-manager" });
+                    this.headers = Object.assign(Object.assign({}, httpUtils_1.headersBasicAuth(auth.username, auth.password)), { "user-agent": "live-plugin-manager" });
                     break;
                 default:
                     throw new Error("Auth type not supported");
@@ -48,7 +49,7 @@ class GithubRegistryClient {
             const repoInfo = extractRepositoryInfo(repository);
             debug("Repository info: ", repoInfo);
             const urlPkg = `https://raw.githubusercontent.com/${repoInfo.owner}/${repoInfo.repo}/${repoInfo.ref}/package.json`;
-            const pkgContent = yield httpUtils_1.httpJsonGet(urlPkg, Object.assign({}, this.headers, { accept: "application/vnd.github.v3+json" }));
+            const pkgContent = yield httpUtils_1.httpJsonGet(urlPkg, Object.assign(Object.assign({}, this.headers), { accept: "application/vnd.github.v3+json" }));
             if (!pkgContent || !pkgContent.name || !pkgContent.version) {
                 throw new Error("Invalid plugin github repository " + repository);
             }

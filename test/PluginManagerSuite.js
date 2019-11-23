@@ -1,9 +1,10 @@
 "use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
         function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
@@ -801,7 +802,7 @@ describe("PluginManager:", function () {
                         manager.require("my-plugin-with-dep");
                     }
                     catch (err) {
-                        chai_1.assert.equal(err.message, "Cannot find module 'moment'");
+                        chai_1.assert.isTrue(err.message.includes("Cannot find module 'moment'"));
                         return;
                     }
                     throw new Error("Expected to fail");
@@ -1170,14 +1171,14 @@ describe("PluginManager:", function () {
                 chai_1.assert.equal(result, "myCustomGlobalVar1");
             });
             it("globals can be overwritten from host", function () {
-                manager.options.sandbox.global = Object.assign({}, global, { myCustomGlobalVar: "myCustomGlobalVar2" });
+                manager.options.sandbox.global = Object.assign(Object.assign({}, global), { myCustomGlobalVar: "myCustomGlobalVar2" });
                 const code = `module.exports = myCustomGlobalVar`;
                 const result = manager.runScript(code);
                 chai_1.assert.equal(result, "myCustomGlobalVar2");
             });
             it("overwritten globals not affect host, is isolated", function () {
                 chai_1.assert.isUndefined(global.SOME_OTHER_KEY, "Initially host should not have it");
-                manager.options.sandbox.global = Object.assign({}, global, { SOME_OTHER_KEY: "test1" });
+                manager.options.sandbox.global = Object.assign(Object.assign({}, global), { SOME_OTHER_KEY: "test1" });
                 const code = `module.exports = SOME_OTHER_KEY;`;
                 const result = manager.runScript(code);
                 chai_1.assert.equal(result, "test1");

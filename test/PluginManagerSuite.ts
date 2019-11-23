@@ -822,7 +822,7 @@ describe("PluginManager:", function() {
 				try {
 					manager.require("my-plugin-with-dep");
 				} catch (err) {
-					assert.equal(err.message, "Cannot find module 'moment'");
+					assert.isTrue(err.message.includes("Cannot find module 'moment'"));
 					return;
 				}
 				throw new Error("Expected to fail");
