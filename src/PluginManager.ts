@@ -13,6 +13,8 @@ const debug = Debug("live-plugin-manager");
 const BASE_NPM_URL = "https://registry.npmjs.org";
 const DefaultMainFile = "index.js";
 
+type IgnoreDependency = string | RegExp
+
 export interface PluginManagerOptions {
 	cwd: string;
 	pluginsPath: string;
@@ -22,7 +24,7 @@ export interface PluginManagerOptions {
 	npmInstallMode: "useCache" | "noCache";
 	requireCoreModules: boolean;
 	hostRequire?: NodeRequire;
-	ignoredDependencies: Array<string | RegExp>;
+	ignoredDependencies: IgnoreDependency[];
 	staticDependencies: { [key: string]: any; };
 	githubAuthentication?: GithubAuth;
 	lockWait: number;

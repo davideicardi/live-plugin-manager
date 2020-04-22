@@ -4,6 +4,7 @@ import { NpmRegistryConfig } from "./NpmRegistryClient";
 import { IPluginInfo } from "./PluginInfo";
 import { GithubAuth } from "./GithubRegistryClient";
 import { PackageInfo } from "./PackageInfo";
+declare type IgnoreDependency = string | RegExp;
 export interface PluginManagerOptions {
     cwd: string;
     pluginsPath: string;
@@ -13,7 +14,7 @@ export interface PluginManagerOptions {
     npmInstallMode: "useCache" | "noCache";
     requireCoreModules: boolean;
     hostRequire?: NodeRequire;
-    ignoredDependencies: Array<string | RegExp>;
+    ignoredDependencies: IgnoreDependency[];
     staticDependencies: {
         [key: string]: any;
     };
@@ -98,3 +99,4 @@ export declare class PluginManager {
     private shouldIgnore;
     private createPluginInfo;
 }
+export {};

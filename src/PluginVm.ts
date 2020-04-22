@@ -197,7 +197,7 @@ export class PluginVm {
 				resolve: moduleResolve,
 				cache: {}, // TODO This should be correctly populated
 				// tslint:disable-next-line:no-object-literal-type-assertion
-				extensions: {} as NodeExtensions, // Deprecated
+				extensions: {} as NodeJS.RequireExtensions,
 				main: require.main // TODO assign the real main or consider main the current module (ie. module)?
 			}
 		);
@@ -427,7 +427,7 @@ export class PluginVm {
 			Uint8ClampedArray: srcGlobal.Uint8ClampedArray,
 			WeakMap: srcGlobal.WeakMap,
 			WeakSet: srcGlobal.WeakSet,
-	
+
 			// create a new instance, but if process is undefined just use null, because undefined is not permitted
 			process: Object.create(srcGlobal.process || null)
 		};
