@@ -32,24 +32,28 @@ There are some **known limitations**, see section at the end.
 
 ## Installation
 
-    npm install live-plugin-manager
+```
+npm install live-plugin-manager
+```
 
 ## Usage
 
-    import {PluginManager} from "live-plugin-manager";
+```js
+import {PluginManager} from "live-plugin-manager";
 
-    const manager = new PluginManager();
+const manager = new PluginManager();
 
-    async function run() {
-      await manager.install("moment");
+async function run() {
+  await manager.install("moment");
 
-      const moment = manager.require("moment");
-      console.log(moment().format());
+  const moment = manager.require("moment");
+  console.log(moment().format());
 
-      await manager.uninstall("moment");
-    }
+  await manager.uninstall("moment");
+}
 
-    run();
+run();  
+```
 
 In the above code I install `moment` package at runtime, load and execute it.
 
@@ -59,24 +63,27 @@ Each time your applicaition start you should reinstall any packages that you nee
 
 Here another more complex scenario where I install `express` with all it's dependencies, just to demostrate how many possibilities you can have:
 
-    import {PluginManager} from "live-plugin-manager";
+```js
 
-    const manager = new PluginManager();
+import {PluginManager} from "live-plugin-manager";
 
-    async function run() {
-      await manager.install("express");
-      const express = manager.require("express");
+const manager = new PluginManager();
 
-      const app = express();
-      app.get("/", function(req: any, res: any) {
-        res.send("Hello World!");
-      });
+async function run() {
+  await manager.install("express");
+  const express = manager.require("express");
 
-      const server = app.listen(3000, function() {
-      });
-    }
+  const app = express();
+  app.get("/", function(req: any, res: any) {
+    res.send("Hello World!");
+  });
 
-    run();
+  const server = app.listen(3000, function() {
+  });
+}
+
+run();
+```
 
 
 ## Load plugins
@@ -128,14 +135,16 @@ By default is the package is already available in the download folder then and v
 
 To setup authentication for private npm registry use:
 
-    const manager = new PluginManager({
-      npmRegistryUrl: "http://your-private-registry",
-      npmRegistryConfig: {
-        auth: {
-          token: "your-token"
-        }
-      }
-    });
+```js
+const manager = new PluginManager({
+  npmRegistryUrl: "http://your-private-registry",
+  npmRegistryConfig: {
+    auth: {
+      token: "your-token"
+    }
+  }
+});
+```
 
 
 ### pluginManager.installFromGithub(repository: string): Promise\<IPluginInfo\>
@@ -145,13 +154,15 @@ Dependencies are automatically installed (devDependencies are ignored).
 
 Note: Github has an API rate limit of 60 calls if not authenticated. To authenticate calls just set the `githubAuthentication` property in the options:
 
-    manager = new PluginManager({
-      githubAuthentication: {
-        "type": "basic",
-        "username": "YOUR_USER",
-        "password": "YOUR_PERSONAL_TOKEN"
-      }
-    });
+```js
+manager = new PluginManager({
+  githubAuthentication: {
+    "type": "basic",
+    "username": "YOUR_USER",
+    "password": "YOUR_PERSONAL_TOKEN"
+  }
+});
+```
 
 See [Github api authentication](https://github.com/octokit/node-github#authentication) for more info.
 
@@ -244,7 +255,9 @@ You can configure `lockWait` inside constructor to configure lock timeout, and `
 Remember to git ignore the directory where packages are installed, see `pluginsPath`.
 Usually you should add this to your `.gitignore` file:
 
-    plugin_packages
+```
+plugin_packages
+```
 
 ## Known limitations
 
