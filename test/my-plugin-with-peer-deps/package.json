@@ -1,0 +1,17 @@
+{
+  "name": "my-plugin-with-peer-deps",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "moment": "2.21.0"
+  },
+  "peerDependencies": {
+    "validator": "13.0.0"
+  }
+}

@@ -44,6 +44,7 @@ const DefaultOptions = {
     staticDependencies: {},
     lockWait: 120000,
     lockStale: 180000,
+    includePeerDependencies: false
 };
 const NPM_LATEST_TAG = "latest";
 class PluginManager {
@@ -622,14 +623,25 @@ class PluginManager {
             const location = this.getPluginLocation(name);
             const packageJson = yield this.readPackageJsonFromPath(location);
             const mainFile = path.normalize(path.join(location, packageJson.main || DefaultMainFile));
+            const adjustedDependencies = this.getPackageDependencies(packageJson);
             return {
                 name: packageJson.name,
                 version: packageJson.version,
                 location,
                 mainFile,
-                dependencies: packageJson.dependencies || {}
+                dependencies: adjustedDependencies
             };
         });
+    }
+    getPackageDependencies(packageJson) {
+        let dependencies;
+        if (this.options.includePeerDependencies) {
+            dependencies = Object.assign((packageJson.dependencies || {}), (packageJson.peerDependencies || {}));
+        }
+        else {
+            dependencies = packageJson.dependencies || {};
+        }
+        return dependencies;
     }
 }
 exports.PluginManager = PluginManager;

@@ -780,6 +780,21 @@ describe("PluginManager:", function () {
                 });
             });
         });
+        describe("With includePeerDependencies ", function () {
+            beforeEach(function () {
+                manager.options.includePeerDependencies = true;
+            });
+            it("dependencies are installed", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    const pluginSourcePath = path.join(__dirname, "my-plugin-with-peer-deps");
+                    yield manager.installFromPath(pluginSourcePath);
+                    chai_1.assert.equal(manager.list().length, 3);
+                    chai_1.assert.equal(manager.list()[0].name, "moment");
+                    chai_1.assert.equal(manager.list()[1].name, "validator");
+                    chai_1.assert.equal(manager.list()[2].name, "my-plugin-with-peer-deps");
+                });
+            });
+        });
         describe("Given some ignored dependencies", function () {
             beforeEach(function () {
                 manager.options.ignoredDependencies = [/^@types\//, "moment"];

@@ -1,6 +1,9 @@
+export type PackageDependencyList = { [name: string]: string };
+
 export interface PackageJsonInfo extends PackageInfo {
 	main?: string;
-	dependencies?: { [name: string]: string };
+	dependencies?: PackageDependencyList;
+	peerDependencies?: PackageDependencyList;
 }
 
 export interface PackageInfo {

@@ -6,8 +6,9 @@ import {IPluginInfo} from "./PluginInfo";
 import * as lockFile from "lockfile";
 import * as semver from "semver";
 import Debug from "debug";
-import { GithubRegistryClient, GithubAuth } from "./GithubRegistryClient";
-import { PackageJsonInfo, PackageInfo } from "./PackageInfo";
+import {GithubAuth, GithubRegistryClient} from "./GithubRegistryClient";
+import {PackageDependencyList, PackageInfo, PackageJsonInfo} from "./PackageInfo";
+
 const debug = Debug("live-plugin-manager");
 
 const BASE_NPM_URL = "https://registry.npmjs.org";
@@ -29,6 +30,7 @@ export interface PluginManagerOptions {
 	githubAuthentication?: GithubAuth;
 	lockWait: number;
 	lockStale: number;
+	includePeerDependencies: boolean;
 }
 
 export interface PluginSandbox {
@@ -50,6 +52,7 @@ const DefaultOptions: PluginManagerOptions = {
 	staticDependencies: {},
 	lockWait: 120000,
 	lockStale: 180000,
+	includePeerDependencies: false
 };
 
 const NPM_LATEST_TAG = "latest";
@@ -728,12 +731,23 @@ export class PluginManager {
 
 		const mainFile = path.normalize(path.join(location, packageJson.main || DefaultMainFile));
 
+		const adjustedDependencies = this.getPackageDependencies(packageJson);
+
 		return {
 			name: packageJson.name,
 			version: packageJson.version,
 			location,
 			mainFile,
-			dependencies: packageJson.dependencies || {}
+			dependencies: adjustedDependencies
 		};
+	}
+
+	private getPackageDependencies(packageJson: PackageJsonInfo): PackageDependencyList {
+		const dependencies = packageJson.dependencies || {};
+		if (this.options.includePeerDependencies) {
+			const peerDependencies = packageJson.peerDependencies || {};
+			return {...dependencies, ...peerDependencies};
+		}
+		return dependencies;
 	}
 }

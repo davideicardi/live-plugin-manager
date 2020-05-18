@@ -21,6 +21,7 @@ export interface PluginManagerOptions {
     githubAuthentication?: GithubAuth;
     lockWait: number;
     lockStale: number;
+    includePeerDependencies: boolean;
 }
 export interface PluginSandbox {
     env?: NodeJS.ProcessEnv;
@@ -98,5 +99,6 @@ export declare class PluginManager {
     private syncUnlock;
     private shouldIgnore;
     private createPluginInfo;
+    private getPackageDependencies;
 }
 export {};
