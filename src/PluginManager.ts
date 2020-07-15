@@ -581,7 +581,7 @@ export class PluginManager {
 			&& semver.satisfies(packageJson.version, version);
 	}
 
-	private async getDownloadedPackage(name: string, version: string): Promise<PackageInfo | undefined> {
+	private async getDownloadedPackage(name: string, _version: string): Promise<PackageInfo | undefined> {
 		const location = this.getPluginLocation(name);
 		if (!(await fs.directoryExists(location))) {
 			return;
