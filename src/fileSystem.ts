@@ -57,7 +57,7 @@ export function copy(src: string, dest: string, options?: Partial<CopyOptions>):
 		? options.exclude.map((f) => path.join(src, f).toLowerCase())
 		: [];
 
-	const filter = (filterSrc: string, filterDest: string) => {
+	const filter = (filterSrc: string, _filterDest: string) => {
 		filterSrc = filterSrc.toLowerCase();
 
 		if (excludeList.indexOf(filterSrc) >= 0) {

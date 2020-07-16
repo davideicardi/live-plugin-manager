@@ -182,7 +182,7 @@ export class PluginVm {
 				return this.sandboxResolve(pluginContext, moduleDirname, id);
 			},
 			{
-				paths: (request: string) => null // TODO I should I populate this
+				paths: (_request: string) => null // TODO I should I populate this
 			}
 		);
 
