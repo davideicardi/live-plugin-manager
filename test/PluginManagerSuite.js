@@ -21,7 +21,7 @@ const path = __importStar(require("path"));
 const fs = __importStar(require("fs-extra"));
 const os = __importStar(require("os"));
 const semver = __importStar(require("semver"));
-const index_1 = require("../index");
+const index_1 = require("../dist/index");
 describe("PluginManager:", function () {
     this.timeout(15000);
     this.slow(3000);

@@ -4,7 +4,7 @@ import * as fs from "fs-extra";
 import * as os from "os";
 import * as semver from "semver";
 
-import {PluginManager, IPluginInfo} from "../index";
+import {PluginManager, IPluginInfo} from "../dist/index";
 
 describe("PluginManager:", function() {
 	this.timeout(15000);

@@ -497,7 +497,7 @@ class PluginManager {
                 && semver.satisfies(packageJson.version, version);
         });
     }
-    getDownloadedPackage(name, version) {
+    getDownloadedPackage(name, _version) {
         return __awaiter(this, void 0, void 0, function* () {
             const location = this.getPluginLocation(name);
             if (!(yield fs.directoryExists(location))) {
