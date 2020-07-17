@@ -8,13 +8,14 @@
     "npm",
     "install"
   ],
-  "main": "index.js",
-  "typings": "index.d.ts",
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
   "scripts": {
     "src-build": "tsc",
     "src-build-w": "tsc -w",
     "tslint": "tslint -p .",
     "develop": "npm run src-build-w",
+    "pretest": "tsc -p test",
     "test": "mocha --require source-map-support/register"
   },
   "repository": {
