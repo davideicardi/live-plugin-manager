@@ -4,10 +4,6 @@
     "target": "es6",
     "moduleResolution": "node",
 
-    "types": [
-      "node"
-    ],
-
     "strict": true,
     "noUnusedLocals": true,
 
@@ -16,14 +12,5 @@
 
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-
-    "outDir": "dist"
-  },
-  "exclude": [
-    "samples",
-    "test",
-    "node_modules",
-    "plugin_packages",
-    "**/*.d.ts"
-  ]
+  }
 }

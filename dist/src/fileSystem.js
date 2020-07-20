@@ -74,7 +74,7 @@ function copy(src, dest, options) {
     const excludeList = options && options.exclude
         ? options.exclude.map((f) => path.join(src, f).toLowerCase())
         : [];
-    const filter = (filterSrc, filterDest) => {
+    const filter = (filterSrc, _filterDest) => {
         filterSrc = filterSrc.toLowerCase();
         if (excludeList.indexOf(filterSrc) >= 0) {
             return false;

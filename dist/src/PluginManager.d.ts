@@ -1,5 +1,4 @@
 /// <reference types="node" />
-/// <reference types="mocha" />
 import { NpmRegistryConfig } from "./NpmRegistryClient";
 import { IPluginInfo } from "./PluginInfo";
 import { GithubAuth } from "./GithubRegistryClient";

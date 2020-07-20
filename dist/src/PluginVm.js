@@ -156,7 +156,7 @@ class PluginVm {
         const moduleResolve = Object.assign((id) => {
             return this.sandboxResolve(pluginContext, moduleDirname, id);
         }, {
-            paths: (request) => null // TODO I should I populate this
+            paths: (_request) => null // TODO I should I populate this
         });
         const moduleRequire = Object.assign((requiredName) => {
             if (debug.enabled) {
