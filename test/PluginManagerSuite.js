@@ -593,10 +593,6 @@ describe("PluginManager:", function () {
                 chai_1.assert.equal(pluginInstance.myJsonRequire.loaded, "yes");
                 chai_1.assert.equal(pluginInstance.myGlobals.__filename, path.join(manager.options.pluginsPath, "my-test-plugin", "index.js"));
                 chai_1.assert.equal(pluginInstance.myGlobals.__dirname, path.join(manager.options.pluginsPath, "my-test-plugin"));
-                // NOTE: process is not equal because I copy it to override vars
-                // assert.equal(pluginInstance.myGlobals.process, process);
-                // assert.equal(pluginInstance.myGlobals.console, console); // TODO Check why this check doesn't work
-                chai_1.assert.isDefined(pluginInstance.myGlobals.console);
                 chai_1.assert.equal(pluginInstance.myGlobals.clearImmediate, clearImmediate);
                 chai_1.assert.equal(pluginInstance.myGlobals.clearInterval, clearInterval);
                 chai_1.assert.equal(pluginInstance.myGlobals.clearTimeout, clearTimeout);
@@ -604,6 +600,10 @@ describe("PluginManager:", function () {
                 chai_1.assert.equal(pluginInstance.myGlobals.setInterval, setInterval);
                 chai_1.assert.equal(pluginInstance.myGlobals.setTimeout, setTimeout);
                 chai_1.assert.equal(pluginInstance.myGlobals.Buffer, Buffer);
+                chai_1.assert.equal(pluginInstance.myGlobals.Function, Function);
+                // NOTE: process and console are not the same but they should be available
+                chai_1.assert.isDefined(pluginInstance.myGlobals.process);
+                chai_1.assert.isDefined(pluginInstance.myGlobals.console);
             });
         });
         it("require absolute files", function () {

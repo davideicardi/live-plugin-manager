@@ -427,10 +427,16 @@ export class PluginVm {
 			Uint8ClampedArray: srcGlobal.Uint8ClampedArray,
 			WeakMap: srcGlobal.WeakMap,
 			WeakSet: srcGlobal.WeakSet,
-
-			// create a new instance, but if process is undefined just use null, because undefined is not permitted
-			process: Object.create(srcGlobal.process || null)
 		};
+
+		// copy properties that are not copied automatically (don't know why..)
+		//  https://stackoverflow.com/questions/59009214/some-properties-of-the-global-instance-are-not-copied-by-spread-operator-or-by-o
+		if (!sandbox.process) {
+			sandbox.process = Object.create(srcGlobal.process || null);
+		}
+		if (!sandbox.console) {
+			sandbox.console = new console.Console({ stdout: process.stdout, stderr: process.stderr });
+		}
 
 		// override the global obj to "unlink" it from the original global obj
 		//  and make it unique for each sandbox

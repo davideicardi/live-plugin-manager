@@ -603,11 +603,6 @@ describe("PluginManager:", function() {
 				path.join(manager.options.pluginsPath, "my-test-plugin", "index.js"));
 			assert.equal(pluginInstance.myGlobals.__dirname, path.join(manager.options.pluginsPath, "my-test-plugin"));
 
-			// NOTE: process is not equal because I copy it to override vars
-			// assert.equal(pluginInstance.myGlobals.process, process);
-
-			// assert.equal(pluginInstance.myGlobals.console, console); // TODO Check why this check doesn't work
-			assert.isDefined(pluginInstance.myGlobals.console);
 			assert.equal(pluginInstance.myGlobals.clearImmediate, clearImmediate);
 			assert.equal(pluginInstance.myGlobals.clearInterval, clearInterval);
 			assert.equal(pluginInstance.myGlobals.clearTimeout, clearTimeout);
@@ -615,6 +610,11 @@ describe("PluginManager:", function() {
 			assert.equal(pluginInstance.myGlobals.setInterval, setInterval);
 			assert.equal(pluginInstance.myGlobals.setTimeout, setTimeout);
 			assert.equal(pluginInstance.myGlobals.Buffer, Buffer);
+			assert.equal(pluginInstance.myGlobals.Function, Function);
+
+			// NOTE: process and console are not the same but they should be available
+			assert.isDefined(pluginInstance.myGlobals.process);
+			assert.isDefined(pluginInstance.myGlobals.console);
 		});
 
 		it("require absolute files", async function() {

@@ -4,6 +4,7 @@ exports.myGlobals = {
   process,
   Buffer,
   console,
+  Function,
 
   clearImmediate,
   clearInterval,
