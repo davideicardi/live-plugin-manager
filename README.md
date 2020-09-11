@@ -25,7 +25,7 @@ Main features are:
   - A filesystem lock is used to prevent multiple instances to work on the same filesystem in the same moment
 - Each package run in an semi isolated environment (VM sandbox)
 - Set different environment variables for each package
-- Implementated in Typescript
+- Implemented in TypeScript
 - Fully tested (mocha tests)
 
 There are some **known limitations**, see section at the end.
