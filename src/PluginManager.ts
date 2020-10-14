@@ -13,11 +13,29 @@ const debug = Debug("live-plugin-manager");
 const BASE_NPM_URL = "https://registry.npmjs.org";
 const DefaultMainFile = "index.js";
 
+/**
+ * A plugin manager's options
+ */
 export interface PluginManagerOptions {
+	/**
+	 * The current working directory of the plugin manager
+	 */
 	cwd: string;
+	/**
+	 * The path plugins will be stored in
+	 */
 	pluginsPath: string;
+	/**
+	 * The sandbox used to contain plugins
+	 */
 	sandbox: PluginSandbox;
+	/**
+	 * The URL of the npm registry to fetch packages from
+	 */
 	npmRegistryUrl: string;
+	/**
+	 * 
+	 */
 	npmRegistryConfig: NpmRegistryConfig;
 	npmInstallMode: "useCache" | "noCache";
 	requireCoreModules: boolean;
@@ -29,8 +47,17 @@ export interface PluginManagerOptions {
 	lockStale: number;
 }
 
+/**
+ * A sandbox used to contain a plugin
+ */
 export interface PluginSandbox {
+	/**
+	 * The Node.js process environment to run the plugin in the context of
+	 */
 	env?: NodeJS.ProcessEnv;
+	/**
+	 * The object to store global variables within the plugin's context
+	 */
 	global?: NodeJS.Global;
 }
 
@@ -56,7 +83,13 @@ export interface InstallFromPathOptions {
 	force: boolean;
 }
 
-export class PluginManager {
+/**
+ * A plugin manager is used to install, require, and uninstall plugins at
+ * runtime.
+ */export class PluginManager {
+	/**
+	 * The plugin manager's options.
+	 */
 	readonly options: PluginManagerOptions;
 	private readonly vm: PluginVm;
 	private readonly installedPlugins = new Array<IPluginInfo>();
@@ -64,6 +97,10 @@ export class PluginManager {
 	private readonly githubRegistry: GithubRegistryClient;
 	private readonly sandboxTemplates = new Map<string, PluginSandbox>();
 
+	/**
+	 * Creates a new plugin manager.
+	 * @param options The options passed to the plugin manager.
+	 */
 	constructor(options?: Partial<PluginManagerOptions>) {
 		if (options && !options.pluginsPath && options.cwd) {
 			options.pluginsPath = path.join(options.cwd, "plugin_packages");
@@ -75,6 +112,11 @@ export class PluginManager {
 		this.githubRegistry = new GithubRegistryClient(this.options.githubAuthentication);
 	}
 
+	/**
+	 * Install a package
+	 * @param name name of the package
+	 * @param version version of the package, default to "latest"
+	 */
 	async install(name: string, version?: string): Promise<IPluginInfo> {
 		await fs.ensureDir(this.options.pluginsPath);
 
@@ -118,6 +160,10 @@ export class PluginManager {
 		}
 	}
 
+	/**
+	 * Install a package from npm
+	 * @param repository GitHub repository of the package
+	 */
 	async installFromGithub(repository: string): Promise<IPluginInfo> {
 		await fs.ensureDir(this.options.pluginsPath);
 
@@ -146,6 +192,10 @@ export class PluginManager {
 		}
 	}
 
+	/**
+	 * Unnstall a package
+	 * @param name name of the package
+	 */
 	async uninstall(name: string): Promise<void> {
 		await fs.ensureDir(this.options.pluginsPath);
 
@@ -157,6 +207,9 @@ export class PluginManager {
 		}
 	}
 
+	/**
+	 * Unnstall all packages
+	 */
 	async uninstallAll(): Promise<void> {
 		await fs.ensureDir(this.options.pluginsPath);
 
@@ -171,10 +224,17 @@ export class PluginManager {
 		}
 	}
 
+	/**
+	 * Get the list of installed plugins
+	 */
 	list(): IPluginInfo[] {
 		return this.installedPlugins.map((p) => p);
 	}
 
+	/**
+	 * Require a plugin
+	 * @param fullName name of the package
+	 */
 	require(fullName: string): any {
 		const {pluginName, requiredPath} = this.vm.splitRequire(fullName);
 
@@ -186,6 +246,11 @@ export class PluginManager {
 		return this.load(info, requiredPath);
 	}
 
+	/**
+	 * Set the sandbox template
+	 * @param name name of the plugin to set the sandbox template of
+	 * @param sandbox the sandbox to use for the plugin
+	 */
 	setSandboxTemplate(name: string, sandbox: PluginSandbox | undefined): void {
 		const info = this.getInfo(name);
 		if (!info) {
@@ -199,10 +264,27 @@ export class PluginManager {
 		this.sandboxTemplates.set(info.name, sandbox);
 	}
 
+	/**
+	 * Get the sandbox template
+	 * @param name name of the plugin to get the sandbox template of
+	 * @returns the plugin's sandbox template
+	 */
 	getSandboxTemplate(name: string): PluginSandbox | undefined {
 		return this.sandboxTemplates.get(name);
 	}
 
+	/**
+	 * Fo
+	 * @param name the name of the plugin to check
+	 * @param version the version to to check for
+	 * @param mode `"satisfies"` to check if the installed version of the
+	 *             plugin satisfies the requirement, `"satisfiesOrGreater"` to
+	 *             check if the installed version is at least `version`.
+	 * @returns the plugin info of the installed version if it satisfies the
+	 *          version requirement, or `undefined` if the plugin was either
+	 *          not installed or the plugin's version does not satisfy the
+	 *          requirement.
+	 */
 	alreadyInstalled(
 		name: string,
 		version?: string,
@@ -223,10 +305,19 @@ export class PluginManager {
 		return undefined;
 	}
 
+	/**
+	 * Get the info of the plugin called `name`
+	 * @param name the name of the plugin to get the info of
+	 */
 	getInfo(name: string): IPluginInfo | undefined {
 		return this.installedPlugins.find((p) => p.name === name);
 	}
 
+	/**
+	 * Get the info of the given package
+	 * @param name the name of the package
+	 * @param version the version of the package
+	 */
 	queryPackage(name: string, version?: string): Promise<PackageInfo> {
 		if (!this.isValidPluginName(name)) {
 			throw new Error(`Invalid plugin name '${name}'`);
@@ -241,6 +332,11 @@ export class PluginManager {
 		return this.queryPackageFromNpm(name, version);
 	}
 
+	/**
+	 * Get the info of the given package from npm
+	 * @param name the name of the package
+	 * @param version the version of the package
+	 */
 	queryPackageFromNpm(name: string, version = NPM_LATEST_TAG): Promise<PackageInfo> {
 		if (!this.isValidPluginName(name)) {
 			throw new Error(`Invalid plugin name '${name}'`);
@@ -251,10 +347,19 @@ export class PluginManager {
 		return this.npmRegistry.get(name, version);
 	}
 
+	/**
+	 * Get the info of the given package from GitHub
+	 * @param name the name of the package
+	 * @param version the version of the package
+	 */
 	queryPackageFromGithub(repository: string): Promise<PackageInfo> {
 		return this.githubRegistry.get(repository);
 	}
 
+	/**
+	 * Runs a script and returns the value returned by the script
+	 * @param code the JavaScript source code of the script
+	 */
 	runScript(code: string): any {
 		return this.vm.runScript(code);
 	}
