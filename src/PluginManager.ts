@@ -604,7 +604,7 @@ export class PluginManager {
 		const packageJson = JSON.parse(await fs.readFile(packageJsonFile, "utf8"));
 
 		if (!packageJson.name
-			|| !packageJson.version) {
+			|| !packageJson.version || !packageJson.main) {
 			throw new Error(
 				`Invalid plugin ${location}, 'main', 'name' and 'version' properties are required in package.json`);
 		}
@@ -730,6 +730,7 @@ export class PluginManager {
 
 		return {
 			name: packageJson.name,
+			description: packageJson.description || '',
 			version: packageJson.version,
 			location,
 			mainFile,
