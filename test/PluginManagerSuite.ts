@@ -469,6 +469,7 @@ describe("PluginManager:", function() {
 			const plugins = await manager.list();
 			assert.equal(plugins.length, 1);
 			assert.equal(plugins[0].name, "moment");
+			assert.equal(plugins[0].description, "Parse, validate, manipulate, and display dates");
 			assert.equal(plugins[0].version, "2.18.1");
 			assert.equal(plugins[0].location, path.join(manager.options.pluginsPath, "moment"));
 
