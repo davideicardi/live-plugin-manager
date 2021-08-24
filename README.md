@@ -18,10 +18,10 @@ Main features are:
 - Update/uninstall packages
 - Any Node.js packages can be installed
   - No special configuration is required
-- Installd packages can have dependencies 
+- Installed packages can have dependencies 
   - dependencies are automatically installed
   - when updating a dependencies all dependents are reloaded
-- Support for concurrency operation on filesystem (cloud/webfarm scenario where file system is shared)
+- Support for concurrency operation on filesystem (cloud/web farm scenario where file system is shared)
   - A filesystem lock is used to prevent multiple instances to work on the same filesystem in the same moment
 - Each package run in an semi isolated environment (VM sandbox)
 - Set different environment variables for each package
@@ -59,9 +59,9 @@ In the above code I install `moment` package at runtime, load and execute it.
 
 Plugins are installed inside the directory specified in the `PluginManager` constructor or in the `plugin_packages` directory if not specified.
 
-Each time your applicaition start you should reinstall any packages that you need; already downloaded packages are not automatically installed, but installation is faster because no new file is downloaded. Typically I suggest to put the list of the installed packages in a database or any other central repository.
+Each time your application start you should reinstall any packages that you need; already downloaded packages are not automatically installed, but installation is faster because no new file is downloaded. Typically I suggest to put the list of the installed packages in a database or any other central repository.
 
-Here another more complex scenario where I install `express` with all it's dependencies, just to demostrate how many possibilities you can have:
+Here another more complex scenario where I install `express` with all it's dependencies, just to demonstrate how many possibilities you can have:
 
 ```js
 
@@ -97,7 +97,7 @@ Often when working with plugins you need some extension point or convention to a
 
 Another solution is to load your plugins inside a Dependency Injection container. 
 
-I'm working also on [shelf-depenency](https://www.npmjs.com/package/shelf-dependency), a simple dependency injection/inversion of control container that can be used to load plugins.
+I'm working also on [shelf-dependency](https://www.npmjs.com/package/shelf-dependency), a simple dependency injection/inversion of control container that can be used to load plugins.
 
 ## Samples
 
@@ -131,7 +131,7 @@ Dependencies are automatically installed (devDependencies are ignored).
 ### pluginManager.installFromNpm(name: string, version = "latest"): Promise\<IPluginInfo\>
 
 Install the specified package from npm registry. Dependencies are automatically installed (devDependencies are ignored).
-By default is the package is already available in the download folder then and version is compatible then it is not requested again from npm. Change this behaviour by setting `npmInstallMode: "noCache"` options.
+By default is the package is already available in the download folder then and version is compatible then it is not requested again from npm. Change this behavior by setting `npmInstallMode: "noCache"` options.
 
 To setup authentication for private npm registry use:
 
@@ -172,7 +172,7 @@ Install the specified package from a filesystem location. Dependencies are autom
 
 ### installFromCode(name: string, code: string, version?: string): Promise\<IPluginInfo\>
 
-Install a package by specifiing code directly. If no version is specified it will be always reinstalled.
+Install a package by specifying code directly. If no version is specified it will be always reinstalled.
 
 ### uninstall(name: string): Promise\<void\>
 
@@ -232,12 +232,12 @@ This project use the following dependencies to do it's job:
 - [lockfile](https://github.com/npm/lockfile): file system locking to prevent concurrent operations (see below)
 - [tar.gz](https://github.com/alanhoff/node-tar.gz): extract package file
 - [fs-extra](https://github.com/jprichardson/node-fs-extra): file system operations
-- [debug](https://github.com/visionmedia/debug): debug informations
+- [debug](https://github.com/visionmedia/debug): debug information
 - (removed for now because I have problems with getArchiveLink api, 302 ...) [github](https://www.npmjs.com/package/github)
 - (removed for now because for some dependencies issues) [npm-registry-client](https://github.com/npm/npm-registry-client): npm registry handling
 
 While I have tried to mimic the standard Node.js module and package architecture there are some differences.
-First of all is the fact that plugins by definition are installed at runtime in contrast with a standard Node.js application where modules are installed before executin the node.js proccess.
+First of all is the fact that plugins by definition are installed at runtime in contrast with a standard Node.js application where modules are installed before executing the node.js process.
 Modules can be loaded one or more times, instead in standard Node.js they are loaded only the first time that you `require` it.
 Only one version of a plugin can be installed, also for dependencies, while in Node.js multiple version can be installed (each module can have it's own `node_modules`).
 
@@ -270,11 +270,33 @@ There are some known limitations when installing a package:
 
 If you find other problems please open an issue.
 
+## Development
+
+Compile typescript using:
+
+```
+npm run src-build
+```
+
+Run tests using:
+
+```
+npm run test
+```
+
+Due to some github rate limits, github related tests can fail if you don't specify a github token. To specify it use:
+
+```
+github_auth_username=YOURUSER github_auth_token=YOUR_TOKEN npm test
+```
+
+The token must only have public access permission.
+
 ## License (MIT)
 
 MIT License
 
-Copyright (c) 2018 Davide Icardi
+Copyright (c) 2021 Davide Icardi
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

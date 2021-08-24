@@ -21,7 +21,7 @@ export function headersTokenAuth(token: string): Headers {
 
 export function headersBasicAuth(username: string, password: string): Headers {
 	return {
-		Authorization: "Basic " + new Buffer(username + ":" + password).toString("base64")
+		Authorization: "Basic " + Buffer.from(username + ":" + password).toString("base64")
 	};
 }
 

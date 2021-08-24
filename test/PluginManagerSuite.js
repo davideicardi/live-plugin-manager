@@ -153,7 +153,7 @@ describe("PluginManager:", function () {
             it("installing from a not valid npm url", function () {
                 return __awaiter(this, void 0, void 0, function* () {
                     manager = new index_1.PluginManager({
-                        npmRegistryUrl: "http://davideicardi.com/some-not-existing-registry/"
+                        npmRegistryUrl: "http://davide.icardi.org/some-not-existing-registry/"
                     });
                     try {
                         yield manager.installFromNpm("moment");
@@ -243,7 +243,7 @@ describe("PluginManager:", function () {
             it("api configuration", function () {
                 if (!manager.options.githubAuthentication) {
                     // tslint:disable-next-line:no-console
-                    console.error("WARNING: No github_auth.json found, github api can give rate limits errors");
+                    console.error("WARNING: No github_auth.json or github_auth_username env variable found, github api can give rate limits errors");
                 }
             });
             it("installing a not existing plugin", function () {
