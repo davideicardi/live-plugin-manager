@@ -196,7 +196,6 @@ export class PluginVm {
 			{
 				resolve: moduleResolve,
 				cache: {}, // TODO This should be correctly populated
-				// tslint:disable-next-line:no-object-literal-type-assertion
 				extensions: {} as NodeJS.RequireExtensions,
 				main: require.main // TODO assign the real main or consider main the current module (ie. module)?
 			}
@@ -211,6 +210,7 @@ export class PluginVm {
 			paths: [], // TODO I should I populate this
 			parent: module, // TODO I assign parent to the current module...it is correct?
 			children: [], // TODO I should populate correctly this list...
+			path: moduleDirname
 		};
 
 		// assign missing https://nodejs.org/api/globals.html
