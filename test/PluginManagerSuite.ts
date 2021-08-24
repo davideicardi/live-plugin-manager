@@ -1,4 +1,4 @@
-import { assert } from "chai"; // tslint:disable-line:no-implicit-dependencies
+import { assert } from "chai";
 import * as path from "path";
 import * as fs from "fs-extra";
 import * as os from "os";
@@ -196,7 +196,6 @@ describe("PluginManager:", function() {
 				assert.equal(result.x, "y");
 			});
 
-			// tslint:disable-next-line:max-line-length
 			it("installing a plugin already present in the folder will fail if npm is down and noCache is used", async function() {
 				// download it to ensure it is present
 				await manager.installFromNpm("cookie", "0.3.1");
@@ -215,7 +214,6 @@ describe("PluginManager:", function() {
 				throw new Error("Expected to throw");
 			});
 
-			// tslint:disable-next-line:max-line-length
 			it("installing a plugin already present in the folder will fail if npm is down and I ask for latest", async function() {
 				// download it to ensure it is present
 				await manager.installFromNpm("cookie", "0.3.1");
@@ -239,7 +237,6 @@ describe("PluginManager:", function() {
 
 			it("api configuration", function() {
 				if (!manager.options.githubAuthentication) {
-					// tslint:disable-next-line:no-console
 					console.error("WARNING: No github_auth.json or github_auth_username env variable found, github api can give rate limits errors");
 				}
 			});
@@ -538,7 +535,7 @@ describe("PluginManager:", function() {
 
 			it("directly requiring a not installed plugin throw an error", async function() {
 				try {
-					require("moment"); // tslint:disable-line:no-implicit-dependencies
+					require("moment");
 				} catch (e) {
 					return;
 				}
@@ -923,7 +920,6 @@ describe("PluginManager:", function() {
 				await manager.installFromPath(pluginSourcePath);
 
 				const pluginDebugInstance = manager.require("debug/package.json");
-				// tslint:disable-next-line:no-submodule-imports
 				const hostDebugInstance = require("debug/package.json");
 
 				assert.equal(pluginDebugInstance.version, "2.6.9");
@@ -949,11 +945,9 @@ describe("PluginManager:", function() {
 			});
 
 			it("it can be resolved", function() {
-				// tslint:disable-next-line:no-implicit-dependencies
 				const dependency = require("host-dependency");
 				assert.isDefined(dependency);
 				assert.equal(dependency, "v1.0.0");
-				// tslint:disable-next-line:no-implicit-dependencies no-submodule-imports
 				const dependencyPackage = require("host-dependency/package.json");
 				assert.equal(dependencyPackage.version, "1.0.0");
 			});
@@ -974,7 +968,6 @@ describe("PluginManager:", function() {
 					const pluginInstance = manager.require("my-plugin-with-host-dep");
 					assert.isDefined(pluginInstance);
 
-					// tslint:disable-next-line:no-implicit-dependencies
 					assert.equal(pluginInstance.testHostDependency, require("host-dependency"));
 
 					assert.equal(pluginInstance.testHostDependency, "v1.0.0");
@@ -997,7 +990,6 @@ describe("PluginManager:", function() {
 						const pluginInstance = manager.require("my-plugin-with-host-dep");
 						assert.isDefined(pluginInstance);
 
-						// tslint:disable-next-line:no-implicit-dependencies
 						assert.notEqual(pluginInstance.testHostDependency, require("host-dependency"));
 
 						assert.equal(pluginInstance.testHostDependency, "v1.0.1");
@@ -1017,7 +1009,6 @@ describe("PluginManager:", function() {
 							const pluginInstance = manager.require("my-plugin-with-host-dep");
 							assert.isDefined(pluginInstance);
 
-							// tslint:disable-next-line:no-implicit-dependencies
 							assert.equal(pluginInstance.testHostDependency, require("host-dependency"));
 
 							assert.equal(pluginInstance.testHostDependency, "v1.0.0");
@@ -1355,6 +1346,5 @@ function sleep(ms: number) {
 }
 
 process.on("unhandledRejection", (reason: any, p) => {
-	// tslint:disable-next-line:no-console
 	console.log("Unhandled Rejection at: Promise", p, "reason:", (reason && reason.stack));
 });

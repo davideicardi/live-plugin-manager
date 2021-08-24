@@ -1,4 +1,23 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -8,15 +27,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
-    result["default"] = mod;
-    return result;
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-const chai_1 = require("chai"); // tslint:disable-line:no-implicit-dependencies
+const chai_1 = require("chai");
 const path = __importStar(require("path"));
 const fs = __importStar(require("fs-extra"));
 const os = __importStar(require("os"));
@@ -202,7 +214,6 @@ describe("PluginManager:", function () {
                     chai_1.assert.equal(result.x, "y");
                 });
             });
-            // tslint:disable-next-line:max-line-length
             it("installing a plugin already present in the folder will fail if npm is down and noCache is used", function () {
                 return __awaiter(this, void 0, void 0, function* () {
                     // download it to ensure it is present
@@ -220,7 +231,6 @@ describe("PluginManager:", function () {
                     throw new Error("Expected to throw");
                 });
             });
-            // tslint:disable-next-line:max-line-length
             it("installing a plugin already present in the folder will fail if npm is down and I ask for latest", function () {
                 return __awaiter(this, void 0, void 0, function* () {
                     // download it to ensure it is present
@@ -242,7 +252,6 @@ describe("PluginManager:", function () {
             this.slow(4000);
             it("api configuration", function () {
                 if (!manager.options.githubAuthentication) {
-                    // tslint:disable-next-line:no-console
                     console.error("WARNING: No github_auth.json or github_auth_username env variable found, github api can give rate limits errors");
                 }
             });
@@ -532,7 +541,7 @@ describe("PluginManager:", function () {
             it("directly requiring a not installed plugin throw an error", function () {
                 return __awaiter(this, void 0, void 0, function* () {
                     try {
-                        require("moment"); // tslint:disable-line:no-implicit-dependencies
+                        require("moment");
                     }
                     catch (e) {
                         return;
@@ -894,7 +903,6 @@ describe("PluginManager:", function () {
                     const pluginSourcePath = path.join(__dirname, "my-plugin-with-diff-dep");
                     yield manager.installFromPath(pluginSourcePath);
                     const pluginDebugInstance = manager.require("debug/package.json");
-                    // tslint:disable-next-line:no-submodule-imports
                     const hostDebugInstance = require("debug/package.json");
                     chai_1.assert.equal(pluginDebugInstance.version, "2.6.9");
                     chai_1.assert.equal(hostDebugInstance.version.substring(0, 1), "4");
@@ -919,11 +927,9 @@ describe("PluginManager:", function () {
                 });
             });
             it("it can be resolved", function () {
-                // tslint:disable-next-line:no-implicit-dependencies
                 const dependency = require("host-dependency");
                 chai_1.assert.isDefined(dependency);
                 chai_1.assert.equal(dependency, "v1.0.0");
-                // tslint:disable-next-line:no-implicit-dependencies no-submodule-imports
                 const dependencyPackage = require("host-dependency/package.json");
                 chai_1.assert.equal(dependencyPackage.version, "1.0.0");
             });
@@ -942,7 +948,6 @@ describe("PluginManager:", function () {
                 it("it is resolved using the host dependency", function () {
                     const pluginInstance = manager.require("my-plugin-with-host-dep");
                     chai_1.assert.isDefined(pluginInstance);
-                    // tslint:disable-next-line:no-implicit-dependencies
                     chai_1.assert.equal(pluginInstance.testHostDependency, require("host-dependency"));
                     chai_1.assert.equal(pluginInstance.testHostDependency, "v1.0.0");
                 });
@@ -962,7 +967,6 @@ describe("PluginManager:", function () {
                     it("the updated dependency is now used by all dependants", function () {
                         const pluginInstance = manager.require("my-plugin-with-host-dep");
                         chai_1.assert.isDefined(pluginInstance);
-                        // tslint:disable-next-line:no-implicit-dependencies
                         chai_1.assert.notEqual(pluginInstance.testHostDependency, require("host-dependency"));
                         chai_1.assert.equal(pluginInstance.testHostDependency, "v1.0.1");
                     });
@@ -979,7 +983,6 @@ describe("PluginManager:", function () {
                         it("it is again resolved using the host dependency", function () {
                             const pluginInstance = manager.require("my-plugin-with-host-dep");
                             chai_1.assert.isDefined(pluginInstance);
-                            // tslint:disable-next-line:no-implicit-dependencies
                             chai_1.assert.equal(pluginInstance.testHostDependency, require("host-dependency"));
                             chai_1.assert.equal(pluginInstance.testHostDependency, "v1.0.0");
                         });
@@ -1289,7 +1292,6 @@ function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 process.on("unhandledRejection", (reason, p) => {
-    // tslint:disable-next-line:no-console
     console.log("Unhandled Rejection at: Promise", p, "reason:", (reason && reason.stack));
 });
 //# sourceMappingURL=PluginManagerSuite.js.map
