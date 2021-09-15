@@ -1,6 +1,6 @@
 import * as fs from "./fileSystem";
 import * as path from "path";
-import {NpmRegistryClient, NpmRegistryConfig} from "./NpmRegistryClient";
+import {NpmRegistry, NpmRegistryClient, NpmRegistryConfig} from "./NpmRegistryClient";
 import {PluginVm} from "./PluginVm";
 import {IPluginInfo} from "./PluginInfo";
 import * as lockFile from "lockfile";
@@ -92,13 +92,19 @@ export class PluginManager {
 	 * Install a package from npm
 	 * @param name name of the package
 	 * @param version version of the package, default to "latest"
+	 * @param npmRegistryConfig the registry where the package is installed
 	 */
-	async installFromNpm(name: string, version = NPM_LATEST_TAG): Promise<IPluginInfo> {
+	async installFromNpm(name: string, version = NPM_LATEST_TAG, npmRegistryConfig?: NpmRegistry): Promise<IPluginInfo> {
 		await fs.ensureDir(this.options.pluginsPath);
+
+		let npmRegistry: NpmRegistryClient = this.npmRegistry;
+		if(npmRegistryConfig){
+			npmRegistry = new NpmRegistryClient(npmRegistryConfig.url, npmRegistryConfig.config || {})
+		}
 
 		await this.syncLock();
 		try {
-			return await this.installFromNpmLockFreeCache(name, version);
+			return await this.installFromNpmLockFreeCache(name, version, npmRegistry);
 		} finally {
 			await this.syncUnlock();
 		}
@@ -292,7 +298,7 @@ export class PluginManager {
 			return this.installFromGithubLockFree(version);
 		}
 
-		return this.installFromNpmLockFreeCache(name, version);
+		return this.installFromNpmLockFreeCache(name, version, this.npmRegistry);
 	}
 
 	private async installFromPathLockFree(
@@ -332,7 +338,7 @@ export class PluginManager {
 	}
 
 	/** Install from npm or from cache if already available */
-	private async installFromNpmLockFreeCache(name: string, version = NPM_LATEST_TAG): Promise<IPluginInfo> {
+	private async installFromNpmLockFreeCache(name: string, version = NPM_LATEST_TAG, npmRegistry: NpmRegistryClient): Promise<IPluginInfo> {
 		if (!this.isValidPluginName(name)) {
 			throw new Error(`Invalid plugin name '${name}'`);
 		}
@@ -356,18 +362,18 @@ export class PluginManager {
 			return this.addPlugin(pluginInfo);
 		}
 
-		return this.installFromNpmLockFreeDirect(name, version);
+		return this.installFromNpmLockFreeDirect(name, version, npmRegistry);
 	}
 
 	/** Install from npm */
-	private async installFromNpmLockFreeDirect(name: string, version = NPM_LATEST_TAG): Promise<IPluginInfo> {
-		const registryInfo = await this.npmRegistry.get(name, version);
+	private async installFromNpmLockFreeDirect(name: string, version = NPM_LATEST_TAG, npmRegistry: NpmRegistryClient): Promise<IPluginInfo> {
+		const registryInfo = await npmRegistry.get(name, version);
 
 		// already downloaded
 		if (!(await this.isAlreadyDownloaded(registryInfo.name, registryInfo.version))) {
 			await this.removeDownloaded(registryInfo.name);
 
-			await this.npmRegistry.download(
+			await npmRegistry.download(
 				this.options.pluginsPath,
 				registryInfo);
 		}
