@@ -129,8 +129,10 @@ class PluginVm {
         // https://60devs.com/executing-js-code-with-nodes-vm-module.html
         // I have also declared the exports variable to support the
         //  `var app = exports = module.exports = {};` notation
-        const newLine = "\r\n";
-        const iifeCode = `(function(exports){${newLine}${code}${newLine}}(module.exports));`;
+        const iifeCode = `
+			(function(exports){
+				${code}
+			}(module.exports));`;
         const vmOptions = { displayErrors: true, filename: filePath };
         const script = new vm.Script(iifeCode, vmOptions);
         script.runInContext(moduleContext, vmOptions);
@@ -319,23 +321,38 @@ class PluginVm {
     }
     createGlobalSandbox(sandboxTemplate) {
         const srcGlobal = sandboxTemplate.global || global;
-        const srcEnv = sandboxTemplate.env || global.process.env;
-        const sandbox = Object.assign(Object.assign({}, srcGlobal), { 
-            // https://stackoverflow.com/questions/59009214/some-properties-of-the-global-instance-are-not-copied-by-spread-operator-or-by-o
-            Array: srcGlobal.Array, ArrayBuffer: srcGlobal.ArrayBuffer, Boolean: srcGlobal.Boolean, Buffer: srcGlobal.Buffer, DataView: srcGlobal.DataView, Date: srcGlobal.Date, Error: srcGlobal.Error, EvalError: srcGlobal.EvalError, Float32Array: srcGlobal.Float32Array, Float64Array: srcGlobal.Float64Array, Function: srcGlobal.Function, Infinity: srcGlobal.Infinity, Int16Array: srcGlobal.Int16Array, Int32Array: srcGlobal.Int32Array, Int8Array: srcGlobal.Int8Array, Intl: srcGlobal.Intl, JSON: srcGlobal.JSON, Map: srcGlobal.Map, Math: srcGlobal.Math, NaN: srcGlobal.NaN, Number: srcGlobal.Number, Object: srcGlobal.Object, Promise: srcGlobal.Promise, RangeError: srcGlobal.RangeError, ReferenceError: srcGlobal.ReferenceError, RegExp: srcGlobal.RegExp, Set: srcGlobal.Set, String: srcGlobal.String, Symbol: srcGlobal.Symbol, SyntaxError: srcGlobal.SyntaxError, TypeError: srcGlobal.TypeError, URIError: srcGlobal.URIError, Uint16Array: srcGlobal.Uint16Array, Uint32Array: srcGlobal.Uint32Array, Uint8Array: srcGlobal.Uint8Array, Uint8ClampedArray: srcGlobal.Uint8ClampedArray, WeakMap: srcGlobal.WeakMap, WeakSet: srcGlobal.WeakSet });
+        const sandbox = Object.assign({}, srcGlobal);
         // copy properties that are not copied automatically (don't know why..)
         //  https://stackoverflow.com/questions/59009214/some-properties-of-the-global-instance-are-not-copied-by-spread-operator-or-by-o
-        if (!sandbox.process) {
-            sandbox.process = Object.create(srcGlobal.process || null);
+        // (some of these properties are Node.js specific, like Buffer)
+        // Function and Object should not be defined, otherwise we will have some unexpected behavior
+        // Somewhat related to https://github.com/nodejs/node/issues/28823
+        if (!sandbox.Buffer && srcGlobal.Buffer) {
+            sandbox.Buffer = srcGlobal.Buffer;
         }
+        if (!sandbox.URL && global.URL) {
+            // cast to any because URL is not defined inside NodeJS.Global, I don't understand why ...
+            sandbox.URL = global.URL;
+        }
+        if (!sandbox.URLSearchParams && global.URLSearchParams) {
+            // cast to any because URLSearchParams is not defined inside NodeJS.Global, I don't understand why ...
+            sandbox.URLSearchParams = global.URLSearchParams;
+        }
+        if (!sandbox.process && global.process) {
+            sandbox.process = Object.assign({}, global.process);
+        }
+        if (sandbox.process) {
+            // override env to "unlink" from original process
+            const srcEnv = sandboxTemplate.env || global.process.env;
+            sandbox.process.env = Object.assign({}, srcEnv); // copy properties
+        }
+        // create global console
         if (!sandbox.console) {
             sandbox.console = new console.Console({ stdout: process.stdout, stderr: process.stderr });
         }
         // override the global obj to "unlink" it from the original global obj
         //  and make it unique for each sandbox
         sandbox.global = sandbox;
-        // override env to "unlink" from original process
-        sandbox.process.env = Object.assign({}, srcEnv); // copy properties
         return sandbox;
     }
 }

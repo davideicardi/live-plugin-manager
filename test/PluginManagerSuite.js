@@ -609,7 +609,6 @@ describe("PluginManager:", function () {
                 chai_1.assert.equal(pluginInstance.myGlobals.setInterval, setInterval);
                 chai_1.assert.equal(pluginInstance.myGlobals.setTimeout, setTimeout);
                 chai_1.assert.equal(pluginInstance.myGlobals.Buffer, Buffer);
-                chai_1.assert.equal(pluginInstance.myGlobals.Function, Function);
                 // NOTE: process and console are not the same but they should be available
                 chai_1.assert.isDefined(pluginInstance.myGlobals.process);
                 chai_1.assert.isDefined(pluginInstance.myGlobals.console);
@@ -1151,6 +1150,11 @@ describe("PluginManager:", function () {
     });
     describe("sandbox", function () {
         describe("given globals variables", function () {
+            it("should define the same globals", function () {
+                const code = `module.exports = global;`;
+                const result = manager.runScript(code);
+                chai_1.assert.equal(result.Buffer, Buffer);
+            });
             it("unknown globals throw an exception", function () {
                 const code = `module.exports = someUnknownGlobalVar;`;
                 try {
@@ -1186,6 +1190,40 @@ describe("PluginManager:", function () {
                 const result = manager.runScript(code);
                 chai_1.assert.equal(result, "test1");
                 chai_1.assert.isUndefined(global.SOME_OTHER_KEY, "Host should not inherit it");
+            });
+        });
+        describe("given nodes types", function () {
+            it("should access Buffer", function () {
+                chai_1.assert.equal(manager.runScript(`module.exports = Buffer.from("hello", "utf-8").length`), 5);
+                chai_1.assert.equal(manager.runScript(`module.exports = Buffer.toString()`), Buffer.toString());
+            });
+        });
+        describe("given js types", function () {
+            it("should access URL", function () {
+                chai_1.assert.equal(manager.runScript(`module.exports = new URL('/foo', 'https://example.org/').toString()`), 'https://example.org/foo');
+                chai_1.assert.equal(manager.runScript(`module.exports = URL.toString()`), URL.toString());
+            });
+            it("should access Error", function () {
+                chai_1.assert.equal(manager.runScript(`module.exports = new Error("an error").message;`), "an error");
+            });
+            it("should access URLSearchParams", function () {
+                chai_1.assert.equal(manager.runScript(`module.exports = new URLSearchParams('user=abc&query=xyz').get('user');`), "abc");
+            });
+            it("should access Date", function () {
+                chai_1.assert.equal(manager.runScript(`module.exports = new Date(1635107735931).toString()`), new Date(1635107735931).toString());
+            });
+            it("should access Function", function () {
+                chai_1.assert.equal(manager.runScript(`module.exports = (function(){}).constructor === Function`), true);
+            });
+            it("should access Object", function () {
+                const code = `
+				module.exports = {
+					var1: new Object().constructor === Object,
+					var2: ({}).constructor === Object,
+				}`;
+                const result = manager.runScript(code);
+                chai_1.assert.isTrue(result.var1);
+                chai_1.assert.isTrue(result.var2);
             });
         });
         describe("given an environment variables", function () {
@@ -1232,7 +1270,7 @@ describe("PluginManager:", function () {
                     chai_1.assert.equal(result, "test1");
                 });
             });
-            it("A plugin share the same globals between modules", function () {
+            it("a plugin share the same globals between modules", function () {
                 return __awaiter(this, void 0, void 0, function* () {
                     const pluginSourcePath = path.join(__dirname, "my-plugin-env-global");
                     yield manager.installFromPath(pluginSourcePath);
@@ -1240,13 +1278,13 @@ describe("PluginManager:", function () {
                     chai_1.assert.equal(result, "Hello world!");
                 });
             });
-            it("plugins not share global and env with host, is isolated", function () {
+            it("a plugin doesn't share global and env with host, is isolated", function () {
                 chai_1.assert.isUndefined(process.env.SOME_PLUGIN_KEY, "Initially host should not have it");
                 chai_1.assert.isUndefined(global.SOME_OTHER_KEY, "Initially host should not have it");
                 const code = `
 				global.SOME_OTHER_KEY = "test1";
 				process.env.SOME_PLUGIN_KEY = "test2";
-				module.exports = SOME_OTHER_KEY + process.env.SOME_PLUGIN_KEY;`;
+				module.exports = global.SOME_OTHER_KEY + process.env.SOME_PLUGIN_KEY;`;
                 const result = manager.runScript(code);
                 chai_1.assert.equal(result, "test1test2");
                 chai_1.assert.isUndefined(process.env.SOME_PLUGIN_KEY, "Host should not inherit it");

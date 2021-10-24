@@ -44,20 +44,22 @@ const debug = debug_1.default("live-plugin-manager");
 const BASE_NPM_URL = "https://registry.npmjs.org";
 const DefaultMainFile = "index.js";
 const cwd = process.cwd();
-const DefaultOptions = {
-    cwd,
-    npmRegistryUrl: BASE_NPM_URL,
-    sandbox: {},
-    npmRegistryConfig: {},
-    npmInstallMode: "useCache",
-    pluginsPath: path.join(cwd, "plugin_packages"),
-    requireCoreModules: true,
-    hostRequire: require,
-    ignoredDependencies: [/^@types\//],
-    staticDependencies: {},
-    lockWait: 120000,
-    lockStale: 180000,
-};
+function createDefaultOptions() {
+    return {
+        cwd,
+        npmRegistryUrl: BASE_NPM_URL,
+        sandbox: {},
+        npmRegistryConfig: {},
+        npmInstallMode: "useCache",
+        pluginsPath: path.join(cwd, "plugin_packages"),
+        requireCoreModules: true,
+        hostRequire: require,
+        ignoredDependencies: [/^@types\//],
+        staticDependencies: {},
+        lockWait: 120000,
+        lockStale: 180000,
+    };
+}
 const NPM_LATEST_TAG = "latest";
 class PluginManager {
     constructor(options) {
@@ -66,7 +68,7 @@ class PluginManager {
         if (options && !options.pluginsPath && options.cwd) {
             options.pluginsPath = path.join(options.cwd, "plugin_packages");
         }
-        this.options = Object.assign(Object.assign({}, DefaultOptions), (options || {}));
+        this.options = Object.assign(Object.assign({}, createDefaultOptions()), (options || {}));
         this.vm = new PluginVm_1.PluginVm(this);
         this.npmRegistry = new NpmRegistryClient_1.NpmRegistryClient(this.options.npmRegistryUrl, this.options.npmRegistryConfig);
         this.githubRegistry = new GithubRegistryClient_1.GithubRegistryClient(this.options.githubAuthentication);
