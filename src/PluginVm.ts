@@ -1,6 +1,7 @@
 import * as vm from "vm";
 import * as fs from "fs-extra";
 import * as path from "path";
+import * as console from "console";
 import {PluginManager} from "./PluginManager";
 import {IPluginInfo} from "./PluginInfo";
 import Debug from "debug";
