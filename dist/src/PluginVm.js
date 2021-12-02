@@ -26,6 +26,7 @@ exports.PluginVm = void 0;
 const vm = __importStar(require("vm"));
 const fs = __importStar(require("fs-extra"));
 const path = __importStar(require("path"));
+const console = __importStar(require("console"));
 const debug_1 = __importDefault(require("debug"));
 const debug = debug_1.default("live-plugin-manager.PluginVm");
 const SCOPED_REGEX = /^(@[a-zA-Z0-9-_]+\/[a-zA-Z0-9-_]+)(.*)/;
