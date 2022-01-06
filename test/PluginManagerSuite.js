@@ -203,7 +203,7 @@ describe("PluginManager:", function () {
                     // download it to ensure it is present
                     yield manager.installFromNpm("cookie", "0.3.1");
                     const failedManager = new index_1.PluginManager({
-                        npmRegistryUrl: "http://davideicardi.com/some-not-existing-registry/"
+                        npmRegistryUrl: "https://httpstat.us/404"
                     });
                     yield failedManager.installFromNpm("cookie", "0.3.1");
                     const cookie = manager.require("cookie");

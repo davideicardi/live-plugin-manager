@@ -182,7 +182,7 @@ describe("PluginManager:", function() {
 				await manager.installFromNpm("cookie", "0.3.1");
 
 				const failedManager = new PluginManager({
-					npmRegistryUrl: "http://davideicardi.com/some-not-existing-registry/"
+					npmRegistryUrl: "https://httpstat.us/404"
 				});
 
 				await failedManager.installFromNpm("cookie", "0.3.1");
