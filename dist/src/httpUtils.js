@@ -35,7 +35,7 @@ exports.httpDownload = exports.httpJsonGet = exports.headersBasicAuth = exports.
 const node_fetch_1 = __importDefault(require("node-fetch"));
 const fs = __importStar(require("./fileSystem"));
 const debug_1 = __importDefault(require("debug"));
-const debug = debug_1.default("live-plugin-manager.HttpUtils");
+const debug = (0, debug_1.default)("live-plugin-manager.HttpUtils");
 function headersBearerAuth(token) {
     return {
         Authorization: "Bearer " + token
@@ -60,7 +60,7 @@ function httpJsonGet(sourceUrl, headers) {
             debug(`Json GET ${sourceUrl} ...`);
             debug("HEADERS", headers);
         }
-        const res = yield node_fetch_1.default(sourceUrl, { headers: Object.assign({}, headers) });
+        const res = yield (0, node_fetch_1.default)(sourceUrl, { headers: Object.assign({}, headers) });
         if (debug.enabled) {
             debug("Response HEADERS", res.headers);
         }
@@ -77,7 +77,7 @@ function httpDownload(sourceUrl, destinationFile, headers) {
             debug(`Download GET ${sourceUrl} ...`);
             debug("HEADERS", headers);
         }
-        const res = yield node_fetch_1.default(sourceUrl, { headers: Object.assign({}, headers) });
+        const res = yield (0, node_fetch_1.default)(sourceUrl, { headers: Object.assign({}, headers) });
         if (debug.enabled) {
             debug("Response HEADERS", res.headers);
         }
@@ -89,9 +89,14 @@ function httpDownload(sourceUrl, destinationFile, headers) {
             res.body.pipe(fileStream);
             res.body.on("error", (err) => {
                 fileStream.close();
-                if (fs.fileExists(destinationFile)) {
-                    fs.remove(destinationFile);
-                }
+                fs.fileExists(destinationFile)
+                    .then(fExist => {
+                    if (fExist) {
+                        return fs.remove(destinationFile);
+                    }
+                })
+                    .catch((err) => debug(err));
+                ;
                 reject(err);
             });
             fileStream.on("finish", function () {

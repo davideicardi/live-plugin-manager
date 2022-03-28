@@ -38,7 +38,7 @@ const fs = __importStar(require("./fileSystem"));
 const tar = __importStar(require("tar"));
 const debug_1 = __importDefault(require("debug"));
 const httpUtils = __importStar(require("./httpUtils"));
-const debug = debug_1.default("live-plugin-manager.TarballUtils");
+const debug = (0, debug_1.default)("live-plugin-manager.TarballUtils");
 function extractTarball(tgzFile, destinationDirectory) {
     return __awaiter(this, void 0, void 0, function* () {
         debug(`Extracting ${tgzFile} to ${destinationDirectory} ...`);

@@ -39,7 +39,7 @@ const tarballUtils_1 = require("./tarballUtils");
 const semVer = __importStar(require("semver"));
 const httpUtils = __importStar(require("./httpUtils"));
 const debug_1 = __importDefault(require("debug"));
-const debug = debug_1.default("live-plugin-manager.NpmRegistryClient");
+const debug = (0, debug_1.default)("live-plugin-manager.NpmRegistryClient");
 class NpmRegistryClient {
     constructor(npmUrl, config) {
         this.npmUrl = npmUrl;
@@ -101,10 +101,10 @@ class NpmRegistryClient {
             if (!packageInfo.dist || !packageInfo.dist.tarball) {
                 throw new Error("Invalid dist.tarball property");
             }
-            const tgzFile = yield tarballUtils_1.downloadTarball(packageInfo.dist.tarball, this.defaultHeaders);
+            const tgzFile = yield (0, tarballUtils_1.downloadTarball)(packageInfo.dist.tarball, this.defaultHeaders);
             const pluginDirectory = path.join(destinationDirectory, packageInfo.name);
             try {
-                yield tarballUtils_1.extractTarball(tgzFile, pluginDirectory);
+                yield (0, tarballUtils_1.extractTarball)(tgzFile, pluginDirectory);
             }
             finally {
                 yield fs.remove(tgzFile);

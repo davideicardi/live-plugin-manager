@@ -28,7 +28,7 @@ const fs = __importStar(require("fs-extra"));
 const path = __importStar(require("path"));
 const console = __importStar(require("console"));
 const debug_1 = __importDefault(require("debug"));
-const debug = debug_1.default("live-plugin-manager.PluginVm");
+const debug = (0, debug_1.default)("live-plugin-manager.PluginVm");
 const SCOPED_REGEX = /^(@[a-zA-Z0-9-_]+\/[a-zA-Z0-9-_]+)(.*)/;
 class PluginVm {
     constructor(manager) {
@@ -194,7 +194,8 @@ class PluginVm {
             paths: [],
             parent: module,
             children: [],
-            path: moduleDirname
+            path: moduleDirname,
+            isPreloading: false
         };
         // assign missing https://nodejs.org/api/globals.html
         //  and other "not real global" objects
@@ -332,11 +333,11 @@ class PluginVm {
             sandbox.Buffer = srcGlobal.Buffer;
         }
         if (!sandbox.URL && global.URL) {
-            // cast to any because URL is not defined inside NodeJS.Global, I don't understand why ...
+            // cast to any because URL is not defined inside NodeJSGlobal, I don't understand why ...
             sandbox.URL = global.URL;
         }
         if (!sandbox.URLSearchParams && global.URLSearchParams) {
-            // cast to any because URLSearchParams is not defined inside NodeJS.Global, I don't understand why ...
+            // cast to any because URLSearchParams is not defined inside NodeJSGlobal, I don't understand why ...
             sandbox.URLSearchParams = global.URLSearchParams;
         }
         if (!sandbox.process && global.process) {
