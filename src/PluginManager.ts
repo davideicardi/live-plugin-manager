@@ -15,6 +15,8 @@ const DefaultMainFile = "index.js";
 
 type IgnoreDependency = string | RegExp
 
+type NodeJSGlobal = typeof global;
+
 export interface PluginManagerOptions {
 	cwd: string;
 	pluginsPath: string;
@@ -33,7 +35,7 @@ export interface PluginManagerOptions {
 
 export interface PluginSandbox {
 	env?: NodeJS.ProcessEnv;
-	global?: NodeJS.Global;
+	global?: NodeJSGlobal;
 }
 
 const cwd = process.cwd();

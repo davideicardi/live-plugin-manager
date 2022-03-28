@@ -4,6 +4,7 @@ import { IPluginInfo } from "./PluginInfo";
 import { GithubAuth } from "./GithubRegistryClient";
 import { PackageInfo } from "./PackageInfo";
 declare type IgnoreDependency = string | RegExp;
+declare type NodeJSGlobal = typeof global;
 export interface PluginManagerOptions {
     cwd: string;
     pluginsPath: string;
@@ -23,7 +24,7 @@ export interface PluginManagerOptions {
 }
 export interface PluginSandbox {
     env?: NodeJS.ProcessEnv;
-    global?: NodeJS.Global;
+    global?: NodeJSGlobal;
 }
 export interface InstallFromPathOptions {
     force: boolean;

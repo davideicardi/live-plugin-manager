@@ -12,7 +12,7 @@ export async function directoryExists(fsPath: string): Promise<boolean> {
 		const stats = await fs.stat(fsPath);
 
 		return stats.isDirectory();
-	} catch (err) {
+	} catch (err: any) {
 		if (err.code === "ENOENT") {
 			return false;
 		}
@@ -26,7 +26,7 @@ export async function fileExists(fsPath: string): Promise<boolean> {
 		const stats = await fs.stat(fsPath);
 
 		return stats.isFile();
-	} catch (err) {
+	} catch (err: any) {
 		if (err.code === "ENOENT") {
 			return false;
 		}

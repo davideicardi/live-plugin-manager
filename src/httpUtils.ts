@@ -64,9 +64,13 @@ export async function httpDownload(sourceUrl: string, destinationFile: string, h
 
 		res.body.on("error", (err) => {
 			fileStream.close();
-			if (fs.fileExists(destinationFile)) {
-				fs.remove(destinationFile);
-			}
+			fs.fileExists(destinationFile)
+				.then(fExist => {
+					if (fExist) {
+						return fs.remove(destinationFile);
+					}
+				})
+				.catch((err) => debug(err));;
 			reject(err);
 		});
 

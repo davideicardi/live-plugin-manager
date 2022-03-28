@@ -109,7 +109,7 @@ export class NpmRegistryClient {
 			}
 
 			return result;
-		} catch (err) {
+		} catch (err: any) {
 			if (err.message) {
 				err.message = `Failed to get package '${name}' ${err.message}`;
 			}

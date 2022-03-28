@@ -10,9 +10,11 @@ const debug = Debug("live-plugin-manager.PluginVm");
 
 const SCOPED_REGEX = /^(@[a-zA-Z0-9-_]+\/[a-zA-Z0-9-_]+)(.*)/;
 
+type NodeJSGlobal = typeof global;
+
 export class PluginVm {
 	private requireCache = new Map<IPluginInfo, Map<string, NodeModule>>();
-	private sandboxCache = new Map<IPluginInfo, NodeJS.Global>();
+	private sandboxCache = new Map<IPluginInfo, NodeJSGlobal>();
 
 	constructor(private readonly manager: PluginManager) {
 	}
@@ -213,7 +215,8 @@ export class PluginVm {
 			paths: [], // TODO I should I populate this
 			parent: module, // TODO I assign parent to the current module...it is correct?
 			children: [], // TODO I should populate correctly this list...
-			path: moduleDirname
+			path: moduleDirname,
+			isPreloading: false
 		};
 
 		// assign missing https://nodejs.org/api/globals.html
@@ -371,7 +374,7 @@ export class PluginVm {
 		return undefined;
 	}
 
-	private getPluginSandbox(pluginContext: IPluginInfo): NodeJS.Global {
+	private getPluginSandbox(pluginContext: IPluginInfo): NodeJSGlobal {
 		let pluginSandbox = this.sandboxCache.get(pluginContext);
 		if (!pluginSandbox) {
 			const srcSandboxTemplate = this.manager.getSandboxTemplate(pluginContext.name)
@@ -385,10 +388,10 @@ export class PluginVm {
 		return pluginSandbox;
 	}
 
-	private createGlobalSandbox(sandboxTemplate: PluginSandbox): NodeJS.Global {
+	private createGlobalSandbox(sandboxTemplate: PluginSandbox): NodeJSGlobal {
 		const srcGlobal = sandboxTemplate.global || global;
 
-		const sandbox: NodeJS.Global = {...srcGlobal};
+		const sandbox: NodeJSGlobal = {...srcGlobal};
 
 		// copy properties that are not copied automatically (don't know why..)
 		//  https://stackoverflow.com/questions/59009214/some-properties-of-the-global-instance-are-not-copied-by-spread-operator-or-by-o
@@ -399,11 +402,11 @@ export class PluginVm {
 			sandbox.Buffer = srcGlobal.Buffer;
 		}
 		if (!(sandbox as any).URL && global.URL) {
-			// cast to any because URL is not defined inside NodeJS.Global, I don't understand why ...
+			// cast to any because URL is not defined inside NodeJSGlobal, I don't understand why ...
 			(sandbox as any).URL = global.URL;
 		}
 		if (!(sandbox as any).URLSearchParams && global.URLSearchParams) {
-			// cast to any because URLSearchParams is not defined inside NodeJS.Global, I don't understand why ...
+			// cast to any because URLSearchParams is not defined inside NodeJSGlobal, I don't understand why ...
 			(sandbox as any).URLSearchParams = global.URLSearchParams;
 		}
 		if (!sandbox.process && global.process) {
@@ -443,7 +446,7 @@ function checkPath(fullPath: string): "file" | "directory" | "none" {
 	}
 }
 
-interface ModuleSandbox extends NodeJS.Global {
+interface ModuleSandbox extends NodeJSGlobal {
 	module: NodeModule;
 	__dirname: string;
 	__filename: string;
