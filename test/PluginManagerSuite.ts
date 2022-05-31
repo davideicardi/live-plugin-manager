@@ -14,7 +14,8 @@ describe("PluginManager:", function() {
 
 	beforeEach(async function() {
 		manager = new PluginManager({
-			githubAuthentication: getGithubAuth()
+			githubAuthentication: getGithubAuth(),
+			bitbucketAuthentication: getBitbucketAuth()
 		});
 
 		// sanity check to see if the pluginsPath is what we expect to be
@@ -290,6 +291,38 @@ describe("PluginManager:", function() {
 				const result = _.defaults({ a: 1 }, { a: 3, b: 2 });
 				assert.equal(result.a, 1);
 				assert.equal(result.b, 2);
+			});
+		});
+
+		describe("from bitbucket", function() {
+			this.slow(4000);
+
+			it("installing a not existing plugin", async function() {
+				try {
+					await manager.installFromBitbucket("this/doesnotexists");
+				} catch (e) {
+					return;
+				}
+
+				throw new Error("Expected to fail");
+			});
+ 
+			it("installing a plugin from master branch", async function() {
+				await manager.installFromBitbucket("atlassian/json-schema-diff");
+
+				const jsonSchemaDiff = manager.require("json-schema-diff");
+				assert.isDefined(jsonSchemaDiff, "Plugin is not loaded");
+
+				const source = {type: 'string'};
+				const destination = {type: ['string', 'number']};
+
+				const result = await jsonSchemaDiff.diffSchemas({
+					sourceSchema: source, 
+					destinationSchema: destination
+				});
+
+				assert.equal(result.removalsFound, false);
+				assert.equal(result.additionsFound, true);
 			});
 		});
 
@@ -1401,6 +1434,21 @@ function getGithubAuth() {
 				type: "basic",
 				username: process.env.github_auth_username,
 				password: process.env.github_auth_token
+			};
+		}
+		return undefined;
+	}
+}
+
+function getBitbucketAuth() {
+	try {
+		return require("./bitbucket_auth.json");
+	} catch (e) {
+		if (process.env.bitbucket_auth_username) {
+			return {
+				type: "basic",
+				username: process.env.bitbucket_auth_username,
+				password: process.env.bitbucket_auth_token
 			};
 		}
 		return undefined;

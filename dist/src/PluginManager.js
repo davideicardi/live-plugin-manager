@@ -40,6 +40,7 @@ const lockFile = __importStar(require("lockfile"));
 const semver = __importStar(require("semver"));
 const debug_1 = __importDefault(require("debug"));
 const GithubRegistryClient_1 = require("./GithubRegistryClient");
+const BitbucketRegistryClient_1 = require("./BitbucketRegistryClient");
 const debug = (0, debug_1.default)("live-plugin-manager");
 const BASE_NPM_URL = "https://registry.npmjs.org";
 const DefaultMainFile = "index.js";
@@ -72,6 +73,7 @@ class PluginManager {
         this.vm = new PluginVm_1.PluginVm(this);
         this.npmRegistry = new NpmRegistryClient_1.NpmRegistryClient(this.options.npmRegistryUrl, this.options.npmRegistryConfig);
         this.githubRegistry = new GithubRegistryClient_1.GithubRegistryClient(this.options.githubAuthentication);
+        this.bitbucketRegistry = new BitbucketRegistryClient_1.BitbucketRegistryClient(this.options.bitbucketAuthentication);
     }
     install(name, version) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -125,6 +127,18 @@ class PluginManager {
             yield this.syncLock();
             try {
                 return yield this.installFromGithubLockFree(repository);
+            }
+            finally {
+                yield this.syncUnlock();
+            }
+        });
+    }
+    installFromBitbucket(repository) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield fs.ensureDir(this.options.pluginsPath);
+            yield this.syncLock();
+            try {
+                return yield this.installFromBitbucketLockFree(repository);
             }
             finally {
                 yield this.syncUnlock();
@@ -357,6 +371,30 @@ class PluginManager {
             if (!(yield this.isAlreadyDownloaded(registryInfo.name, registryInfo.version))) {
                 yield this.removeDownloaded(registryInfo.name);
                 yield this.githubRegistry.download(this.options.pluginsPath, registryInfo);
+            }
+            const pluginInfo = yield this.createPluginInfo(registryInfo.name);
+            return this.addPlugin(pluginInfo);
+        });
+    }
+    installFromBitbucketLockFree(repository) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const registryInfo = yield this.bitbucketRegistry.get(repository);
+            if (!this.isValidPluginName(registryInfo.name)) {
+                throw new Error(`Invalid plugin name '${registryInfo.name}'`);
+            }
+            // already installed satisfied version
+            const installedInfo = this.alreadyInstalled(registryInfo.name, registryInfo.version);
+            if (installedInfo) {
+                return installedInfo;
+            }
+            // already installed not satisfied version
+            if (this.alreadyInstalled(registryInfo.name)) {
+                yield this.uninstallLockFree(registryInfo.name);
+            }
+            // already downloaded
+            if (!(yield this.isAlreadyDownloaded(registryInfo.name, registryInfo.version))) {
+                yield this.removeDownloaded(registryInfo.name);
+                yield this.bitbucketRegistry.download(this.options.pluginsPath, registryInfo);
             }
             const pluginInfo = yield this.createPluginInfo(registryInfo.name);
             return this.addPlugin(pluginInfo);

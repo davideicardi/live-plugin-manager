@@ -7,6 +7,7 @@ import * as lockFile from "lockfile";
 import * as semver from "semver";
 import Debug from "debug";
 import { GithubRegistryClient, GithubAuth } from "./GithubRegistryClient";
+import { BitbucketRegistryClient, BitbucketAuth } from "./BitbucketRegistryClient";
 import { PackageJsonInfo, PackageInfo } from "./PackageInfo";
 const debug = Debug("live-plugin-manager");
 
@@ -29,6 +30,7 @@ export interface PluginManagerOptions {
 	ignoredDependencies: IgnoreDependency[];
 	staticDependencies: { [key: string]: any; };
 	githubAuthentication?: GithubAuth;
+	bitbucketAuthentication?: BitbucketAuth;
 	lockWait: number;
 	lockStale: number;
 }
@@ -68,6 +70,7 @@ export class PluginManager {
 	private readonly installedPlugins = new Array<IPluginInfo>();
 	private readonly npmRegistry: NpmRegistryClient;
 	private readonly githubRegistry: GithubRegistryClient;
+	private readonly bitbucketRegistry: BitbucketRegistryClient;
 	private readonly sandboxTemplates = new Map<string, PluginSandbox>();
 
 	constructor(options?: Partial<PluginManagerOptions>) {
@@ -79,6 +82,7 @@ export class PluginManager {
 		this.vm = new PluginVm(this);
 		this.npmRegistry = new NpmRegistryClient(this.options.npmRegistryUrl, this.options.npmRegistryConfig);
 		this.githubRegistry = new GithubRegistryClient(this.options.githubAuthentication);
+		this.bitbucketRegistry = new BitbucketRegistryClient(this.options.bitbucketAuthentication);
 	}
 
 	async install(name: string, version?: string): Promise<IPluginInfo> {
@@ -130,6 +134,17 @@ export class PluginManager {
 		await this.syncLock();
 		try {
 			return await this.installFromGithubLockFree(repository);
+		} finally {
+			await this.syncUnlock();
+		}
+	}
+
+	async installFromBitbucket(repository: string): Promise<IPluginInfo> {
+		await fs.ensureDir(this.options.pluginsPath);
+
+		await this.syncLock();
+		try {
+			return await this.installFromBitbucketLockFree(repository);
 		} finally {
 			await this.syncUnlock();
 		}
@@ -403,6 +418,37 @@ export class PluginManager {
 			await this.removeDownloaded(registryInfo.name);
 
 			await this.githubRegistry.download(
+				this.options.pluginsPath,
+				registryInfo);
+		}
+
+		const pluginInfo = await this.createPluginInfo(registryInfo.name);
+		return this.addPlugin(pluginInfo);
+	}
+
+	private async installFromBitbucketLockFree(repository: string): Promise<IPluginInfo> {
+		const registryInfo = await this.bitbucketRegistry.get(repository);
+
+		if (!this.isValidPluginName(registryInfo.name)) {
+			throw new Error(`Invalid plugin name '${registryInfo.name}'`);
+		}
+
+		// already installed satisfied version
+		const installedInfo = this.alreadyInstalled(registryInfo.name, registryInfo.version);
+		if (installedInfo) {
+			return installedInfo;
+		}
+
+		// already installed not satisfied version
+		if (this.alreadyInstalled(registryInfo.name)) {
+			await this.uninstallLockFree(registryInfo.name);
+		}
+
+		// already downloaded
+		if (!(await this.isAlreadyDownloaded(registryInfo.name, registryInfo.version))) {
+			await this.removeDownloaded(registryInfo.name);
+
+			await this.bitbucketRegistry.download(
 				this.options.pluginsPath,
 				registryInfo);
 		}
