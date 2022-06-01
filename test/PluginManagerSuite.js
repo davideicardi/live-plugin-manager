@@ -320,17 +320,11 @@ describe("PluginManager:", function () {
             });
             it("installing a plugin from master branch", function () {
                 return __awaiter(this, void 0, void 0, function* () {
-                    yield manager.installFromBitbucket("atlassian/json-schema-diff");
-                    const jsonSchemaDiff = manager.require("json-schema-diff");
-                    chai_1.assert.isDefined(jsonSchemaDiff, "Plugin is not loaded");
-                    const source = { type: 'string' };
-                    const destination = { type: ['string', 'number'] };
-                    const result = yield jsonSchemaDiff.diffSchemas({
-                        sourceSchema: source,
-                        destinationSchema: destination
-                    });
-                    chai_1.assert.equal(result.removalsFound, false);
-                    chai_1.assert.equal(result.additionsFound, true);
+                    yield manager.installFromBitbucket("quaren/live-package-test");
+                    const multiply = manager.require("live-package-test");
+                    chai_1.assert.isDefined(multiply, "Plugin is not loaded");
+                    const result = multiply(3, 4);
+                    chai_1.assert.equal(result, 12);
                 });
             });
         });
