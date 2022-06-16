@@ -1118,7 +1118,7 @@ describe("PluginManager:", function() {
 			const installation1 = manager.installFromNpm("moment");
 			const installation2 = manager.installFromPath(pluginSourcePath);
 			try {
-				await Promise.all([ installation1, installation2 ])
+				await Promise.all([ installation1, installation2 ]);
 			} catch (error) {
 				if (/failed to acquire lock/i.test(error as string)) return;
 			}
