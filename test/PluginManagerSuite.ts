@@ -1114,21 +1114,15 @@ describe("PluginManager:", function() {
 		});
 
 		it("cannot install multiple package concurrently", async function() {
-			// I expect this to take some time...
-			const installation1 = manager.installFromNpm("moment");
-
-			// so I expect a concurrent installation to fail...
 			const pluginSourcePath = path.join(__dirname, "my-basic-plugin");
+			const installation1 = manager.installFromNpm("moment");
 			const installation2 = manager.installFromPath(pluginSourcePath);
-
 			try {
-				await installation2;
-			} catch (err) {
-				await installation1;
-				return;
+				await Promise.all([ installation1, installation2 ])
+			} catch (error) {
+				if (/failed to acquire lock/i.test(error as string)) return;
 			}
-
-			throw new Error("Expected to fail");
+			throw new Error("Expected to fail acquiring lock");
 		});
 
 		describe("given a lock", function() {
