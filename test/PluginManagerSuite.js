@@ -41,7 +41,8 @@ describe("PluginManager:", function () {
     beforeEach(function () {
         return __awaiter(this, void 0, void 0, function* () {
             manager = new index_1.PluginManager({
-                githubAuthentication: getGithubAuth()
+                githubAuthentication: getGithubAuth(),
+                bitbucketAuthentication: getBitbucketAuth()
             });
             // sanity check to see if the pluginsPath is what we expect to be
             if (manager.options.pluginsPath !== path.join(__dirname, "../plugin_packages")) {
@@ -301,6 +302,29 @@ describe("PluginManager:", function () {
                     const result = _.defaults({ a: 1 }, { a: 3, b: 2 });
                     chai_1.assert.equal(result.a, 1);
                     chai_1.assert.equal(result.b, 2);
+                });
+            });
+        });
+        describe("from bitbucket", function () {
+            this.slow(4000);
+            it("installing a not existing plugin", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    try {
+                        yield manager.installFromBitbucket("this/doesnotexists");
+                    }
+                    catch (e) {
+                        return;
+                    }
+                    throw new Error("Expected to fail");
+                });
+            });
+            it("installing a plugin from master branch", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    yield manager.installFromBitbucket("quaren/live-package-test");
+                    const multiply = manager.require("live-package-test");
+                    chai_1.assert.isDefined(multiply, "Plugin is not loaded");
+                    const result = multiply(3, 4);
+                    chai_1.assert.equal(result, 12);
                 });
             });
         });
@@ -1321,6 +1345,21 @@ function getGithubAuth() {
                 type: "basic",
                 username: process.env.github_auth_username,
                 password: process.env.github_auth_token
+            };
+        }
+        return undefined;
+    }
+}
+function getBitbucketAuth() {
+    try {
+        return require("./bitbucket_auth.json");
+    }
+    catch (e) {
+        if (process.env.bitbucket_auth_username) {
+            return {
+                type: "basic",
+                username: process.env.bitbucket_auth_username,
+                password: process.env.bitbucket_auth_token
             };
         }
         return undefined;

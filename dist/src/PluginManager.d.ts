@@ -2,6 +2,7 @@
 import { NpmRegistryConfig } from "./NpmRegistryClient";
 import { IPluginInfo } from "./PluginInfo";
 import { GithubAuth } from "./GithubRegistryClient";
+import { BitbucketAuth } from "./BitbucketRegistryClient";
 import { PackageInfo } from "./PackageInfo";
 declare type IgnoreDependency = string | RegExp;
 declare type NodeJSGlobal = typeof global;
@@ -19,6 +20,7 @@ export interface PluginManagerOptions {
         [key: string]: any;
     };
     githubAuthentication?: GithubAuth;
+    bitbucketAuthentication?: BitbucketAuth;
     lockWait: number;
     lockStale: number;
 }
@@ -35,6 +37,7 @@ export declare class PluginManager {
     private readonly installedPlugins;
     private readonly npmRegistry;
     private readonly githubRegistry;
+    private readonly bitbucketRegistry;
     private readonly sandboxTemplates;
     constructor(options?: Partial<PluginManagerOptions>);
     install(name: string, version?: string): Promise<IPluginInfo>;
@@ -51,6 +54,7 @@ export declare class PluginManager {
      */
     installFromPath(location: string, options?: Partial<InstallFromPathOptions>): Promise<IPluginInfo>;
     installFromGithub(repository: string): Promise<IPluginInfo>;
+    installFromBitbucket(repository: string): Promise<IPluginInfo>;
     /**
      * Install a package by specifiing code directly. If no version is specified it will be always reinstalled.
      * @param name plugin name
@@ -78,6 +82,7 @@ export declare class PluginManager {
     /** Install from npm */
     private installFromNpmLockFreeDirect;
     private installFromGithubLockFree;
+    private installFromBitbucketLockFree;
     private installFromCodeLockFree;
     private installDependencies;
     private unloadDependents;

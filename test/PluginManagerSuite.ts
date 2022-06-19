@@ -14,7 +14,8 @@ describe("PluginManager:", function() {
 
 	beforeEach(async function() {
 		manager = new PluginManager({
-			githubAuthentication: getGithubAuth()
+			githubAuthentication: getGithubAuth(),
+			bitbucketAuthentication: getBitbucketAuth()
 		});
 
 		// sanity check to see if the pluginsPath is what we expect to be
@@ -290,6 +291,30 @@ describe("PluginManager:", function() {
 				const result = _.defaults({ a: 1 }, { a: 3, b: 2 });
 				assert.equal(result.a, 1);
 				assert.equal(result.b, 2);
+			});
+		});
+
+		describe("from bitbucket", function() {
+			this.slow(4000);
+
+			it("installing a not existing plugin", async function() {
+				try {
+					await manager.installFromBitbucket("this/doesnotexists");
+				} catch (e) {
+					return;
+				}
+
+				throw new Error("Expected to fail");
+			});
+ 
+			it("installing a plugin from master branch", async function() {
+				await manager.installFromBitbucket("quaren/live-package-test");
+
+				const multiply = manager.require("live-package-test");
+				assert.isDefined(multiply, "Plugin is not loaded");
+
+				const result = multiply(3, 4);
+				assert.equal(result, 12);
 			});
 		});
 
@@ -1401,6 +1426,21 @@ function getGithubAuth() {
 				type: "basic",
 				username: process.env.github_auth_username,
 				password: process.env.github_auth_token
+			};
+		}
+		return undefined;
+	}
+}
+
+function getBitbucketAuth() {
+	try {
+		return require("./bitbucket_auth.json");
+	} catch (e) {
+		if (process.env.bitbucket_auth_username) {
+			return {
+				type: "basic",
+				username: process.env.bitbucket_auth_username,
+				password: process.env.bitbucket_auth_token
 			};
 		}
 		return undefined;
