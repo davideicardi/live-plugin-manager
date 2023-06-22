@@ -41,7 +41,7 @@ export class PluginVm {
 		moduleInstance = sandbox.module;
 
 		const filePathExtension = path.extname(filePath).toLowerCase();
-		if (filePathExtension === ".js") {
+		if (filePathExtension === ".js" || filePathExtension === ".cjs") {
 			const code = fs.readFileSync(filePath, "utf8");
 			// note: I first put the object (before executing the script) in cache to support circular require
 			this.setCache(pluginContext, filePath, moduleInstance);
