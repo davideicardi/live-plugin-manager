@@ -338,6 +338,10 @@ export class PluginVm {
 		const reqPathKind = checkPath(fullPath);
 
 		if (reqPathKind !== "file") {
+			if (checkPath(fullPath + ".cjs") === "file") {
+				return fullPath + ".cjs";
+			}
+
 			if (checkPath(fullPath + ".js") === "file") {
 				return fullPath + ".js";
 			}
@@ -359,6 +363,11 @@ export class PluginVm {
 	private tryResolveAsDirectory(fullPath: string): string | undefined {
 		if (checkPath(fullPath) !== "directory") {
 			return undefined;
+		}
+
+		const indexCjs = path.join(fullPath, "index.cjs");
+		if (checkPath(indexCjs) === "file") {
+			return indexCjs;
 		}
 
 		const indexJs = path.join(fullPath, "index.js");
