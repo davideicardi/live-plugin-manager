@@ -416,6 +416,7 @@ export class PluginVm {
 			// override env to "unlink" from original process
 			const srcEnv = sandboxTemplate.env || global.process.env;
 			sandbox.process.env = {...srcEnv}; // copy properties
+			(sandbox as any).process.on = (event: string, callback: any) => {};
 		}
 
 		// create global console
