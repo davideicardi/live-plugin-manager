@@ -263,7 +263,8 @@ plugin_packages
 
 There are some known limitations when installing a package:
 
-- Different plugins cannot depends on different/incompatible modules. If plugin A require module x at version 1 and plugin B require the same module X at version 2 then plugin A and plugin B cannot be installed simultaneously. Version 2 of module X will be used and this can cause problems on your code.
+- Different plugins cannot depend on different/incompatible modules. If plugin A require module x at version 1 and plugin B require the same module X at version 2 then plugin A and plugin B cannot be installed simultaneously. Version 2 of module X will be used and this can cause problems on your code.
+- `process.on` has been stubbed, so plugins that use these events may not work as expected. 
 - No `pre/post-install` scripts are executed (some packages use this scripts to build assets or for platform specific installation, so for this reason some packages are not supported)
 - C/C++ packages (`.node`) are not supported
 - Plugin dependencies can be specified only as NPM dependencies (version number) or github dependencies (owner/repo), url or other kind of dependencies are not supported
