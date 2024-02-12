@@ -66,7 +66,7 @@ export function copy(src: string, dest: string, options?: Partial<CopyOptions>):
 		return true;
 	};
 
-	return fs.copy(src, dest, { filter });
+	return fs.copy(src, dest, { filter, dereference: true });
 }
 
 export interface CopyOptions {
