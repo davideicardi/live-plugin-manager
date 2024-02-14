@@ -141,6 +141,11 @@ function encodeNpmName(name: string) {
 	return name.replace("/", "%2F");
 }
 
+export interface NpmRegistry {
+	url: string,
+	config?: NpmRegistryConfig
+}
+
 export interface NpmRegistryConfig {
 	// actually this is used in the params
 	auth?: NpmRegistryAuthToken | NpmRegistryAuthBasic;

@@ -20,8 +20,14 @@ export function headersTokenAuth(token: string): Headers {
 }
 
 export function headersBasicAuth(username: string, password: string): Headers {
+	let auth;
+	if(username && password){
+		auth = Buffer.from(username + ":" + password).toString("base64");
+	} else {
+		auth = username;
+	}
 	return {
-		Authorization: "Basic " + Buffer.from(username + ":" + password).toString("base64")
+		Authorization: "Basic " + auth
 	};
 }
 
