@@ -1,7 +1,11 @@
 import fetch from "node-fetch";
 import * as fs from "./fileSystem";
 import Debug from "debug";
+import { ProxyAgent } from 'proxy-agent';
+
 const debug = Debug("live-plugin-manager.HttpUtils");
+
+const agent = new ProxyAgent();
 
 export interface Headers {
 	[name: string]: string;
@@ -30,7 +34,7 @@ export async function httpJsonGet<T>(sourceUrl: string, headers?: Headers): Prom
 		debug(`Json GET ${sourceUrl} ...`);
 		debug("HEADERS", headers);
 	}
-	const res = await fetch(sourceUrl, { headers: {...headers} });
+	const res = await fetch(sourceUrl, { agent, headers: {...headers} });
 
 	if (debug.enabled) {
 		debug("Response HEADERS", res.headers);
@@ -48,7 +52,7 @@ export async function httpDownload(sourceUrl: string, destinationFile: string, h
 		debug(`Download GET ${sourceUrl} ...`);
 		debug("HEADERS", headers);
 	}
-	const res = await fetch(sourceUrl, { headers: {...headers} });
+	const res = await fetch(sourceUrl, { agent, headers: {...headers} });
 
 	if (debug.enabled) {
 		debug("Response HEADERS", res.headers);
