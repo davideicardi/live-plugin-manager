@@ -94,7 +94,7 @@ function copy(src, dest, options) {
         }
         return true;
     };
-    return fs.copy(src, dest, { filter });
+    return fs.copy(src, dest, { filter, dereference: true });
 }
 exports.copy = copy;
 //# sourceMappingURL=fileSystem.js.map
