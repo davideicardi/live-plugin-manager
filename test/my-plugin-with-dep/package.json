@@ -10,7 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "@types/express": "4.17.13",
-    "debug": "4.3.3",
+    "debug": "^4.3.3",
     "moment": "2.29.1"
   }
 }
