@@ -1,11 +1,13 @@
 /// <reference types="node" />
+/// <reference types="node" />
+/// <reference types="node" />
 import { NpmRegistryConfig } from "./NpmRegistryClient";
 import { IPluginInfo } from "./PluginInfo";
 import { GithubAuth } from "./GithubRegistryClient";
 import { BitbucketAuth } from "./BitbucketRegistryClient";
 import { PackageInfo } from "./PackageInfo";
-declare type IgnoreDependency = string | RegExp;
-declare type NodeJSGlobal = typeof global;
+type IgnoreDependency = string | RegExp;
+type NodeJSGlobal = typeof global;
 export interface PluginManagerOptions {
     cwd: string;
     pluginsPath: string;

@@ -15,4 +15,4 @@ export interface GithubAuthBasic {
     username: string;
     password: string;
 }
-export declare type GithubAuth = GithubAuthUserToken | GithubAuthBasic;
+export type GithubAuth = GithubAuthUserToken | GithubAuthBasic;

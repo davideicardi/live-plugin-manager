@@ -11,4 +11,4 @@ export interface BitbucketAuthBasic {
     username: string;
     password: string;
 }
-export declare type BitbucketAuth = BitbucketAuthBasic;
+export type BitbucketAuth = BitbucketAuthBasic;
