@@ -72,3 +72,23 @@ export function copy(src: string, dest: string, options?: Partial<CopyOptions>):
 export interface CopyOptions {
 	exclude: string[];
 }
+
+export function pathExists(fsPath: string): Promise<boolean> {
+	return fs.pathExists(fsPath);
+}
+
+export function access(fsPath: string, mode?: number): Promise<void> {
+	return fs.access(fsPath, mode);
+}
+
+export function readdir(fsPath: string): Promise<string[]> {
+	return fs.readdir(fsPath);
+}
+
+export function rename(oldPath: string, newPath: string): Promise<void> {
+	return fs.rename(oldPath, newPath);
+}
+
+export function symlink(target: string, path: string): Promise<void> {
+	return fs.symlink(target, path);
+}

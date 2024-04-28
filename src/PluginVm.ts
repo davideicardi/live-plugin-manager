@@ -77,7 +77,8 @@ export class PluginVm {
 			mainFile: filePath,
 			name,
 			version: "1.0.0",
-			dependencies: {}
+			dependencies: {},
+			dependencyDetails: {}
 		};
 
 		try {
@@ -257,6 +258,32 @@ export class PluginVm {
 			throw new Error(`Cannot find ${requiredName} in plugin ${pluginContext.name}`);
 		}
 
+		if (this.hasDependency(pluginContext, requiredName)) {
+			let fullPath = path.join(pluginContext.location, "node_modules", requiredName);
+			if (!pluginContext.dependencyDetails) {
+				throw new Error(`Dependencies not loaded for plugin ${pluginContext.name}`);
+			}
+			const packageJson = pluginContext.dependencyDetails[requiredName];
+			if (!packageJson) {
+				throw new Error(`${pluginContext.name} does not include ${requiredName} in local dependencies`);
+			}
+			if (packageJson.main) {
+				fullPath = path.join(fullPath, packageJson.main);
+			}
+
+			const isFile = this.tryResolveAsFile(fullPath);
+			if (isFile) {
+				return isFile;
+			}
+
+			const isDirectory = this.tryResolveAsDirectory(fullPath);
+			if (isDirectory) {
+				return isDirectory;
+			}
+
+			throw new Error(`Cannot find ${requiredName} in plugin ${pluginContext.name}`);
+		}
+
 		if (this.isPlugin(requiredName)) {
 			return requiredName;
 		}
@@ -326,6 +353,14 @@ export class PluginVm {
 		const { pluginName } = this.splitRequire(requiredName);
 
 		return !!this.manager.getInfo(pluginName);
+	}
+
+	private hasDependency(pluginContext: IPluginInfo, requiredName: string) {
+		const { dependencyDetails } = pluginContext;
+		if (!dependencyDetails) {
+			return false;
+		}
+		return !!dependencyDetails[requiredName];
 	}
 
 	private tryResolveAsFile(fullPath: string): string | undefined {

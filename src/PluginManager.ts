@@ -9,10 +9,10 @@ import Debug from "debug";
 import { GithubRegistryClient, GithubAuth } from "./GithubRegistryClient";
 import { BitbucketRegistryClient, BitbucketAuth } from "./BitbucketRegistryClient";
 import { PackageJsonInfo, PackageInfo } from "./PackageInfo";
+import { VersionManager, DefaultMainFile } from "./VersionManager";
 const debug = Debug("live-plugin-manager");
 
 const BASE_NPM_URL = "https://registry.npmjs.org";
-const DefaultMainFile = "index.js";
 
 type IgnoreDependency = string | RegExp
 
@@ -21,6 +21,7 @@ type NodeJSGlobal = typeof global;
 export interface PluginManagerOptions {
 	cwd: string;
 	pluginsPath: string;
+	versionsPath?: string;
 	sandbox: PluginSandbox;
 	npmRegistryUrl: string;
 	npmRegistryConfig: NpmRegistryConfig;
@@ -66,6 +67,7 @@ export interface InstallFromPathOptions {
 
 export class PluginManager {
 	readonly options: PluginManagerOptions;
+	private versionManager: VersionManager;
 	private readonly vm: PluginVm;
 	private readonly installedPlugins = new Array<IPluginInfo>();
 	private readonly npmRegistry: NpmRegistryClient;
@@ -79,6 +81,10 @@ export class PluginManager {
 		}
 
 		this.options = {...createDefaultOptions(), ...(options || {})};
+		this.versionManager = new VersionManager({
+			cwd: this.options.cwd,
+			rootPath: this.options.versionsPath || path.join(this.options.pluginsPath, ".versions")
+		});
 		this.vm = new PluginVm(this);
 		this.npmRegistry = new NpmRegistryClient(this.options.npmRegistryUrl, this.options.npmRegistryConfig);
 		this.githubRegistry = new GithubRegistryClient(this.options.githubAuthentication);
@@ -172,7 +178,11 @@ export class PluginManager {
 
 		await this.syncLock();
 		try {
-			return await this.uninstallLockFree(name);
+			await this.uninstallLockFree(name);
+
+			const removed = await this.versionManager.uninstallOrphans(this.installedPlugins);
+			await Promise.all(removed
+				.map(pluginInfo => this.deleteAndUnloadPlugin(pluginInfo)));
 		} finally {
 			await this.syncUnlock();
 		}
@@ -187,6 +197,9 @@ export class PluginManager {
 			for (const plugin of this.installedPlugins.slice().reverse()) {
 				await this.uninstallLockFree(plugin.name);
 			}
+			const removed = await this.versionManager.uninstallOrphans(this.installedPlugins);
+			await Promise.all(removed
+				.map(pluginInfo => this.deleteAndUnloadPlugin(pluginInfo)));
 		} finally {
 			await this.syncUnlock();
 		}
@@ -339,13 +352,17 @@ export class PluginManager {
 		if (options.force || !(await this.isAlreadyDownloaded(packageJson.name, packageJson.version))) {
 			await this.removeDownloaded(packageJson.name);
 
-			if (debug.enabled) {
-				debug(`Copy from ${location} to ${this.options.pluginsPath}`);
+			const destLocation = this.versionManager.getPath(packageJson);
+			if (!destLocation) {
+				throw new Error(`Cannot resolve path for ${packageJson.name}@${packageJson.version}`);
 			}
-			await fs.copy(location, this.getPluginLocation(packageJson.name), { exclude: ["node_modules"] });
+			if (debug.enabled) {
+				debug(`Copy from ${location} to ${destLocation}`);
+			}
+			await fs.copy(location, destLocation, { exclude: ["node_modules"] });
 		}
 
-		const pluginInfo = await this.createPluginInfo(packageJson.name);
+		const pluginInfo = await this.createPluginInfo(packageJson);
 
 		return this.addPlugin(pluginInfo);
 	}
@@ -371,7 +388,11 @@ export class PluginManager {
 
 		if (this.options.npmInstallMode === "useCache"
 			&& await this.isAlreadyDownloaded(name, version)) {
-			const pluginInfo = await this.createPluginInfo(name);
+			const packageJson = await this.getDownloadedPackage(name, version);
+			if (!packageJson) {
+				throw new Error(`Unexpected state: not found ${name}@${version}`);
+			}
+			const pluginInfo = await this.createPluginInfo(packageJson);
 			return this.addPlugin(pluginInfo);
 		}
 
@@ -386,12 +407,10 @@ export class PluginManager {
 		if (!(await this.isAlreadyDownloaded(registryInfo.name, registryInfo.version))) {
 			await this.removeDownloaded(registryInfo.name);
 
-			await this.npmRegistry.download(
-				this.options.pluginsPath,
-				registryInfo);
+			await this.versionManager.download(this.npmRegistry, registryInfo);
 		}
 
-		const pluginInfo = await this.createPluginInfo(registryInfo.name);
+		const pluginInfo = await this.createPluginInfo(registryInfo);
 		return this.addPlugin(pluginInfo);
 	}
 
@@ -414,15 +433,19 @@ export class PluginManager {
 		}
 
 		// already downloaded
+		let downloadedInfo = undefined;
 		if (!(await this.isAlreadyDownloaded(registryInfo.name, registryInfo.version))) {
 			await this.removeDownloaded(registryInfo.name);
 
-			await this.githubRegistry.download(
-				this.options.pluginsPath,
-				registryInfo);
+			downloadedInfo = await this.versionManager.download(this.githubRegistry, registryInfo);
+		} else {
+			downloadedInfo = await this.getDownloadedPackage(registryInfo.name, registryInfo.version);
+			if (!downloadedInfo) {
+				throw new Error(`Unexpected state: not found ${registryInfo.name}@${registryInfo.version}`);
+			}
 		}
 
-		const pluginInfo = await this.createPluginInfo(registryInfo.name);
+		const pluginInfo = await this.createPluginInfo(downloadedInfo);
 		return this.addPlugin(pluginInfo);
 	}
 
@@ -445,15 +468,19 @@ export class PluginManager {
 		}
 
 		// already downloaded
+		let downloadedInfo = undefined;
 		if (!(await this.isAlreadyDownloaded(registryInfo.name, registryInfo.version))) {
 			await this.removeDownloaded(registryInfo.name);
 
-			await this.bitbucketRegistry.download(
-				this.options.pluginsPath,
-				registryInfo);
+			downloadedInfo = await this.versionManager.download(this.bitbucketRegistry, registryInfo);
+		} else {
+			downloadedInfo = await this.getDownloadedPackage(registryInfo.name, registryInfo.version);
+			if (!downloadedInfo) {
+				throw new Error(`Unexpected state: not found ${registryInfo.name}@${registryInfo.version}`);
+			}
 		}
 
-		const pluginInfo = await this.createPluginInfo(registryInfo.name);
+		const pluginInfo = await this.createPluginInfo(downloadedInfo);
 		return this.addPlugin(pluginInfo);
 	}
 
@@ -492,13 +519,17 @@ export class PluginManager {
 				debug(`Create plugin ${name} to ${this.options.pluginsPath} from code`);
 			}
 
-			const location = this.getPluginLocation(name);
+			const location = this.versionManager.getPath({name, version});
+			if (!location) {
+				throw new Error(`Cannot resolve path for ${name}@${version}`);
+			}
+			await fs.remove(location);
 			await fs.ensureDir(location);
 			await fs.writeFile(path.join(location, DefaultMainFile), code);
 			await fs.writeFile(path.join(location, "package.json"), JSON.stringify(packageJson));
 		}
 
-		const pluginInfo = await this.createPluginInfo(packageJson.name);
+		const pluginInfo = await this.createPluginInfo(packageJson);
 		return this.addPlugin(pluginInfo);
 	}
 
@@ -523,15 +554,25 @@ export class PluginManager {
 				if (debug.enabled) {
 					debug(`Installing dependencies of ${plugin.name}: ${key} is already available on host`);
 				}
-			} else if (this.alreadyInstalled(key, version, "satisfiesOrGreater")) {
+			} else if (this.alreadyInstalled(key, version)) {
 				if (debug.enabled) {
 					debug(`Installing dependencies of ${plugin.name}: ${key} is already installed`);
 				}
+				const installed = await this.versionManager.resolvePath(key, version);
+				if (!installed) {
+					throw new Error(`Cannot resolve path for ${key}@${version}`);
+				}
+				await this.linkDependencyToPlugin(plugin, key, installed);
 			} else {
 				if (debug.enabled) {
 					debug(`Installing dependencies of ${plugin.name}: ${key} ...`);
 				}
-				await this.installLockFree(key, version);
+				const installedPlugin = await this.installLockFree(key, version);
+				const installed = await this.versionManager.resolvePath(installedPlugin.name, installedPlugin.version);
+				if (!installed) {
+					throw new Error(`Cannot resolve path for ${installedPlugin.name}@${installedPlugin.version}`);
+				}
+				await this.linkDependencyToPlugin(plugin, key, installed);
 			}
 
 			// NOTE: maybe here I should put the actual version?
@@ -541,18 +582,44 @@ export class PluginManager {
 		return dependencies;
 	}
 
-	private unloadDependents(pluginName: string) {
+	private async linkDependencyToPlugin(plugin: IPluginInfo, packageName: string, versionPath: string) {
+		const nodeModulesPath = path.join(plugin.location, "node_modules");
+		await fs.ensureDir(nodeModulesPath);
+		const modulePath = path.join(nodeModulesPath, packageName);
+		const pathSegments = packageName.split("/");
+		for (let i = 1; i < pathSegments.length; i++) {
+			const pathToCreate = path.join(nodeModulesPath, ...pathSegments.slice(0, i));
+			if (debug.enabled) {
+				debug(`Creating ${pathToCreate}`);
+			}
+			await fs.ensureDir(pathToCreate);
+		}
+		const moduleExists = await fs.pathExists(modulePath);
+		if (moduleExists) {
+			// remove link if it exists
+			if (debug.enabled) {
+				debug(`Removing existing link ${modulePath}`);
+			}
+			await fs.remove(modulePath);
+		}
+		await fs.symlink(versionPath, modulePath);
+	}
+
+	private async unloadDependents(pluginName: string) {
 		for (const installed of this.installedPlugins) {
 			if (installed.dependencies[pluginName]) {
-				this.unloadWithDependents(installed);
+				if (debug.enabled) {
+					debug(`Attempting to unload dependent ${installed.name} of ${pluginName}...`);
+				}
+				await this.unloadWithDependents(installed);
 			}
 		}
 	}
 
-	private unloadWithDependents(plugin: IPluginInfo) {
+	private async unloadWithDependents(plugin: IPluginInfo) {
 		this.unload(plugin);
 
-		this.unloadDependents(plugin.name);
+		await this.unloadDependents(plugin.name);
 	}
 
 	private isModuleAvailableFromHost(name: string, version: string): boolean {
@@ -632,7 +699,10 @@ export class PluginManager {
 	}
 
 	private async getDownloadedPackage(name: string, _version: string): Promise<PackageInfo | undefined> {
-		const location = this.getPluginLocation(name);
+		const location = await this.versionManager.resolvePath(name, _version);
+		if (!location) {
+			return;
+		}
 		if (!(await fs.directoryExists(location))) {
 			return;
 		}
@@ -684,11 +754,74 @@ export class PluginManager {
 	private async addPlugin(plugin: IPluginInfo): Promise<IPluginInfo> {
 		await this.installDependencies(plugin);
 
-		this.installedPlugins.push(plugin);
+		const oldPluginIndex = this.installedPlugins.findIndex(p => p.name === plugin.name);
+		if (oldPluginIndex !== -1) {
+			const oldPlugins = this.installedPlugins.splice(oldPluginIndex, 1);
+			await this.unlinkModule(oldPlugins[0]);
+		}
+		const linkedPlugin = await this.linkModule(plugin);
+		this.installedPlugins.push(linkedPlugin);
 
 		// this.unloadDependents(plugin.name);
 
-		return plugin;
+		return linkedPlugin;
+	}
+
+	/**
+	 * Unlink a plugin from the specified version of package.
+	 *
+	 * @param plugin A plugin information to unlink
+	 */
+	private async unlinkModule(plugin: IPluginInfo) {
+		const location = this.getPluginLocation(plugin.name);
+		if (debug.enabled) {
+			debug(`Unlinking ${location} to ${plugin.name}@${plugin.version}`);
+		}
+		const pathSegments = plugin.name.split("/");
+		for (let i = 0; i < pathSegments.length; i++) {
+			const pathToRemove = path.join(this.options.pluginsPath, ...pathSegments.slice(0, pathSegments.length - i));
+			if (debug.enabled) {
+				debug(`Removing ${pathToRemove}`);
+			}
+			if (!(await fs.directoryExists(pathToRemove))) {
+				continue;
+			}
+			if (i > 0) {
+				const files = await fs.readdir(pathToRemove);
+				if (files.length > 0) {
+					if (debug.enabled) {
+						debug(`Skipping ${pathToRemove} as it is not empty`);
+					}
+					break;
+				}
+			}
+			await fs.remove(pathToRemove);
+		}
+		await this.versionManager.uninstallOrphan(plugin);
+	}
+
+	/**
+	 * Link a plugin to the specified version of package.
+	 *
+	 * @param plugin A plugin information to link
+	 * @returns A plugin information linked
+	 */
+	private async linkModule(plugin: IPluginInfo) {
+		const location = this.getPluginLocation(plugin.name);
+		const versionLocation = this.versionManager.getPath(plugin);
+		if (!versionLocation) {
+			throw new Error(`Cannot resolve path for ${plugin.name}@${plugin.version}`);
+		}
+
+		if (debug.enabled) {
+			debug(`Linking ${location} to ${versionLocation}`);
+		}
+
+		await fs.remove(location);
+		// parent directory should be created before linking
+		await fs.ensureDir(path.dirname(location));
+		await fs.symlink(versionLocation, location);
+		return this.createPluginInfoFromPath(location, true);
 	}
 
 	private async deleteAndUnloadPlugin(plugin: IPluginInfo): Promise<void> {
@@ -698,9 +831,9 @@ export class PluginManager {
 		}
 		this.sandboxTemplates.delete(plugin.name);
 
-		this.unloadWithDependents(plugin);
+		await this.unloadWithDependents(plugin);
 
-		await fs.remove(plugin.location);
+		await this.unlinkModule(plugin);
 	}
 
 	private syncLock() {
@@ -772,18 +905,24 @@ export class PluginManager {
 		return false;
 	}
 
-	private async createPluginInfo(name: string): Promise<IPluginInfo> {
-		const location = this.getPluginLocation(name);
-		const packageJson = await this.readPackageJsonFromPath(location);
-
-		const mainFile = path.normalize(path.join(location, packageJson.main || DefaultMainFile));
-
-		return {
-			name: packageJson.name,
-			version: packageJson.version,
-			location,
-			mainFile,
-			dependencies: packageJson.dependencies || {}
-		};
+	private async createPluginInfo(packageInfo: PackageInfo): Promise<IPluginInfo> {
+		const {name, version} = packageInfo;
+		const location = await this.versionManager.resolvePath(name, version);
+		if (!location) {
+			throw new Error(`Cannot resolve path for ${name}@${version}`);
+		}
+		return this.createPluginInfoFromPath(location);
 	}
+
+	/**
+	 * Create a plugin information from the specified location.
+	 *
+	 * @param location A location of the plugin
+	 * @param withDependencies If true, dependencies are also loaded
+	 * @returns
+	 */
+	private async createPluginInfoFromPath(location: string, withDependencies: boolean = false): Promise<IPluginInfo> {
+		return this.versionManager.createVersionInfoFromPath(location, withDependencies);
+	}
+
 }
