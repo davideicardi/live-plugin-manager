@@ -32,7 +32,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.copy = exports.writeFile = exports.readJsonFile = exports.readFile = exports.ensureDir = exports.fileExists = exports.directoryExists = exports.remove = exports.createWriteStream = void 0;
+exports.symlink = exports.rename = exports.readdir = exports.access = exports.pathExists = exports.copy = exports.writeFile = exports.readJsonFile = exports.readFile = exports.ensureDir = exports.fileExists = exports.directoryExists = exports.remove = exports.createWriteStream = void 0;
 const fs = __importStar(require("fs-extra"));
 const path = __importStar(require("path"));
 var fs_extra_1 = require("fs-extra");
@@ -101,4 +101,24 @@ function copy(src, dest, options) {
     return fs.copy(src, dest, { filter, dereference: true });
 }
 exports.copy = copy;
+function pathExists(fsPath) {
+    return fs.pathExists(fsPath);
+}
+exports.pathExists = pathExists;
+function access(fsPath, mode) {
+    return fs.access(fsPath, mode);
+}
+exports.access = access;
+function readdir(fsPath) {
+    return fs.readdir(fsPath);
+}
+exports.readdir = readdir;
+function rename(oldPath, newPath) {
+    return fs.rename(oldPath, newPath);
+}
+exports.rename = rename;
+function symlink(target, path) {
+    return fs.symlink(target, path);
+}
+exports.symlink = symlink;
 //# sourceMappingURL=fileSystem.js.map

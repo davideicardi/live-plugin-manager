@@ -1,3 +1,4 @@
+import { PackageJsonInfo } from './PackageInfo';
 export interface IPluginInfo {
     readonly mainFile: string;
     readonly location: string;
@@ -5,5 +6,8 @@ export interface IPluginInfo {
     readonly version: string;
     readonly dependencies: {
         [name: string]: string;
+    };
+    readonly dependencyDetails?: {
+        [name: string]: PackageJsonInfo | undefined;
     };
 }

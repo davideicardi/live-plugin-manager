@@ -45,9 +45,9 @@ const semver = __importStar(require("semver"));
 const debug_1 = __importDefault(require("debug"));
 const GithubRegistryClient_1 = require("./GithubRegistryClient");
 const BitbucketRegistryClient_1 = require("./BitbucketRegistryClient");
+const VersionManager_1 = require("./VersionManager");
 const debug = (0, debug_1.default)("live-plugin-manager");
 const BASE_NPM_URL = "https://registry.npmjs.org";
-const DefaultMainFile = "index.js";
 const cwd = process.cwd();
 function createDefaultOptions() {
     return {
@@ -74,6 +74,10 @@ class PluginManager {
             options.pluginsPath = path.join(options.cwd, "plugin_packages");
         }
         this.options = Object.assign(Object.assign({}, createDefaultOptions()), (options || {}));
+        this.versionManager = new VersionManager_1.VersionManager({
+            cwd: this.options.cwd,
+            rootPath: this.options.versionsPath || path.join(this.options.pluginsPath, ".versions")
+        });
         this.vm = new PluginVm_1.PluginVm(this);
         this.npmRegistry = new NpmRegistryClient_1.NpmRegistryClient(this.options.npmRegistryUrl, this.options.npmRegistryConfig);
         this.githubRegistry = new GithubRegistryClient_1.GithubRegistryClient(this.options.githubAuthentication);
@@ -172,7 +176,10 @@ class PluginManager {
             yield fs.ensureDir(this.options.pluginsPath);
             yield this.syncLock();
             try {
-                return yield this.uninstallLockFree(name);
+                yield this.uninstallLockFree(name);
+                const removed = yield this.versionManager.uninstallOrphans(this.installedPlugins);
+                yield Promise.all(removed
+                    .map(pluginInfo => this.deleteAndUnloadPlugin(pluginInfo)));
             }
             finally {
                 yield this.syncUnlock();
@@ -188,6 +195,9 @@ class PluginManager {
                 for (const plugin of this.installedPlugins.slice().reverse()) {
                     yield this.uninstallLockFree(plugin.name);
                 }
+                const removed = yield this.versionManager.uninstallOrphans(this.installedPlugins);
+                yield Promise.all(removed
+                    .map(pluginInfo => this.deleteAndUnloadPlugin(pluginInfo)));
             }
             finally {
                 yield this.syncUnlock();
@@ -310,12 +320,16 @@ class PluginManager {
             // already downloaded
             if (options.force || !(yield this.isAlreadyDownloaded(packageJson.name, packageJson.version))) {
                 yield this.removeDownloaded(packageJson.name);
-                if (debug.enabled) {
-                    debug(`Copy from ${location} to ${this.options.pluginsPath}`);
+                const destLocation = this.versionManager.getPath(packageJson);
+                if (!destLocation) {
+                    throw new Error(`Cannot resolve path for ${packageJson.name}@${packageJson.version}`);
                 }
-                yield fs.copy(location, this.getPluginLocation(packageJson.name), { exclude: ["node_modules"] });
+                if (debug.enabled) {
+                    debug(`Copy from ${location} to ${destLocation}`);
+                }
+                yield fs.copy(location, destLocation, { exclude: ["node_modules"] });
             }
-            const pluginInfo = yield this.createPluginInfo(packageJson.name);
+            const pluginInfo = yield this.createPluginInfo(packageJson);
             return this.addPlugin(pluginInfo);
         });
     }
@@ -337,7 +351,11 @@ class PluginManager {
             }
             if (this.options.npmInstallMode === "useCache"
                 && (yield this.isAlreadyDownloaded(name, version))) {
-                const pluginInfo = yield this.createPluginInfo(name);
+                const packageJson = yield this.getDownloadedPackage(name, version);
+                if (!packageJson) {
+                    throw new Error(`Unexpected state: not found ${name}@${version}`);
+                }
+                const pluginInfo = yield this.createPluginInfo(packageJson);
                 return this.addPlugin(pluginInfo);
             }
             return this.installFromNpmLockFreeDirect(name, version);
@@ -350,9 +368,9 @@ class PluginManager {
             // already downloaded
             if (!(yield this.isAlreadyDownloaded(registryInfo.name, registryInfo.version))) {
                 yield this.removeDownloaded(registryInfo.name);
-                yield this.npmRegistry.download(this.options.pluginsPath, registryInfo);
+                yield this.versionManager.download(this.npmRegistry, registryInfo);
             }
-            const pluginInfo = yield this.createPluginInfo(registryInfo.name);
+            const pluginInfo = yield this.createPluginInfo(registryInfo);
             return this.addPlugin(pluginInfo);
         });
     }
@@ -372,11 +390,18 @@ class PluginManager {
                 yield this.uninstallLockFree(registryInfo.name);
             }
             // already downloaded
+            let downloadedInfo = undefined;
             if (!(yield this.isAlreadyDownloaded(registryInfo.name, registryInfo.version))) {
                 yield this.removeDownloaded(registryInfo.name);
-                yield this.githubRegistry.download(this.options.pluginsPath, registryInfo);
+                downloadedInfo = yield this.versionManager.download(this.githubRegistry, registryInfo);
             }
-            const pluginInfo = yield this.createPluginInfo(registryInfo.name);
+            else {
+                downloadedInfo = yield this.getDownloadedPackage(registryInfo.name, registryInfo.version);
+                if (!downloadedInfo) {
+                    throw new Error(`Unexpected state: not found ${registryInfo.name}@${registryInfo.version}`);
+                }
+            }
+            const pluginInfo = yield this.createPluginInfo(downloadedInfo);
             return this.addPlugin(pluginInfo);
         });
     }
@@ -396,11 +421,18 @@ class PluginManager {
                 yield this.uninstallLockFree(registryInfo.name);
             }
             // already downloaded
+            let downloadedInfo = undefined;
             if (!(yield this.isAlreadyDownloaded(registryInfo.name, registryInfo.version))) {
                 yield this.removeDownloaded(registryInfo.name);
-                yield this.bitbucketRegistry.download(this.options.pluginsPath, registryInfo);
+                downloadedInfo = yield this.versionManager.download(this.bitbucketRegistry, registryInfo);
             }
-            const pluginInfo = yield this.createPluginInfo(registryInfo.name);
+            else {
+                downloadedInfo = yield this.getDownloadedPackage(registryInfo.name, registryInfo.version);
+                if (!downloadedInfo) {
+                    throw new Error(`Unexpected state: not found ${registryInfo.name}@${registryInfo.version}`);
+                }
+            }
+            const pluginInfo = yield this.createPluginInfo(downloadedInfo);
             return this.addPlugin(pluginInfo);
         });
     }
@@ -433,12 +465,16 @@ class PluginManager {
                 if (debug.enabled) {
                     debug(`Create plugin ${name} to ${this.options.pluginsPath} from code`);
                 }
-                const location = this.getPluginLocation(name);
+                const location = this.versionManager.getPath({ name, version });
+                if (!location) {
+                    throw new Error(`Cannot resolve path for ${name}@${version}`);
+                }
+                yield fs.remove(location);
                 yield fs.ensureDir(location);
-                yield fs.writeFile(path.join(location, DefaultMainFile), code);
+                yield fs.writeFile(path.join(location, VersionManager_1.DefaultMainFile), code);
                 yield fs.writeFile(path.join(location, "package.json"), JSON.stringify(packageJson));
             }
-            const pluginInfo = yield this.createPluginInfo(packageJson.name);
+            const pluginInfo = yield this.createPluginInfo(packageJson);
             return this.addPlugin(pluginInfo);
         });
     }
@@ -461,16 +497,26 @@ class PluginManager {
                         debug(`Installing dependencies of ${plugin.name}: ${key} is already available on host`);
                     }
                 }
-                else if (this.alreadyInstalled(key, version, "satisfiesOrGreater")) {
+                else if (this.alreadyInstalled(key, version)) {
                     if (debug.enabled) {
                         debug(`Installing dependencies of ${plugin.name}: ${key} is already installed`);
                     }
+                    const installed = yield this.versionManager.resolvePath(key, version);
+                    if (!installed) {
+                        throw new Error(`Cannot resolve path for ${key}@${version}`);
+                    }
+                    yield this.linkDependencyToPlugin(plugin, key, installed);
                 }
                 else {
                     if (debug.enabled) {
                         debug(`Installing dependencies of ${plugin.name}: ${key} ...`);
                     }
-                    yield this.installLockFree(key, version);
+                    const installedPlugin = yield this.installLockFree(key, version);
+                    const installed = yield this.versionManager.resolvePath(installedPlugin.name, installedPlugin.version);
+                    if (!installed) {
+                        throw new Error(`Cannot resolve path for ${installedPlugin.name}@${installedPlugin.version}`);
+                    }
+                    yield this.linkDependencyToPlugin(plugin, key, installed);
                 }
                 // NOTE: maybe here I should put the actual version?
                 dependencies[key] = version;
@@ -478,16 +524,47 @@ class PluginManager {
             return dependencies;
         });
     }
-    unloadDependents(pluginName) {
-        for (const installed of this.installedPlugins) {
-            if (installed.dependencies[pluginName]) {
-                this.unloadWithDependents(installed);
+    linkDependencyToPlugin(plugin, packageName, versionPath) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const nodeModulesPath = path.join(plugin.location, "node_modules");
+            yield fs.ensureDir(nodeModulesPath);
+            const modulePath = path.join(nodeModulesPath, packageName);
+            const pathSegments = packageName.split("/");
+            for (let i = 1; i < pathSegments.length; i++) {
+                const pathToCreate = path.join(nodeModulesPath, ...pathSegments.slice(0, i));
+                if (debug.enabled) {
+                    debug(`Creating ${pathToCreate}`);
+                }
+                yield fs.ensureDir(pathToCreate);
             }
-        }
+            const moduleExists = yield fs.pathExists(modulePath);
+            if (moduleExists) {
+                // remove link if it exists
+                if (debug.enabled) {
+                    debug(`Removing existing link ${modulePath}`);
+                }
+                yield fs.remove(modulePath);
+            }
+            yield fs.symlink(versionPath, modulePath);
+        });
+    }
+    unloadDependents(pluginName) {
+        return __awaiter(this, void 0, void 0, function* () {
+            for (const installed of this.installedPlugins) {
+                if (installed.dependencies[pluginName]) {
+                    if (debug.enabled) {
+                        debug(`Attempting to unload dependent ${installed.name} of ${pluginName}...`);
+                    }
+                    yield this.unloadWithDependents(installed);
+                }
+            }
+        });
     }
     unloadWithDependents(plugin) {
-        this.unload(plugin);
-        this.unloadDependents(plugin.name);
+        return __awaiter(this, void 0, void 0, function* () {
+            this.unload(plugin);
+            yield this.unloadDependents(plugin.name);
+        });
     }
     isModuleAvailableFromHost(name, version) {
         if (!this.options.hostRequire) {
@@ -556,7 +633,10 @@ class PluginManager {
     }
     getDownloadedPackage(name, _version) {
         return __awaiter(this, void 0, void 0, function* () {
-            const location = this.getPluginLocation(name);
+            const location = yield this.versionManager.resolvePath(name, _version);
+            if (!location) {
+                return;
+            }
             if (!(yield fs.directoryExists(location))) {
                 return;
             }
@@ -600,9 +680,72 @@ class PluginManager {
     addPlugin(plugin) {
         return __awaiter(this, void 0, void 0, function* () {
             yield this.installDependencies(plugin);
-            this.installedPlugins.push(plugin);
+            const oldPluginIndex = this.installedPlugins.findIndex(p => p.name === plugin.name);
+            if (oldPluginIndex !== -1) {
+                const oldPlugins = this.installedPlugins.splice(oldPluginIndex, 1);
+                yield this.unlinkModule(oldPlugins[0]);
+            }
+            const linkedPlugin = yield this.linkModule(plugin);
+            this.installedPlugins.push(linkedPlugin);
             // this.unloadDependents(plugin.name);
-            return plugin;
+            return linkedPlugin;
+        });
+    }
+    /**
+     * Unlink a plugin from the specified version of package.
+     *
+     * @param plugin A plugin information to unlink
+     */
+    unlinkModule(plugin) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const location = this.getPluginLocation(plugin.name);
+            if (debug.enabled) {
+                debug(`Unlinking ${location} to ${plugin.name}@${plugin.version}`);
+            }
+            const pathSegments = plugin.name.split("/");
+            for (let i = 0; i < pathSegments.length; i++) {
+                const pathToRemove = path.join(this.options.pluginsPath, ...pathSegments.slice(0, pathSegments.length - i));
+                if (debug.enabled) {
+                    debug(`Removing ${pathToRemove}`);
+                }
+                if (!(yield fs.directoryExists(pathToRemove))) {
+                    continue;
+                }
+                if (i > 0) {
+                    const files = yield fs.readdir(pathToRemove);
+                    if (files.length > 0) {
+                        if (debug.enabled) {
+                            debug(`Skipping ${pathToRemove} as it is not empty`);
+                        }
+                        break;
+                    }
+                }
+                yield fs.remove(pathToRemove);
+            }
+            yield this.versionManager.uninstallOrphan(plugin);
+        });
+    }
+    /**
+     * Link a plugin to the specified version of package.
+     *
+     * @param plugin A plugin information to link
+     * @returns A plugin information linked
+     */
+    linkModule(plugin) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const location = this.getPluginLocation(plugin.name);
+            const versionLocation = this.versionManager.getPath(plugin);
+            if (!versionLocation) {
+                throw new Error(`Cannot resolve path for ${plugin.name}@${plugin.version}`);
+            }
+            if (debug.enabled) {
+                debug(`Linking ${location} to ${versionLocation}`);
+            }
+            yield fs.remove(location);
+            // parent directory should be created before linking
+            yield fs.ensureDir(path.dirname(location));
+            yield fs.symlink(versionLocation, location);
+            return this.createPluginInfoFromPath(location, true);
         });
     }
     deleteAndUnloadPlugin(plugin) {
@@ -612,8 +755,8 @@ class PluginManager {
                 this.installedPlugins.splice(index, 1);
             }
             this.sandboxTemplates.delete(plugin.name);
-            this.unloadWithDependents(plugin);
-            yield fs.remove(plugin.location);
+            yield this.unloadWithDependents(plugin);
+            yield this.unlinkModule(plugin);
         });
     }
     syncLock() {
@@ -674,18 +817,26 @@ class PluginManager {
         }
         return false;
     }
-    createPluginInfo(name) {
+    createPluginInfo(packageInfo) {
         return __awaiter(this, void 0, void 0, function* () {
-            const location = this.getPluginLocation(name);
-            const packageJson = yield this.readPackageJsonFromPath(location);
-            const mainFile = path.normalize(path.join(location, packageJson.main || DefaultMainFile));
-            return {
-                name: packageJson.name,
-                version: packageJson.version,
-                location,
-                mainFile,
-                dependencies: packageJson.dependencies || {}
-            };
+            const { name, version } = packageInfo;
+            const location = yield this.versionManager.resolvePath(name, version);
+            if (!location) {
+                throw new Error(`Cannot resolve path for ${name}@${version}`);
+            }
+            return this.createPluginInfoFromPath(location);
+        });
+    }
+    /**
+     * Create a plugin information from the specified location.
+     *
+     * @param location A location of the plugin
+     * @param withDependencies If true, dependencies are also loaded
+     * @returns
+     */
+    createPluginInfoFromPath(location, withDependencies = false) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return this.versionManager.createVersionInfoFromPath(location, withDependencies);
         });
     }
 }
