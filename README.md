@@ -112,6 +112,7 @@ Create a new instance of `PluginManager`. Takes an optional `options` parameter 
 
 - `cwd`: current working directory (default to `process.cwd()`)
 - `pluginsPath`: plugins installation directory (default to `.\plugin_packages`, see `cwd`). Directory is created if not exists
+- `versionsPath`: directory containing the individual versions of the plugins (default to `./plugin_packages/.versions`). Directory is created if not exists
 - `npmRegistryUrl`: npm registry to use (default to https://registry.npmjs.org)
 - `npmRegistryConfig`: npm registry configuration see [npm-registry-client config](https://github.com/npm/npm-registry-client)
 - `ignoredDependencies`: array of string or RegExp with the list of dependencies to ignore, default to `@types/*`
@@ -263,7 +264,6 @@ plugin_packages
 
 There are some known limitations when installing a package:
 
-- Different plugins cannot depend on different/incompatible modules. If plugin A require module x at version 1 and plugin B require the same module X at version 2 then plugin A and plugin B cannot be installed simultaneously. Version 2 of module X will be used and this can cause problems on your code.
 - `process.on` has been stubbed, so plugins that use these events may not work as expected. 
 - No `pre/post-install` scripts are executed (some packages use this scripts to build assets or for platform specific installation, so for this reason some packages are not supported)
 - C/C++ packages (`.node`) are not supported
