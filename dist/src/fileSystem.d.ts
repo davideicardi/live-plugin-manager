@@ -10,3 +10,8 @@ export declare function copy(src: string, dest: string, options?: Partial<CopyOp
 export interface CopyOptions {
     exclude: string[];
 }
+export declare function pathExists(fsPath: string): Promise<boolean>;
+export declare function access(fsPath: string, mode?: number): Promise<void>;
+export declare function readdir(fsPath: string): Promise<string[]>;
+export declare function rename(oldPath: string, newPath: string): Promise<void>;
+export declare function symlink(target: string, path: string): Promise<void>;
