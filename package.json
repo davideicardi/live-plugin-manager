@@ -42,7 +42,7 @@
     "@types/lockfile": "^1.0.4",
     "@types/node-fetch": "^2.6.11",
     "@types/semver": "^7.5.8",
-    "@types/tar": "^6.1.12",
+    "@types/tar": "^6.1.13",
     "@types/url-join": "^4.0.3",
     "debug": "^4.3.4",
     "fetch-blob": "^4.0.0",
@@ -51,7 +51,7 @@
     "lockfile": "^1.0.4",
     "node-fetch-commonjs": "^3.3.2",
     "proxy-agent": "^6.4.0",
-    "semver": "^7.6.0",
+    "semver": "^7.6.1",
     "tar": "^6.2.1",
     "url-join": "^4.0.1"
   }
