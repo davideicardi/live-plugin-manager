@@ -1,6 +1,6 @@
 {
   "name": "live-plugin-manager",
-  "version": "0.20.0",
+  "version": "1.0.0",
   "description": "Install and uninstall any node package at runtime from npm registry",
   "keywords": [
     "plugin",
@@ -45,9 +45,11 @@
     "@types/tar": "^6.1.13",
     "@types/url-join": "^4.0.3",
     "debug": "^4.3.4",
+    "fetch-blob": "^4.0.0",
+    "formdata-polyfill": "^4.0.10",
     "fs-extra": "^10.1.0",
     "lockfile": "^1.0.4",
-    "node-fetch": "^2.7.0",
+    "node-fetch-commonjs": "^3.3.2",
     "proxy-agent": "^6.4.0",
     "semver": "^7.6.1",
     "tar": "^6.2.1",

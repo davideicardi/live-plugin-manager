@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.httpDownload = exports.httpJsonGet = exports.headersBasicAuth = exports.headersTokenAuth = exports.headersBearerAuth = void 0;
-const node_fetch_1 = __importDefault(require("node-fetch"));
+const node_fetch_commonjs_1 = __importDefault(require("node-fetch-commonjs"));
 const fs = __importStar(require("./fileSystem"));
 const debug_1 = __importDefault(require("debug"));
 const proxy_agent_1 = require("proxy-agent");
@@ -66,14 +66,14 @@ function httpJsonGet(sourceUrl, headers) {
             debug(`Json GET ${sourceUrl} ...`);
             debug("HEADERS", headers);
         }
-        const res = yield (0, node_fetch_1.default)(sourceUrl, { agent, headers: Object.assign({}, headers) });
+        const res = yield (0, node_fetch_commonjs_1.default)(sourceUrl, { agent, headers: Object.assign({}, headers) });
         if (debug.enabled) {
             debug("Response HEADERS", res.headers);
         }
         if (!res.ok) {
             throw new Error(`Response error ${res.status} ${res.statusText}`);
         }
-        return res.json();
+        return yield res.json();
     });
 }
 exports.httpJsonGet = httpJsonGet;
@@ -83,7 +83,7 @@ function httpDownload(sourceUrl, destinationFile, headers) {
             debug(`Download GET ${sourceUrl} ...`);
             debug("HEADERS", headers);
         }
-        const res = yield (0, node_fetch_1.default)(sourceUrl, { agent, headers: Object.assign({}, headers) });
+        const res = yield (0, node_fetch_commonjs_1.default)(sourceUrl, { agent, headers: Object.assign({}, headers) });
         if (debug.enabled) {
             debug("Response HEADERS", res.headers);
         }

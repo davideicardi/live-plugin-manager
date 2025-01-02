@@ -24,6 +24,7 @@ export declare class PluginVm {
     private sandboxRequire;
     private isCoreModule;
     private isPlugin;
+    private hasDependency;
     private tryResolveAsFile;
     private tryResolveAsDirectory;
     private getPluginSandbox;

@@ -11,6 +11,7 @@ type NodeJSGlobal = typeof global;
 export interface PluginManagerOptions {
     cwd: string;
     pluginsPath: string;
+    versionsPath?: string;
     sandbox: PluginSandbox;
     npmRegistryUrl: string;
     npmRegistryConfig: NpmRegistryConfig;
@@ -35,6 +36,7 @@ export interface InstallFromPathOptions {
 }
 export declare class PluginManager {
     readonly options: PluginManagerOptions;
+    private versionManager;
     private readonly vm;
     private readonly installedPlugins;
     private readonly npmRegistry;
@@ -87,6 +89,7 @@ export declare class PluginManager {
     private installFromBitbucketLockFree;
     private installFromCodeLockFree;
     private installDependencies;
+    private linkDependencyToPlugin;
     private unloadDependents;
     private unloadWithDependents;
     private isModuleAvailableFromHost;
@@ -100,10 +103,31 @@ export declare class PluginManager {
     private load;
     private unload;
     private addPlugin;
+    /**
+     * Unlink a plugin from the specified version of package.
+     *
+     * @param plugin A plugin information to unlink
+     */
+    private unlinkModule;
+    /**
+     * Link a plugin to the specified version of package.
+     *
+     * @param plugin A plugin information to link
+     * @returns A plugin information linked
+     */
+    private linkModule;
     private deleteAndUnloadPlugin;
     private syncLock;
     private syncUnlock;
     private shouldIgnore;
     private createPluginInfo;
+    /**
+     * Create a plugin information from the specified location.
+     *
+     * @param location A location of the plugin
+     * @param withDependencies If true, dependencies are also loaded
+     * @returns
+     */
+    private createPluginInfoFromPath;
 }
 export {};
