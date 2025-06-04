@@ -88,6 +88,8 @@ export declare class PluginManager {
     private installFromGithubLockFree;
     private installFromBitbucketLockFree;
     private installFromCodeLockFree;
+    private installDependency;
+    private listDependencies;
     private installDependencies;
     private linkDependencyToPlugin;
     private unloadDependents;

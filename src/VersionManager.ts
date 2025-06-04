@@ -1,6 +1,6 @@
 import * as fs from "./fileSystem";
 import * as path from "path";
-import {IPluginInfo} from "./PluginInfo";
+import { IPluginInfo } from "./PluginInfo";
 import * as semver from "semver";
 import Debug from "debug";
 import { PackageJsonInfo, PackageInfo } from "./PackageInfo";
@@ -32,7 +32,7 @@ export class VersionManager {
 			options.rootPath = path.join(options.cwd, "plugin_packages", ".versions");
 		}
 
-		this.options = {...createDefaultOptions(), ...(options || {})};
+		this.options = { ...createDefaultOptions(), ...(options || {}) };
 	}
 
 	/**
@@ -49,7 +49,7 @@ export class VersionManager {
 	 * @returns A location for the specified package name and version
 	 */
 	public getPath(packageInfo: PackageInfo): string {
-		const {name, version} = packageInfo;
+		const { name, version } = packageInfo;
 		return path.join(this.options.rootPath, `${name}@${version}`);
 	}
 
@@ -174,6 +174,7 @@ export class VersionManager {
 				location,
 				mainFile,
 				dependencies: packageJson.dependencies || {},
+				optionalDependencies: packageJson.optionalDependencies || {},
 			};
 		}
 
@@ -194,6 +195,7 @@ export class VersionManager {
 			location,
 			mainFile,
 			dependencies,
+			optionalDependencies: packageJson.optionalDependencies || {},
 			dependencyDetails,
 		};
 	}
@@ -275,7 +277,7 @@ export class VersionManager {
 	private async checkVersionUsedInDir(
 		packageInfo: PackageInfo, baseDir?: string,
 	): Promise<boolean> {
-		const {name, version} = packageInfo;
+		const { name, version } = packageInfo;
 		const location = baseDir || this.options.rootPath;
 		const files = await this.listVersionDirs(location);
 		if (debug.enabled) {
@@ -318,7 +320,7 @@ export class VersionManager {
 		if (!packageJson.dependencies) {
 			return false;
 		}
-		const {name, version} = packageInfo;
+		const { name, version } = packageInfo;
 		if (!packageJson.dependencies[name]) {
 			return false;
 		}

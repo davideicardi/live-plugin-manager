@@ -6,6 +6,7 @@ export interface IPluginInfo {
 	readonly name: string;
 	readonly version: string;
 	readonly dependencies: { [name: string]: string };
+	readonly optionalDependencies?: { [name: string]: string };
 	readonly dependencyDetails?: {
 		[name: string]: PackageJsonInfo | undefined;
 	}

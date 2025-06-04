@@ -18,8 +18,9 @@ Main features are:
 - Update/uninstall packages
 - Any Node.js packages can be installed
   - No special configuration is required
-- Installed packages can have dependencies 
+- Installed packages can have dependencies
   - dependencies are automatically installed
+  - optionalDependencies are also installed (errors are ignored)
   - when updating a dependencies all dependents are reloaded
 - Support for concurrency operation on filesystem (cloud/web farm scenario where file system is shared)
   - A filesystem lock is used to prevent multiple instances to work on the same filesystem in the same moment

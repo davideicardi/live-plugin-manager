@@ -4,15 +4,15 @@ import * as fs from "fs-extra";
 import * as os from "os";
 import * as semver from "semver";
 
-import {PluginManager, IPluginInfo} from "../dist/index";
+import { PluginManager, IPluginInfo } from "../dist/index";
 
-describe("PluginManager:", function() {
+describe("PluginManager:", function () {
 	this.timeout(15000);
 	this.slow(3000);
 
 	let manager: PluginManager;
 
-	beforeEach(async function() {
+	beforeEach(async function () {
 		manager = new PluginManager({
 			githubAuthentication: getGithubAuth(),
 			bitbucketAuthentication: getBitbucketAuth()
@@ -26,12 +26,12 @@ describe("PluginManager:", function() {
 		await fs.remove(manager.options.pluginsPath);
 	});
 
-	afterEach(async function() {
+	afterEach(async function () {
 		await fs.remove(manager.options.pluginsPath);
 	});
 
-	describe("installation", function() {
-		it("initially should not have any plugins", async function() {
+	describe("installation", function () {
+		it("initially should not have any plugins", async function () {
 			const plugins = await manager.list();
 			assert.equal(plugins.length, 0);
 
@@ -40,7 +40,7 @@ describe("PluginManager:", function() {
 			assert.isUndefined(manager.alreadyInstalled("my-basic-plugin"));
 		});
 
-		it("initially cannot require any plugins", async function() {
+		it("initially cannot require any plugins", async function () {
 			const isAvaialable = (name: string) => {
 				try {
 					manager.require(name);
@@ -60,8 +60,8 @@ describe("PluginManager:", function() {
 			assert.isFalse(isAvaialable("my-basic-plugin"), "my-basic-plugin should not be available");
 		});
 
-		describe("from path", function() {
-			it("installing a not existing plugin", async function() {
+		describe("from path", function () {
+			it("installing a not existing plugin", async function () {
 				try {
 					await manager.installFromPath("/this/path/does-not-exists");
 				} catch (e) {
@@ -71,7 +71,7 @@ describe("PluginManager:", function() {
 				throw new Error("Expected to fail");
 			});
 
-			it("installing a plugin", async function() {
+			it("installing a plugin", async function () {
 				const pluginPath = path.join(__dirname, "my-basic-plugin");
 				await manager.installFromPath(pluginPath);
 
@@ -81,7 +81,7 @@ describe("PluginManager:", function() {
 				assert.equal(pluginInstance.myVariable, "value1");
 			});
 
-			it("installing a plugin with a special name", async function() {
+			it("installing a plugin with a special name", async function () {
 				// name with dot (.)
 				const pluginPath = path.join(__dirname, "my-plugin.js");
 				await manager.installFromPath(pluginPath);
@@ -90,7 +90,7 @@ describe("PluginManager:", function() {
 
 			});
 
-			it("installing a plugin 2 times doesn't have effect", async function() {
+			it("installing a plugin 2 times doesn't have effect", async function () {
 				const pluginPath = path.join(__dirname, "my-basic-plugin");
 
 				await manager.installFromPath(pluginPath);
@@ -103,20 +103,20 @@ describe("PluginManager:", function() {
 				assert.equal(pluginInstance.installDate, pluginInstance2.installDate);
 			});
 
-			it("installing a plugin 2 times with force options allow to force a reinstallation", async function() {
+			it("installing a plugin 2 times with force options allow to force a reinstallation", async function () {
 				const pluginPath = path.join(__dirname, "my-basic-plugin");
 
 				await manager.installFromPath(pluginPath);
 				const pluginInstance = manager.require("my-basic-plugin");
 
-				await manager.installFromPath(pluginPath, {force: true});
+				await manager.installFromPath(pluginPath, { force: true });
 				const pluginInstance2 = manager.require("my-basic-plugin");
 
 				assert.notEqual(pluginInstance, pluginInstance2);
 				assert.notEqual(pluginInstance.installDate, pluginInstance2.installDate);
 			});
 
-			it("installing a plugin with minimal info", async function() {
+			it("installing a plugin with minimal info", async function () {
 				const pluginPath = path.join(__dirname, "my-minimal-plugin");
 				await manager.installFromPath(pluginPath);
 
@@ -126,7 +126,7 @@ describe("PluginManager:", function() {
 				assert.equal(pluginInstance.myVariable, "value1");
 			});
 
-			it("installing a plugin with node_modules should not copy node_modules", async function() {
+			it("installing a plugin with node_modules should not copy node_modules", async function () {
 				const pluginPath = path.join(__dirname, "my-plugin-with-npm-modules");
 				await manager.installFromPath(pluginPath);
 
@@ -142,8 +142,8 @@ describe("PluginManager:", function() {
 			});
 		});
 
-		describe("from npm", function() {
-			it("installing from a not valid npm url", async function() {
+		describe("from npm", function () {
+			it("installing from a not valid npm url", async function () {
 				manager = new PluginManager({
 					npmRegistryUrl: "http://davide.icardi.org/some-not-existing-registry/"
 				});
@@ -156,7 +156,7 @@ describe("PluginManager:", function() {
 				throw new Error("Expected to throw");
 			});
 
-			it("installing a not existing plugin", async function() {
+			it("installing a not existing plugin", async function () {
 				try {
 					await manager.installFromNpm("this-does-not-exists", "9.9.9");
 				} catch (e) {
@@ -166,7 +166,7 @@ describe("PluginManager:", function() {
 				throw new Error("Expected to throw");
 			});
 
-			it("installing a plugin (cookie)", async function() {
+			it("installing a plugin (cookie)", async function () {
 				await manager.installFromNpm("cookie", "0.3.1");
 
 				const cookie = manager.require("cookie");
@@ -178,7 +178,7 @@ describe("PluginManager:", function() {
 				assert.equal(result.x, "y");
 			});
 
-			it("installing a plugin already present in the folder will succeeded also if npm is down", async function() {
+			it("installing a plugin already present in the folder will succeeded also if npm is down", async function () {
 				// download it to ensure it is present
 				await manager.installFromNpm("cookie", "0.3.1");
 
@@ -197,7 +197,7 @@ describe("PluginManager:", function() {
 				assert.equal(result.x, "y");
 			});
 
-			it("installing a plugin already present in the folder will fail if npm is down and noCache is used", async function() {
+			it("installing a plugin already present in the folder will fail if npm is down and noCache is used", async function () {
 				// download it to ensure it is present
 				await manager.installFromNpm("cookie", "0.3.1");
 
@@ -215,7 +215,7 @@ describe("PluginManager:", function() {
 				throw new Error("Expected to throw");
 			});
 
-			it("installing a plugin already present in the folder will fail if npm is down and I ask for latest", async function() {
+			it("installing a plugin already present in the folder will fail if npm is down and I ask for latest", async function () {
 				// download it to ensure it is present
 				await manager.installFromNpm("cookie", "0.3.1");
 
@@ -233,16 +233,16 @@ describe("PluginManager:", function() {
 			});
 		});
 
-		describe("from github", function() {
+		describe("from github", function () {
 			this.slow(4000);
 
-			it("api configuration", function() {
+			it("api configuration", function () {
 				if (!manager.options.githubAuthentication) {
 					console.error("WARNING: No github_auth.json or github_auth_username env variable found, github api can give rate limits errors");
 				}
 			});
 
-			it("installing a not existing plugin", async function() {
+			it("installing a not existing plugin", async function () {
 				try {
 					await manager.installFromGithub("this/doesnotexists");
 				} catch (e) {
@@ -255,7 +255,7 @@ describe("PluginManager:", function() {
 			// NOTE: Initially I have tried with lodash but it doesn't have a valid structure
 			// (missing lodash.js, probably need a compilation)
 
-			it("installing a plugin from master branch (underscore)", async function() {
+			it("installing a plugin from master branch (underscore)", async function () {
 				await manager.installFromGithub("jashkenas/underscore");
 
 				const _ = manager.require("underscore");
@@ -267,7 +267,7 @@ describe("PluginManager:", function() {
 				assert.equal(result.b, 2);
 			});
 
-			it("installing a plugin from commit (underscore)", async function() {
+			it("installing a plugin from commit (underscore)", async function () {
 				const pluginInfo = await manager.installFromGithub("jashkenas/underscore#1aed9ec");
 				assert.equal(pluginInfo.version, "1.8.0");
 
@@ -280,7 +280,7 @@ describe("PluginManager:", function() {
 				assert.equal(result.b, 2);
 			});
 
-			it("installing a plugin from tag (underscore)", async function() {
+			it("installing a plugin from tag (underscore)", async function () {
 				const pluginInfo = await manager.installFromGithub("jashkenas/underscore#1.8.0");
 				assert.equal(pluginInfo.version, "1.8.0");
 
@@ -294,10 +294,10 @@ describe("PluginManager:", function() {
 			});
 		});
 
-		describe("from bitbucket", function() {
+		describe("from bitbucket", function () {
 			this.slow(4000);
 
-			it("installing a not existing plugin", async function() {
+			it("installing a not existing plugin", async function () {
 				try {
 					await manager.installFromBitbucket("this/doesnotexists");
 				} catch (e) {
@@ -306,8 +306,8 @@ describe("PluginManager:", function() {
 
 				throw new Error("Expected to fail");
 			});
- 
-			it("installing a plugin from master branch", async function() {
+
+			it("installing a plugin from master branch", async function () {
 				await manager.installFromBitbucket("quaren/live-package-test");
 
 				const multiply = manager.require("live-package-test");
@@ -318,9 +318,9 @@ describe("PluginManager:", function() {
 			});
 		});
 
-		describe("from code", function() {
+		describe("from code", function () {
 			for (const invalidName of ["../test", ".\\test", "", undefined, null]) {
-				it(`installing a not valid plugin name "${invalidName}" is not supported`, async function() {
+				it(`installing a not valid plugin name "${invalidName}" is not supported`, async function () {
 					try {
 						const n = invalidName as any;
 						await manager.installFromNpm(n, "9.9.9");
@@ -332,7 +332,7 @@ describe("PluginManager:", function() {
 				});
 			}
 
-			it("installing a plugin", async function() {
+			it("installing a plugin", async function () {
 				const code = `module.exports = "Hello from code plugin";`;
 				await manager.installFromCode("my-code-plugin", code);
 
@@ -343,7 +343,7 @@ describe("PluginManager:", function() {
 				assert.equal(myPlugin, "Hello from code plugin");
 			});
 
-			it("update a plugin", async function() {
+			it("update a plugin", async function () {
 				const code = `module.exports = "Hello from code plugin";`;
 				await manager.installFromCode("my-code-plugin", code);
 
@@ -357,7 +357,7 @@ describe("PluginManager:", function() {
 				assert.equal(myPluginV2, "V2");
 			});
 
-			it("uninstalling a plugin", async function() {
+			it("uninstalling a plugin", async function () {
 				const code = `module.exports = "Hello from code plugin";`;
 				await manager.installFromCode("my-code-plugin", code);
 
@@ -374,13 +374,13 @@ describe("PluginManager:", function() {
 				throw new Error("Expected to fail");
 			});
 
-			describe("given a plugin with an unknown dependency", function() {
-				beforeEach(async function() {
+			describe("given a plugin with an unknown dependency", function () {
+				beforeEach(async function () {
 					const code = `module.exports = require("some-not-valid-dependency");`;
 					await manager.installFromCode("my-code-plugin", code);
 				});
 
-				it("should give an error on require", async function() {
+				it("should give an error on require", async function () {
 					try {
 						manager.require("my-code-plugin");
 					} catch (e) {
@@ -389,7 +389,7 @@ describe("PluginManager:", function() {
 					throw new Error("Expected to fail");
 				});
 
-				it("after a failed require it shold fail also for next require", async function() {
+				it("after a failed require it shold fail also for next require", async function () {
 					// there was a bug that cache a failed plugin also on error
 					for (let i = 0; i < 10; i++) {
 						try {
@@ -405,8 +405,8 @@ describe("PluginManager:", function() {
 
 	});
 
-	describe("run script", function() {
-		it("simple script", async function() {
+	describe("run script", function () {
+		it("simple script", async function () {
 			const code = `
 			const a = 1;
 			const b = 3;
@@ -418,7 +418,7 @@ describe("PluginManager:", function() {
 			assert.equal(result, 4);
 		});
 
-		it("script with comment at the end", async function() {
+		it("script with comment at the end", async function () {
 			const code = `
 			const a = 1;
 			const b = 3;
@@ -430,7 +430,7 @@ describe("PluginManager:", function() {
 			assert.equal(result, 4);
 		});
 
-		it("require system module", async function() {
+		it("require system module", async function () {
 			const code = `
 			const os = require("os");
 
@@ -442,14 +442,14 @@ describe("PluginManager:", function() {
 		});
 	});
 
-	describe("given an installed plugin", function() {
+	describe("given an installed plugin", function () {
 		let pluginInfo: IPluginInfo;
 
-		beforeEach(async function() {
+		beforeEach(async function () {
 			pluginInfo = await manager.installFromNpm("moment", "2.18.1");
 		});
 
-		it("alreadyInstalled function should respect semver", function() {
+		it("alreadyInstalled function should respect semver", function () {
 			assert.isDefined(manager.alreadyInstalled("moment"));
 			assert.isDefined(manager.alreadyInstalled("moment", "2.18.1"));
 			assert.isDefined(manager.alreadyInstalled("moment", "v2.18.1"));
@@ -466,7 +466,7 @@ describe("PluginManager:", function() {
 			assert.isUndefined(manager.alreadyInstalled("moment", "^3.0.0"));
 		});
 
-		it("alreadyInstalled function should support greater mode (for dependencies)", function() {
+		it("alreadyInstalled function should support greater mode (for dependencies)", function () {
 			assert.isDefined(manager.alreadyInstalled("moment", undefined, "satisfiesOrGreater"));
 			assert.isDefined(manager.alreadyInstalled("moment", "2.18.1", "satisfiesOrGreater"));
 			assert.isDefined(manager.alreadyInstalled("moment", "v2.18.1", "satisfiesOrGreater"));
@@ -487,7 +487,7 @@ describe("PluginManager:", function() {
 			assert.isUndefined(manager.alreadyInstalled("moment", "^3.0.0", "satisfiesOrGreater"));
 		});
 
-		it("should be available", async function() {
+		it("should be available", async function () {
 			const plugins = await manager.list();
 			assert.equal(plugins.length, 1);
 			assert.equal(plugins[0].name, "moment");
@@ -502,14 +502,14 @@ describe("PluginManager:", function() {
 			assert.equal(manager.getInfo("moment"), pluginInfo);
 		});
 
-		it("require always return the same instance", async function() {
+		it("require always return the same instance", async function () {
 			const instance1 = manager.require("moment");
 			const instance2 = manager.require("moment");
 
 			assert.equal(instance1, instance2);
 		});
 
-		it("dynamic script can require a plugin", async function() {
+		it("dynamic script can require a plugin", async function () {
 			const code = `
 			const m = require("moment");
 
@@ -522,7 +522,7 @@ describe("PluginManager:", function() {
 			assert.equal(expectedInstance, result);
 		});
 
-		it("code plugin can require another plugin", async function() {
+		it("code plugin can require another plugin", async function () {
 			const code = `
 			const m = require("moment");
 
@@ -536,19 +536,19 @@ describe("PluginManager:", function() {
 			assert.equal(expectedInstance, result);
 		});
 
-		describe("when uninstalled", function() {
-			beforeEach(async function() {
+		describe("when uninstalled", function () {
+			beforeEach(async function () {
 				await manager.uninstall("moment");
 			});
 
-			it("should not be available anymore", async function() {
+			it("should not be available anymore", async function () {
 				const plugins = await manager.list();
 				assert.equal(plugins.length, 0);
 
 				assert.isFalse(fs.existsSync(pluginInfo.location), "Directory still exits");
 			});
 
-			it("requiring a not installed plugin throw an error", async function() {
+			it("requiring a not installed plugin throw an error", async function () {
 				try {
 					manager.require("moment");
 				} catch (e) {
@@ -558,7 +558,7 @@ describe("PluginManager:", function() {
 				throw new Error("Expected to fail");
 			});
 
-			it("directly requiring a not installed plugin throw an error", async function() {
+			it("directly requiring a not installed plugin throw an error", async function () {
 				try {
 					require("moment");
 				} catch (e) {
@@ -568,7 +568,7 @@ describe("PluginManager:", function() {
 				throw new Error("Expected to fail");
 			});
 
-			it("requiring a not installed plugin using it's path throw an error", async function() {
+			it("requiring a not installed plugin using it's path throw an error", async function () {
 				// Ensure that the plugin is really unloaded
 				try {
 					require(pluginInfo.location);
@@ -581,20 +581,20 @@ describe("PluginManager:", function() {
 		});
 	});
 
-	describe("given a plugin x that depend on y", function() {
-		describe("when plugin y is installed", function() {
-			beforeEach(async function() {
+	describe("given a plugin x that depend on y", function () {
+		describe("when plugin y is installed", function () {
+			beforeEach(async function () {
 				await manager.installFromPath(path.join(__dirname, "my-plugin-y"));
 			});
 
-			it("when plugin x is installed can require plugin y", async function() {
+			it("when plugin x is installed can require plugin y", async function () {
 				await manager.installFromPath(path.join(__dirname, "my-plugin-x"));
 
 				const x = manager.require("my-plugin-x");
 				assert.equal(x.y, "y!");
 			});
 
-			it("when plugin x is installed can require plugin y sub file", async function() {
+			it("when plugin x is installed can require plugin y sub file", async function () {
 				await manager.installFromPath(path.join(__dirname, "my-plugin-x"));
 
 				const x = manager.require("my-plugin-x");
@@ -603,10 +603,10 @@ describe("PluginManager:", function() {
 		});
 	});
 
-	describe("require", function() {
+	describe("require", function () {
 
 		// TODO review this test, split it in microtest
-		it("plugins respect the same node.js behavior", async function() {
+		it("plugins respect the same node.js behavior", async function () {
 			const pluginSourcePath = path.join(__dirname, "my-test-plugin");
 			await manager.installFromPath(pluginSourcePath);
 
@@ -638,7 +638,7 @@ describe("PluginManager:", function() {
 			assert.isDefined(pluginInstance.myGlobals.console);
 		});
 
-		it("require absolute files", async function() {
+		it("require absolute files", async function () {
 			const pluginSourcePath = path.join(__dirname, "my-plugin-with-abs-require");
 			await manager.installFromPath(pluginSourcePath);
 
@@ -648,7 +648,7 @@ describe("PluginManager:", function() {
 			assert.equal(pluginInstance.myVariableFromAbsoluteFile, "value3");
 		});
 
-		it("requre a plugin sub folder", async function() {
+		it("requre a plugin sub folder", async function () {
 			const pluginSourcePath = path.join(__dirname, "my-test-plugin");
 			await manager.installFromPath(pluginSourcePath);
 
@@ -656,7 +656,7 @@ describe("PluginManager:", function() {
 			assert.isDefined(result, "value4");
 		});
 
-		it("requre a plugin sub file", async function() {
+		it("requre a plugin sub file", async function () {
 			const pluginSourcePath = path.join(__dirname, "my-test-plugin");
 			await manager.installFromPath(pluginSourcePath);
 
@@ -664,7 +664,7 @@ describe("PluginManager:", function() {
 			assert.isDefined(result, "value3");
 		});
 
-		it("index file can be required explicitly or implicitly", async function() {
+		it("index file can be required explicitly or implicitly", async function () {
 			const pluginSourcePath = path.join(__dirname, "my-test-plugin");
 			await manager.installFromPath(pluginSourcePath);
 
@@ -675,7 +675,7 @@ describe("PluginManager:", function() {
 			assert.equal(resultImplicit, resultExplicit2);
 		});
 
-		it("installing a plugin with folder as main", async function() {
+		it("installing a plugin with folder as main", async function () {
 			const pluginPath = path.join(__dirname, "my-plugin-with-folder-as-main");
 			await manager.installFromPath(pluginPath);
 
@@ -685,7 +685,7 @@ describe("PluginManager:", function() {
 			assert.equal(pluginInstance.myVariable, "value1");
 		});
 
-		it("installing a plugin with a circular reference in require", async function() {
+		it("installing a plugin with a circular reference in require", async function () {
 			const pluginPath = path.join(__dirname, "my-plugin-with-circular-reference");
 			await manager.installFromPath(pluginPath);
 
@@ -695,7 +695,7 @@ describe("PluginManager:", function() {
 			assert.equal(pluginInstance.myVariable, "value1");
 		});
 
-		it("file should wins over folder with the same name", async function() {
+		it("file should wins over folder with the same name", async function () {
 			const pluginPath = path.join(__dirname, "my-plugin-file-win-over-folder");
 			await manager.installFromPath(pluginPath);
 
@@ -707,8 +707,8 @@ describe("PluginManager:", function() {
 
 	});
 
-	describe("scoped plugins", function() {
-		it("installing a scoped plugin", async function() {
+	describe("scoped plugins", function () {
+		it("installing a scoped plugin", async function () {
 			const pluginPath = path.join(__dirname, "my-basic-plugin-scoped");
 			await manager.installFromPath(pluginPath);
 
@@ -718,7 +718,7 @@ describe("PluginManager:", function() {
 			assert.equal(pluginInstance.myVariable, "value1");
 		});
 
-		it("installing a scoped plugin with path", async function() {
+		it("installing a scoped plugin with path", async function () {
 			const pluginPath = path.join(__dirname, "my-basic-plugin-scoped");
 			await manager.installFromPath(pluginPath);
 
@@ -729,18 +729,18 @@ describe("PluginManager:", function() {
 		});
 	});
 
-	describe("plugins dependencies", function() {
+	describe("plugins dependencies", function () {
 		this.slow(6000);
 
-		describe("Npm dependencies", function() {
+		describe("Npm dependencies", function () {
 
-			describe("Given a package with npm dependencies", function() {
-				beforeEach(async function() {
+			describe("Given a package with npm dependencies", function () {
+				beforeEach(async function () {
 					const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
 					await manager.installFromPath(pluginSourcePath);
 				});
 
-				it("dependencies are installed", async function() {
+				it("dependencies are installed", async function () {
 					assert.equal(manager.list().length, 2);
 					assert.equal(manager.list()[0].name, "moment");
 					assert.equal(manager.list()[0].location, path.join(manager.options.pluginsPath, "moment"));
@@ -748,20 +748,20 @@ describe("PluginManager:", function() {
 					assert.equal(manager.list()[1].location, path.join(manager.options.pluginsPath, "my-plugin-with-dep"));
 				});
 
-				it("dependencies are available", async function() {
+				it("dependencies are available", async function () {
 					const pluginInstance = manager.require("my-plugin-with-dep");
 
 					assert.equal(pluginInstance.testDebug, require("debug")); // I expect to be exactly the same
 					assert.equal(pluginInstance.testMoment, "1981/10/06");
 				});
 
-				it("by default @types dependencies are not installed", async function() {
+				it("by default @types dependencies are not installed", async function () {
 					for (const p of manager.list()) {
 						assert.notEqual(p.name, "@types/express");
 					}
 				});
 
-				it("dependencies installed in the host are not installed but are available", async function() {
+				it("dependencies installed in the host are not installed but are available", async function () {
 					// debug package is already available in the host
 
 					for (const p of manager.list()) {
@@ -769,12 +769,12 @@ describe("PluginManager:", function() {
 					}
 				});
 
-				describe("uninstalling a dependency (moment)", function() {
-					beforeEach(async function() {
+				describe("uninstalling a dependency (moment)", function () {
+					beforeEach(async function () {
 						await manager.uninstall("moment");
 					});
 
-					it("requiring the plugin will fail", function() {
+					it("requiring the plugin will fail", function () {
 						// VersionManager should be keep the dependencies of my-plugin-with-dep
 						// after uninstalling moment
 						const pluginInstance = manager.require("my-plugin-with-dep");
@@ -782,7 +782,7 @@ describe("PluginManager:", function() {
 						assert.equal(pluginInstance.testMoment, "1981/10/06");
 					});
 
-					it("if dependency is reinstalled plugin will work again", async function() {
+					it("if dependency is reinstalled plugin will work again", async function () {
 						await manager.installFromNpm("moment", "2.18.1");
 
 						const pluginInstance = manager.require("my-plugin-with-dep");
@@ -793,9 +793,9 @@ describe("PluginManager:", function() {
 			});
 		});
 
-		describe("Github dependencies", function() {
+		describe("Github dependencies", function () {
 
-			it("dependencies are installed", async function() {
+			it("dependencies are installed", async function () {
 				const pluginSourcePath = path.join(__dirname, "my-plugin-with-git-dep");
 				await manager.installFromPath(pluginSourcePath);
 
@@ -805,12 +805,12 @@ describe("PluginManager:", function() {
 			});
 		});
 
-		describe("Given some ignored dependencies", function() {
-			beforeEach(function() {
+		describe("Given some ignored dependencies", function () {
+			beforeEach(function () {
 				manager.options.ignoredDependencies = [/^@types\//, "moment"];
 			});
 
-			it("ignored dependencies are not installed", async function() {
+			it("ignored dependencies are not installed", async function () {
 				const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
 				await manager.installFromPath(pluginSourcePath);
 
@@ -819,7 +819,7 @@ describe("PluginManager:", function() {
 				}
 			});
 
-			it("if the ignored dependencies is required the plugin will not be loaded", async function() {
+			it("if the ignored dependencies is required the plugin will not be loaded", async function () {
 				const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
 				await manager.installFromPath(pluginSourcePath);
 
@@ -834,14 +834,45 @@ describe("PluginManager:", function() {
 			});
 		});
 
-		describe("handling updates", function() {
+		describe("Optional dependencies", function () {
+			describe("Given a package with optional dependencies", function () {
+				beforeEach(async function () {
+					const pluginSourcePath = path.join(__dirname, "my-plugin-with-opt-dep");
+					await manager.installFromPath(pluginSourcePath);
+				});
 
-			beforeEach(async function() {
+				it("optional dependencies are installed", function () {
+					assert.equal(manager.list().length, 2);
+					assert.equal(manager.list()[0].name, "moment");
+					assert.equal(manager.list()[1].name, "my-plugin-with-opt-dep");
+				});
+
+				it("optional dependencies are available", function () {
+					const pluginInstance = manager.require("my-plugin-with-opt-dep");
+					assert.equal(pluginInstance.testMoment, "1981/10/06");
+				});
+			});
+
+			it("installation continues when an optional dependency fails", async function () {
+				const pluginSourcePath = path.join(__dirname, "my-plugin-with-bad-opt-dep");
+				await manager.installFromPath(pluginSourcePath);
+
+				assert.equal(manager.list().length, 1);
+				assert.equal(manager.list()[0].name, "my-plugin-with-bad-opt-dep");
+
+				const pluginInstance = manager.require("my-plugin-with-bad-opt-dep");
+				assert.isTrue(pluginInstance.ok);
+			});
+		});
+
+		describe("handling updates", function () {
+
+			beforeEach(async function () {
 				await manager.installFromPath(path.join(__dirname, "my-plugin-a@v1"));
 				await manager.installFromPath(path.join(__dirname, "my-plugin-b")); // depend on my-plugin-a@1.0.0
 			});
 
-			it("updating a dependency will reload dependents", async function() {
+			it("updating a dependency will reload dependents", async function () {
 				// load the plugin before installing the new version
 				//  to ensure that the starting condition is valid
 				assert.equal(manager.list().length, 2);
@@ -874,7 +905,7 @@ describe("PluginManager:", function() {
 				assert.equal(pluginInstance, "a = v1");
 			});
 
-			it("updating a package that need a prev version will not downgrade the dependency", async function() {
+			it("updating a package that need a prev version will not downgrade the dependency", async function () {
 				await manager.installFromPath(path.join(__dirname, "my-plugin-a@v2")); // update dependency to v2
 
 				await manager.uninstall("my-plugin-b");
@@ -900,18 +931,18 @@ describe("PluginManager:", function() {
 			});
 		});
 
-		describe("given static dependencies", function() {
-			beforeEach(function() {
+		describe("given static dependencies", function () {
+			beforeEach(function () {
 				const momentStub = () => {
 					return {
 						format: () => "this is moment stub"
 					};
 				};
 
-				manager.options.staticDependencies = {moment: momentStub};
+				manager.options.staticDependencies = { moment: momentStub };
 			});
 
-			it("static dependencies are not installed but resolved correctly", async function() {
+			it("static dependencies are not installed but resolved correctly", async function () {
 				const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
 				await manager.installFromPath(pluginSourcePath);
 
@@ -923,11 +954,11 @@ describe("PluginManager:", function() {
 			});
 		});
 
-		describe("Not compatible dependencies with host", function() {
+		describe("Not compatible dependencies with host", function () {
 
 			// Note: Assume that host contains "debug" npm package at version 3
 
-			it("dependencies are installed", async function() {
+			it("dependencies are installed", async function () {
 				// this package contains "debug" at version 2 (different from the host)
 				const pluginSourcePath = path.join(__dirname, "my-plugin-with-diff-dep");
 				await manager.installFromPath(pluginSourcePath);
@@ -938,7 +969,7 @@ describe("PluginManager:", function() {
 				assert.equal(manager.list()[2].name, "my-plugin-with-diff-dep");
 			});
 
-			it("dependencies are available", async function() {
+			it("dependencies are available", async function () {
 				const pluginSourcePath = path.join(__dirname, "my-plugin-with-diff-dep");
 				await manager.installFromPath(pluginSourcePath);
 
@@ -947,7 +978,7 @@ describe("PluginManager:", function() {
 				assert.notEqual(pluginInstance.testDebug, require("debug")); // I expect to be different (v2 vs v3)
 			});
 
-			it("dependencies is not the same", async function() {
+			it("dependencies is not the same", async function () {
 				const pluginSourcePath = path.join(__dirname, "my-plugin-with-diff-dep");
 				await manager.installFromPath(pluginSourcePath);
 
@@ -961,22 +992,22 @@ describe("PluginManager:", function() {
 			});
 		});
 
-		describe("given an host dependency", function() {
+		describe("given an host dependency", function () {
 			const hostDependencyDestPath = path.join(__dirname, "..", "node_modules", "host-dependency");
 
 			// given a dependency installed in the host
 			// with version 1
 			// note: I simulate an host dependency by manually copy it in the node_modules folder
-			before(async function() {
+			before(async function () {
 				const hostDependencySourcePath = path.join(__dirname, "host-dependency@v1");
 				await fs.copy(hostDependencySourcePath, hostDependencyDestPath);
 			});
 
-			after(async function() {
+			after(async function () {
 				await fs.remove(hostDependencyDestPath);
 			});
 
-			it("it can be resolved", function() {
+			it("it can be resolved", function () {
 				const dependency = require("host-dependency");
 				assert.isDefined(dependency);
 				assert.equal(dependency, "v1.0.0");
@@ -984,19 +1015,19 @@ describe("PluginManager:", function() {
 				assert.equal(dependencyPackage.version, "1.0.0");
 			});
 
-			describe("when installing plugin that depends on the host dependency", function() {
-				beforeEach(async function() {
+			describe("when installing plugin that depends on the host dependency", function () {
+				beforeEach(async function () {
 					// this package depends on "host-dependency" at version ^1.0.0
 					const pluginSourcePath = path.join(__dirname, "my-plugin-with-host-dep");
 					await manager.installFromPath(pluginSourcePath);
 				});
 
-				it("dependency is not installed because already installed in host", function() {
+				it("dependency is not installed because already installed in host", function () {
 					assert.equal(manager.list().length, 1);
 					assert.equal(manager.list()[0].name, "my-plugin-with-host-dep");
 				});
 
-				it("it is resolved using the host dependency", function() {
+				it("it is resolved using the host dependency", function () {
 					const pluginInstance = manager.require("my-plugin-with-host-dep");
 					assert.isDefined(pluginInstance);
 
@@ -1005,20 +1036,20 @@ describe("PluginManager:", function() {
 					assert.equal(pluginInstance.testHostDependency, "v1.0.0");
 				});
 
-				describe("when installing an update of the host dependency", function() {
-					beforeEach(async function() {
+				describe("when installing an update of the host dependency", function () {
+					beforeEach(async function () {
 						const pluginSourcePath = path.join(__dirname, "host-dependency@v1.0.1");
 						await manager.installFromPath(pluginSourcePath);
 					});
 
-					it("dependency is installed/updated", function() {
+					it("dependency is installed/updated", function () {
 						assert.equal(manager.list().length, 2);
 						assert.equal(manager.list()[0].name, "my-plugin-with-host-dep");
 						assert.equal(manager.list()[1].name, "host-dependency");
 						assert.equal(manager.list()[1].version, "1.0.1");
 					});
 
-					it("the updated dependency is now used by all dependants", function() {
+					it("the updated dependency is now used by all dependants", function () {
 						const pluginInstance = manager.require("my-plugin-with-host-dep");
 						assert.isDefined(pluginInstance);
 
@@ -1027,17 +1058,17 @@ describe("PluginManager:", function() {
 						assert.equal(pluginInstance.testHostDependency, "v1.0.1");
 					});
 
-					describe("when uninstalling the update", function() {
-						beforeEach(async function() {
+					describe("when uninstalling the update", function () {
+						beforeEach(async function () {
 							await manager.uninstall("host-dependency");
 						});
 
-						it("dependency is uninstalled", function() {
+						it("dependency is uninstalled", function () {
 							assert.equal(manager.list().length, 1);
 							assert.equal(manager.list()[0].name, "my-plugin-with-host-dep");
 						});
 
-						it("it is again resolved using the host dependency", function() {
+						it("it is again resolved using the host dependency", function () {
 							const pluginInstance = manager.require("my-plugin-with-host-dep");
 							assert.isDefined(pluginInstance);
 
@@ -1051,32 +1082,32 @@ describe("PluginManager:", function() {
 		});
 	});
 
-	describe("query npm package", function() {
-		it("get latest version info", async function() {
+	describe("query npm package", function () {
+		it("get latest version info", async function () {
 			const info = await manager.queryPackageFromNpm("lodash");
 			assert.equal("lodash", info.name);
 			assert.isDefined(info.version, "Version not defined");
 		});
 
-		it("get latest version info (with string empty version)", async function() {
+		it("get latest version info (with string empty version)", async function () {
 			const info = await manager.queryPackageFromNpm("lodash", "");
 			assert.equal("lodash", info.name);
 			assert.isDefined(info.version, "Version not defined");
 		});
 
-		it("get latest version info (with undefined version)", async function() {
+		it("get latest version info (with undefined version)", async function () {
 			const info = await manager.queryPackageFromNpm("lodash", undefined);
 			assert.equal("lodash", info.name);
 			assert.isDefined(info.version, "Version not defined");
 		});
 
-		it("get latest version info (with null version)", async function() {
+		it("get latest version info (with null version)", async function () {
 			const info = await manager.queryPackageFromNpm("lodash", null as any);
 			assert.equal("lodash", info.name);
 			assert.isDefined(info.version, "Version not defined");
 		});
 
-		it("get specific version info", async function() {
+		it("get specific version info", async function () {
 			let info = await manager.queryPackageFromNpm("lodash", "4.17.4");
 			assert.equal(info.name, "lodash");
 			assert.equal(info.version, "4.17.4");
@@ -1086,19 +1117,19 @@ describe("PluginManager:", function() {
 			assert.equal(info.version, "4.17.4");
 		});
 
-		it("get caret version range info", async function() {
+		it("get caret version range info", async function () {
 			const info = await manager.queryPackageFromNpm("lodash", "^3.0.0");
 			assert.equal(info.name, "lodash");
 			assert.equal(info.version, "3.10.1"); // this test can fail if lodash publish a 3.x version
 		});
 
-		it("get latest version info for scoped packages", async function() {
+		it("get latest version info for scoped packages", async function () {
 			const info = await manager.queryPackageFromNpm("@types/node");
 			assert.equal("@types/node", info.name);
 			assert.isDefined(info.version);
 		});
 
-		it("get specific version info for scoped packages", async function() {
+		it("get specific version info for scoped packages", async function () {
 			let info = await manager.queryPackageFromNpm("@types/node", "7.0.13");
 			assert.equal("@types/node", info.name);
 			assert.equal(info.version, "7.0.13");
@@ -1108,7 +1139,7 @@ describe("PluginManager:", function() {
 			assert.equal(info.version, "7.0.13");
 		});
 
-		it("get caret version range info for scoped packages", async function() {
+		it("get caret version range info for scoped packages", async function () {
 			const info = await manager.queryPackageFromNpm("@types/node", "^6.0.0");
 			assert.equal(info.name, "@types/node");
 
@@ -1117,36 +1148,36 @@ describe("PluginManager:", function() {
 		});
 	});
 
-	describe("query github package", function() {
-		it("get version info", async function() {
+	describe("query github package", function () {
+		it("get version info", async function () {
 			const info = await manager.queryPackageFromGithub("lodash/lodash");
 			assert.equal("lodash", info.name);
 			assert.isDefined(info.version);
 		});
 	});
 
-	describe("query package info", function() {
-		it("get version from github", async function() {
+	describe("query package info", function () {
+		it("get version from github", async function () {
 			const info = await manager.queryPackage("lodash", "lodash/lodash");
 			assert.equal("lodash", info.name);
 			assert.isDefined(info.version);
 		});
 
-		it("get version from npm", async function() {
+		it("get version from npm", async function () {
 			const info = await manager.queryPackage("lodash", "4.17.4");
 			assert.equal("lodash", info.name);
 			assert.isDefined(info.version);
 		});
 	});
 
-	describe("locking", function() {
-		beforeEach(function() {
+	describe("locking", function () {
+		beforeEach(function () {
 			// reduce lock timeout for test reason
 			manager.options.lockWait = 50;
 			manager.options.lockStale = 1000;
 		});
 
-		it("cannot install multiple package concurrently", async function() {
+		it("cannot install multiple package concurrently", async function () {
 			// I expect this to take some time...
 			const installation1 = manager.installFromNpm("moment");
 
@@ -1164,9 +1195,9 @@ describe("PluginManager:", function() {
 			throw new Error("Expected to fail");
 		});
 
-		describe("given a lock", function() {
+		describe("given a lock", function () {
 
-			beforeEach(async function() {
+			beforeEach(async function () {
 				await fs.ensureDir(manager.options.pluginsPath);
 
 				// simulate a lock
@@ -1174,12 +1205,12 @@ describe("PluginManager:", function() {
 				manager.options.lockStale = 1000;
 			});
 
-			afterEach(async function() {
+			afterEach(async function () {
 				// simulate unlock
 				await (manager as any).syncUnlock();
 			});
 
-			it("cannot install package", async function() {
+			it("cannot install package", async function () {
 				const pluginSourcePath = path.join(__dirname, "my-basic-plugin");
 				const installation = manager.installFromPath(pluginSourcePath);
 
@@ -1192,7 +1223,7 @@ describe("PluginManager:", function() {
 				throw new Error("Expected to fail");
 			});
 
-			it("sync is considered stale after some time", async function() {
+			it("sync is considered stale after some time", async function () {
 				await sleep(manager.options.lockStale + 1);
 
 				// expected to succeeded because lock is considered stale
@@ -1202,15 +1233,15 @@ describe("PluginManager:", function() {
 		});
 	});
 
-	describe("sandbox", function() {
-		describe("given globals variables", function() {
-			it("should define the same globals", function() {
+	describe("sandbox", function () {
+		describe("given globals variables", function () {
+			it("should define the same globals", function () {
 				const code = `module.exports = global;`;
 				const result = manager.runScript(code);
 				assert.equal(result.Buffer, Buffer);
 			});
 
-			it("unknown globals throw an exception", function() {
+			it("unknown globals throw an exception", function () {
 				const code = `module.exports = someUnknownGlobalVar;`;
 				try {
 					manager.runScript(code);
@@ -1220,13 +1251,13 @@ describe("PluginManager:", function() {
 				throw new Error("Excepted to fail");
 			});
 
-			it("globals are available", function() {
+			it("globals are available", function () {
 				const code = `module.exports = encodeURIComponent("test/1");`;
 				const result = manager.runScript(code);
 				assert.equal(result, encodeURIComponent("test/1"));
 			});
 
-			it("globals are inherited from host", function() {
+			it("globals are inherited from host", function () {
 				// Note: this is a bad practice (modify global...) but I support it
 				(global as any).myCustomGlobalVar = "myCustomGlobalVar1";
 				const code = `module.exports = myCustomGlobalVar`;
@@ -1234,7 +1265,7 @@ describe("PluginManager:", function() {
 				assert.equal(result, "myCustomGlobalVar1");
 			});
 
-			it("globals can be overwritten from host", function() {
+			it("globals can be overwritten from host", function () {
 				(manager.options.sandbox.global as any) = {
 					...global, // copy default global
 					myCustomGlobalVar: "myCustomGlobalVar2"
@@ -1244,10 +1275,10 @@ describe("PluginManager:", function() {
 				assert.equal(result, "myCustomGlobalVar2");
 			});
 
-			it("overwritten globals not affect host, is isolated", function() {
+			it("overwritten globals not affect host, is isolated", function () {
 				assert.isUndefined((global as any).SOME_OTHER_KEY, "Initially host should not have it");
 
-				manager.options.sandbox.global = {...global, SOME_OTHER_KEY: "test1" } as any;
+				manager.options.sandbox.global = { ...global, SOME_OTHER_KEY: "test1" } as any;
 
 				const code = `module.exports = SOME_OTHER_KEY;`;
 				const result = manager.runScript(code);
@@ -1257,8 +1288,8 @@ describe("PluginManager:", function() {
 			});
 		});
 
-		describe("given nodes types", function(){
-			it("should access Buffer", function() {
+		describe("given nodes types", function () {
+			it("should access Buffer", function () {
 				assert.equal(
 					manager.runScript(`module.exports = Buffer.from("hello", "utf-8").length`),
 					5
@@ -1270,8 +1301,8 @@ describe("PluginManager:", function() {
 			});
 		});
 
-		describe("given js types", function(){
-			it("should access URL", function() {
+		describe("given js types", function () {
+			it("should access URL", function () {
 				assert.equal(
 					manager.runScript(`module.exports = new URL('/foo', 'https://example.org/').toString()`),
 					'https://example.org/foo'
@@ -1281,31 +1312,31 @@ describe("PluginManager:", function() {
 					URL.toString()
 				);
 			});
-			it("should access Error", function() {
+			it("should access Error", function () {
 				assert.equal(
 					manager.runScript(`module.exports = new Error("an error").message;`),
 					"an error"
 				);
 			});
-			it("should access URLSearchParams", function() {
+			it("should access URLSearchParams", function () {
 				assert.equal(
 					manager.runScript(`module.exports = new URLSearchParams('user=abc&query=xyz').get('user');`),
 					"abc"
 				);
 			});
-			it("should access Date", function() {
+			it("should access Date", function () {
 				assert.equal(
 					manager.runScript(`module.exports = new Date(1635107735931).toString()`),
 					new Date(1635107735931).toString()
 				);
 			});
-			it("should access Function", function() {
+			it("should access Function", function () {
 				assert.equal(
 					manager.runScript(`module.exports = (function(){}).constructor === Function`),
 					true
 				);
 			});
-			it("should access Object", function() {
+			it("should access Object", function () {
 				const code = `
 				module.exports = {
 					var1: new Object().constructor === Object,
@@ -1318,24 +1349,24 @@ describe("PluginManager:", function() {
 			});
 		});
 
-		describe("given an environment variables", function() {
+		describe("given an environment variables", function () {
 
-			beforeEach(function() {
+			beforeEach(function () {
 				process.env.SOME_RANDOM_KEY = "test1";
 			});
 
-			afterEach(function() {
+			afterEach(function () {
 				delete process.env.SOME_RANDOM_KEY;
 			});
 
-			it("plugins inherit from host", function() {
+			it("plugins inherit from host", function () {
 				const code = `module.exports = process.env.SOME_RANDOM_KEY;`;
 
 				const result = manager.runScript(code);
 				assert.equal(result, "test1");
 			});
 
-			it("allow to override env from host", function() {
+			it("allow to override env from host", function () {
 				manager.options.sandbox.env = { SOME_KEY: "test2" };
 
 				const code = `module.exports = process.env.SOME_RANDOM_KEY;`;
@@ -1347,7 +1378,7 @@ describe("PluginManager:", function() {
 				assert.equal(result2, "test2");
 			});
 
-			it("overwritten env not affect host, is isolated", function() {
+			it("overwritten env not affect host, is isolated", function () {
 				assert.isUndefined(process.env.SOME_PLUGIN_KEY, "Initially host should not have it");
 
 				manager.options.sandbox.env = { SOME_PLUGIN_KEY: "test2" };
@@ -1360,9 +1391,9 @@ describe("PluginManager:", function() {
 			});
 		});
 
-		describe("sandbox specific for plugin", function() {
+		describe("sandbox specific for plugin", function () {
 
-			it("set sandbox for a specific plugin", async function() {
+			it("set sandbox for a specific plugin", async function () {
 				const code = `module.exports = process.env.SOME_RANDOM_KEY;`;
 
 				await manager.installFromCode("my-plugin-with-sandbox", code);
@@ -1377,7 +1408,7 @@ describe("PluginManager:", function() {
 				assert.equal(result, "test1");
 			});
 
-			it("a plugin share the same globals between modules", async function() {
+			it("a plugin share the same globals between modules", async function () {
 				const pluginSourcePath = path.join(__dirname, "my-plugin-env-global");
 				await manager.installFromPath(pluginSourcePath);
 
@@ -1386,7 +1417,7 @@ describe("PluginManager:", function() {
 				assert.equal(result, "Hello world!");
 			});
 
-			it("a plugin doesn't share global and env with host, is isolated", function() {
+			it("a plugin doesn't share global and env with host, is isolated", function () {
 				assert.isUndefined(process.env.SOME_PLUGIN_KEY, "Initially host should not have it");
 				assert.isUndefined((global as any).SOME_OTHER_KEY, "Initially host should not have it");
 
@@ -1402,8 +1433,8 @@ describe("PluginManager:", function() {
 			});
 		});
 
-		describe("NodeRequire object inside a plugin", function() {
-			it("require system module", async function() {
+		describe("NodeRequire object inside a plugin", function () {
+			it("require system module", async function () {
 				const code = `module.exports = require("fs");`;
 
 				await manager.installFromCode("my-plugin-with-sandbox", code);
@@ -1412,7 +1443,7 @@ describe("PluginManager:", function() {
 				assert.equal(result, require("fs"));
 			});
 
-			it("require.resolve system module", async function() {
+			it("require.resolve system module", async function () {
 				const code = `module.exports = require.resolve("fs");`;
 
 				await manager.installFromCode("my-plugin-with-sandbox", code);
@@ -1423,12 +1454,12 @@ describe("PluginManager:", function() {
 		});
 	});
 
-	describe("uninstall", function() {
-		afterEach(async function() {
+	describe("uninstall", function () {
+		afterEach(async function () {
 			await manager.uninstallAll();
 		});
 
-		it("uninstall a single plugin", async function() {
+		it("uninstall a single plugin", async function () {
 			const pluginSourcePath = path.join(__dirname, "my-basic-plugin");
 			await manager.installFromPath(pluginSourcePath);
 
@@ -1450,7 +1481,7 @@ describe("PluginManager:", function() {
 			assert.equal(cleanedVersionFiles.length, 0);
 		});
 
-		it("uninstall a single plugin with multiple versions", async function() {
+		it("uninstall a single plugin with multiple versions", async function () {
 			await manager.installFromPath(path.join(__dirname, "my-plugin-a@v1"));
 			await manager.installFromPath(path.join(__dirname, "my-plugin-a@v2"));
 
@@ -1475,7 +1506,7 @@ describe("PluginManager:", function() {
 			assert.equal(cleanedVersionFiles.length, 0);
 		});
 
-		it("uninstall a single plugin with multiple versions and keep other plugins", async function() {
+		it("uninstall a single plugin with multiple versions and keep other plugins", async function () {
 			await manager.installFromPath(path.join(__dirname, "my-plugin-a@v1"));
 			await manager.installFromPath(path.join(__dirname, "my-basic-plugin"));
 			await manager.installFromPath(path.join(__dirname, "my-plugin-a@v2"));
@@ -1503,7 +1534,7 @@ describe("PluginManager:", function() {
 			assert.equal(cleanedVersionFiles.length, 1);
 		});
 
-		it("uninstall a plugin with dependencies, uninstall main package", async function() {
+		it("uninstall a plugin with dependencies, uninstall main package", async function () {
 			await manager.installFromPath(path.join(__dirname, "my-plugin-with-dep"));
 
 			const plugins = manager.list();
@@ -1529,7 +1560,7 @@ describe("PluginManager:", function() {
 			assert.equal(cleanedVersionFiles.length, 1);
 		});
 
-		it("uninstall a plugin with dependencies, uninstall dependency", async function() {
+		it("uninstall a plugin with dependencies, uninstall dependency", async function () {
 			await manager.installFromPath(path.join(__dirname, "my-plugin-with-dep"));
 
 			const plugins = manager.list();
@@ -1555,7 +1586,7 @@ describe("PluginManager:", function() {
 			assert.equal(cleanedVersionFiles.length, 2);
 		});
 
-		it("uninstall a plugin with host dependencies", async function() {
+		it("uninstall a plugin with host dependencies", async function () {
 			await manager.installFromPath(path.join(__dirname, "my-plugin-with-host-dep"));
 
 			const plugins = manager.list();
@@ -1578,7 +1609,7 @@ describe("PluginManager:", function() {
 			assert.equal(cleanedVersionFiles.length, 0);
 		});
 
-		it("uninstall a scoped plugin", async function() {
+		it("uninstall a scoped plugin", async function () {
 			await manager.installFromPath(path.join(__dirname, "my-basic-plugin-scoped"));
 
 			const plugins = manager.list();
@@ -1601,7 +1632,7 @@ describe("PluginManager:", function() {
 			assert.equal(cleanedVersionFiles.length, 0);
 		});
 
-		it("uninstall a scoped plugin, keep scope directory", async function() {
+		it("uninstall a scoped plugin, keep scope directory", async function () {
 			await manager.installFromPath(path.join(__dirname, "my-basic-plugin-scoped"));
 			await manager.installFromPath(path.join(__dirname, "my-plugin-a@v1"));
 			await manager.installFromPath(path.join(__dirname, "my-plugin-scoped-with-dep"));
@@ -1642,7 +1673,7 @@ describe("PluginManager:", function() {
 			assert.isTrue(scopedVersionFiles.includes("my-basic-plugin-scoped@1.0.0"));
 		});
 
-		it("uninstall a plugin with scoped dependencies", async function() {
+		it("uninstall a plugin with scoped dependencies", async function () {
 			await manager.installFromPath(path.join(__dirname, "my-basic-plugin-scoped"));
 			await manager.installFromPath(path.join(__dirname, "my-plugin-with-scoped-dep"));
 
@@ -1668,7 +1699,7 @@ describe("PluginManager:", function() {
 			assert.equal(cleanedVersionFiles.length, 0);
 		});
 
-		it("uninstall a plugin with git dependencies", async function() {
+		it("uninstall a plugin with git dependencies", async function () {
 			await manager.installFromPath(path.join(__dirname, "my-plugin-with-git-dep"));
 
 			const plugins = manager.list();

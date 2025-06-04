@@ -1,0 +1,8 @@
+{
+  "name": "my-plugin-with-bad-opt-dep",
+  "version": "1.0.0",
+  "main": "index.js",
+  "optionalDependencies": {
+    "some-non-existent-package-xyz": "1.0.0"
+  }
+}

@@ -1,8 +1,8 @@
 import * as fs from "./fileSystem";
 import * as path from "path";
-import {NpmRegistryClient, NpmRegistryConfig} from "./NpmRegistryClient";
-import {PluginVm} from "./PluginVm";
-import {IPluginInfo} from "./PluginInfo";
+import { NpmRegistryClient, NpmRegistryConfig } from "./NpmRegistryClient";
+import { PluginVm } from "./PluginVm";
+import { IPluginInfo } from "./PluginInfo";
 import * as lockFile from "lockfile";
 import * as semver from "semver";
 import Debug from "debug";
@@ -80,7 +80,7 @@ export class PluginManager {
 			options.pluginsPath = path.join(options.cwd, "plugin_packages");
 		}
 
-		this.options = {...createDefaultOptions(), ...(options || {})};
+		this.options = { ...createDefaultOptions(), ...(options || {}) };
 		this.versionManager = new VersionManager({
 			cwd: this.options.cwd,
 			rootPath: this.options.versionsPath || path.join(this.options.pluginsPath, ".versions")
@@ -210,7 +210,7 @@ export class PluginManager {
 	}
 
 	require(fullName: string): any {
-		const {pluginName, requiredPath} = this.vm.splitRequire(fullName);
+		const { pluginName, requiredPath } = this.vm.splitRequire(fullName);
 
 		const info = this.getInfo(pluginName);
 		if (!info) {
@@ -519,7 +519,7 @@ export class PluginManager {
 				debug(`Create plugin ${name} to ${this.options.pluginsPath} from code`);
 			}
 
-			const location = this.versionManager.getPath({name, version});
+			const location = this.versionManager.getPath({ name, version });
 			if (!location) {
 				throw new Error(`Cannot resolve path for ${name}@${version}`);
 			}
@@ -533,53 +533,76 @@ export class PluginManager {
 		return this.addPlugin(pluginInfo);
 	}
 
-	private async installDependencies(plugin: IPluginInfo): Promise<{ [name: string]: string }> {
-		if (!plugin.dependencies) {
-			return {};
-		}
-
-		const dependencies: { [name: string]: string } = {};
-
-		for (const key in plugin.dependencies) {
-			if (!plugin.dependencies.hasOwnProperty(key)) {
-				continue;
-			}
-			if (this.shouldIgnore(key)) {
-				continue;
+	private async installDependency(plugin: IPluginInfo, name: string, version: string): Promise<{ installed: boolean, error?: Error }> {
+		try {
+			if (this.shouldIgnore(name)) {
+				return { installed: false };
 			}
 
-			const version = plugin.dependencies[key];
-
-			if (this.isModuleAvailableFromHost(key, version)) {
+			if (this.isModuleAvailableFromHost(name, version)) {
 				if (debug.enabled) {
-					debug(`Installing dependencies of ${plugin.name}: ${key} is already available on host`);
+					debug(`Installing dependencies of ${plugin.name}: ${name} is already available on host`);
 				}
-			} else if (this.alreadyInstalled(key, version)) {
+				return { installed: true };
+			} else if (this.alreadyInstalled(name, version)) {
 				if (debug.enabled) {
-					debug(`Installing dependencies of ${plugin.name}: ${key} is already installed`);
+					debug(`Installing dependencies of ${plugin.name}: ${name} is already installed`);
 				}
-				const installed = await this.versionManager.resolvePath(key, version);
+				const installed = await this.versionManager.resolvePath(name, version);
 				if (!installed) {
-					throw new Error(`Cannot resolve path for ${key}@${version}`);
+					const error = new Error(`Cannot resolve path for ${name}@${version}`);
+					return { installed: false, error };
 				}
-				await this.linkDependencyToPlugin(plugin, key, installed);
+				await this.linkDependencyToPlugin(plugin, name, installed);
+				return { installed: true };
 			} else {
 				if (debug.enabled) {
-					debug(`Installing dependencies of ${plugin.name}: ${key} ...`);
+					debug(`Installing dependencies of ${plugin.name}: ${name} ...`);
 				}
-				const installedPlugin = await this.installLockFree(key, version);
+				const installedPlugin = await this.installLockFree(name, version);
 				const installed = await this.versionManager.resolvePath(installedPlugin.name, installedPlugin.version);
 				if (!installed) {
-					throw new Error(`Cannot resolve path for ${installedPlugin.name}@${installedPlugin.version}`);
+					const error = new Error(`Cannot resolve path for ${installedPlugin.name}@${installedPlugin.version}`);
+					return { installed: false, error };
 				}
-				await this.linkDependencyToPlugin(plugin, key, installed);
+				await this.linkDependencyToPlugin(plugin, name, installed);
+				return { installed: true };
 			}
+		} catch (error) {
+			if (debug.enabled) {
+				debug(`Error installing dependency ${name} for ${plugin.name}:`, error);
+			}
+			const err = error instanceof Error ? error : new Error(String(error));
+			return { installed: false, error: err };
+		}
+	}
 
-			// NOTE: maybe here I should put the actual version?
-			dependencies[key] = version;
+	private listDependencies(plugin: IPluginInfo): { name: string, version: string, isOptional: boolean }[] {
+		const allDependenciesToInstall = Object.keys(plugin.dependencies).map((key) => ({ isOptional: false, name: key, version: plugin.dependencies[key] }));
+		if (plugin.optionalDependencies) {
+			const optDeps = plugin.optionalDependencies;
+			allDependenciesToInstall.push(...Object.keys(optDeps).map((key) => ({ isOptional: true, name: key, version: optDeps[key] })));
 		}
 
-		return dependencies;
+		return allDependenciesToInstall;
+	}
+
+	private async installDependencies(plugin: IPluginInfo): Promise<{ [name: string]: string }> {
+		const installedDependencies: { [name: string]: string } = {};
+		for (const dep of this.listDependencies(plugin)) {
+			const installResult = await this.installDependency(plugin, dep.name, dep.version);
+			if (!installResult.installed && installResult.error) {
+				if (dep.isOptional) {
+					continue;
+				}
+				throw installResult.error;
+			}
+
+			// NOTE: maybe here I should put the actual installed version?
+			installedDependencies[dep.name] = dep.version;
+		}
+
+		return installedDependencies;
 	}
 
 	private async linkDependencyToPlugin(plugin: IPluginInfo, packageName: string, versionPath: string) {
@@ -652,7 +675,7 @@ export class PluginManager {
 
 		// '/' is permitted to support scoped packages
 		if (name.startsWith(".")
-		|| name.indexOf("\\") >= 0) {
+			|| name.indexOf("\\") >= 0) {
 			return false;
 		}
 
@@ -906,7 +929,7 @@ export class PluginManager {
 	}
 
 	private async createPluginInfo(packageInfo: PackageInfo): Promise<IPluginInfo> {
-		const {name, version} = packageInfo;
+		const { name, version } = packageInfo;
 		const location = await this.versionManager.resolvePath(name, version);
 		if (!location) {
 			throw new Error(`Cannot resolve path for ${name}@${version}`);
