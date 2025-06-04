@@ -543,6 +543,7 @@ export class PluginManager {
 				if (debug.enabled) {
 					debug(`Installing dependencies of ${plugin.name}: ${name} is already available on host`);
 				}
+				return { installed: true };
 			} else if (this.alreadyInstalled(name, version)) {
 				if (debug.enabled) {
 					debug(`Installing dependencies of ${plugin.name}: ${name} is already installed`);
@@ -553,6 +554,7 @@ export class PluginManager {
 					return { installed: false, error };
 				}
 				await this.linkDependencyToPlugin(plugin, name, installed);
+				return { installed: true };
 			} else {
 				if (debug.enabled) {
 					debug(`Installing dependencies of ${plugin.name}: ${name} ...`);
@@ -564,9 +566,8 @@ export class PluginManager {
 					return { installed: false, error };
 				}
 				await this.linkDependencyToPlugin(plugin, name, installed);
+				return { installed: true };
 			}
-
-			return { installed: true };
 		} catch (error) {
 			if (debug.enabled) {
 				debug(`Error installing dependency ${name} for ${plugin.name}:`, error);
