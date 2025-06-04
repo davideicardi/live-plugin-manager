@@ -480,18 +480,11 @@ class PluginManager {
     }
     installDependencies(plugin) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (!plugin.dependencies) {
-                return {};
-            }
             const dependencies = {};
-            for (const key in plugin.dependencies) {
-                if (!plugin.dependencies.hasOwnProperty(key)) {
-                    continue;
-                }
+            const installOne = (key, version, optional = false) => __awaiter(this, void 0, void 0, function* () {
                 if (this.shouldIgnore(key)) {
-                    continue;
+                    return;
                 }
-                const version = plugin.dependencies[key];
                 if (this.isModuleAvailableFromHost(key, version)) {
                     if (debug.enabled) {
                         debug(`Installing dependencies of ${plugin.name}: ${key} is already available on host`);
@@ -503,6 +496,12 @@ class PluginManager {
                     }
                     const installed = yield this.versionManager.resolvePath(key, version);
                     if (!installed) {
+                        if (optional) {
+                            if (debug.enabled) {
+                                debug(`Cannot resolve optional dependency path for ${key}@${version}`);
+                            }
+                            return;
+                        }
                         throw new Error(`Cannot resolve path for ${key}@${version}`);
                     }
                     yield this.linkDependencyToPlugin(plugin, key, installed);
@@ -511,15 +510,48 @@ class PluginManager {
                     if (debug.enabled) {
                         debug(`Installing dependencies of ${plugin.name}: ${key} ...`);
                     }
-                    const installedPlugin = yield this.installLockFree(key, version);
-                    const installed = yield this.versionManager.resolvePath(installedPlugin.name, installedPlugin.version);
-                    if (!installed) {
-                        throw new Error(`Cannot resolve path for ${installedPlugin.name}@${installedPlugin.version}`);
+                    try {
+                        const installedPlugin = yield this.installLockFree(key, version);
+                        const installed = yield this.versionManager.resolvePath(installedPlugin.name, installedPlugin.version);
+                        if (!installed) {
+                            if (optional) {
+                                if (debug.enabled) {
+                                    debug(`Cannot resolve optional dependency path for ${installedPlugin.name}@${installedPlugin.version}`);
+                                }
+                                return;
+                            }
+                            throw new Error(`Cannot resolve path for ${installedPlugin.name}@${installedPlugin.version}`);
+                        }
+                        yield this.linkDependencyToPlugin(plugin, key, installed);
                     }
-                    yield this.linkDependencyToPlugin(plugin, key, installed);
+                    catch (err) {
+                        if (optional) {
+                            if (debug.enabled) {
+                                debug(`Failed to install optional dependency ${key}@${version}`, err);
+                            }
+                            return;
+                        }
+                        throw err;
+                    }
                 }
                 // NOTE: maybe here I should put the actual version?
                 dependencies[key] = version;
+            });
+            if (plugin.dependencies) {
+                for (const key in plugin.dependencies) {
+                    if (!plugin.dependencies.hasOwnProperty(key)) {
+                        continue;
+                    }
+                    yield installOne(key, plugin.dependencies[key], false);
+                }
+            }
+            if (plugin.optionalDependencies) {
+                for (const key in plugin.optionalDependencies) {
+                    if (!plugin.optionalDependencies.hasOwnProperty(key)) {
+                        continue;
+                    }
+                    yield installOne(key, plugin.optionalDependencies[key], true);
+                }
             }
             return dependencies;
         });

@@ -166,37 +166,39 @@ export class VersionManager {
 			throw new Error(`Invalid plugin ${location}, package.json is missing`);
 		}
 
-		const mainFile = path.normalize(path.join(location, packageJson.main || DefaultMainFile));
-		if (!withDependencies) {
-			return {
-				name: packageJson.name,
-				version: packageJson.version,
-				location,
-				mainFile,
-				dependencies: packageJson.dependencies || {},
-			};
-		}
+                const mainFile = path.normalize(path.join(location, packageJson.main || DefaultMainFile));
+                if (!withDependencies) {
+                        return {
+                                name: packageJson.name,
+                                version: packageJson.version,
+                                location,
+                                mainFile,
+                                dependencies: packageJson.dependencies || {},
+                                optionalDependencies: packageJson.optionalDependencies || {},
+                        };
+                }
 
-		const dependencies = packageJson.dependencies || {};
-		const dependencyNames = Object.keys(dependencies);
+                const dependencies = packageJson.dependencies || {};
+                const dependencyNames = Object.keys(dependencies);
 		const dependencyPackageJsons = await Promise.all(dependencyNames.map(async (name) => {
 			const moduleLocation = path.join(location, "node_modules", name);
 			return await this.readPackageJsonFromPath(moduleLocation);
 		}));
-		const dependencyDetails: { [name: string]: PackageJsonInfo | undefined } = {};
-		dependencyPackageJsons.forEach((p, i) => {
-			dependencyDetails[dependencyNames[i]] = p;
-		});
+                const dependencyDetails: { [name: string]: PackageJsonInfo | undefined } = {};
+                dependencyPackageJsons.forEach((p, i) => {
+                        dependencyDetails[dependencyNames[i]] = p;
+                });
 
-		return {
-			name: packageJson.name,
-			version: packageJson.version,
-			location,
-			mainFile,
-			dependencies,
-			dependencyDetails,
-		};
-	}
+                return {
+                        name: packageJson.name,
+                        version: packageJson.version,
+                        location,
+                        mainFile,
+                        dependencies,
+                        optionalDependencies: packageJson.optionalDependencies || {},
+                        dependencyDetails,
+                };
+        }
 
 	/**
 	 * Check whether the filename is satisfied with the specified package name and version.

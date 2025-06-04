@@ -3,6 +3,9 @@ export interface PackageJsonInfo extends PackageInfo {
     dependencies?: {
         [name: string]: string;
     };
+    optionalDependencies?: {
+        [name: string]: string;
+    };
 }
 export interface PackageInfo {
     name: string;

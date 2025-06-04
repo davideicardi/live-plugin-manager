@@ -200,6 +200,7 @@ class VersionManager {
                     location,
                     mainFile,
                     dependencies: packageJson.dependencies || {},
+                    optionalDependencies: packageJson.optionalDependencies || {},
                 };
             }
             const dependencies = packageJson.dependencies || {};
@@ -218,6 +219,7 @@ class VersionManager {
                 location,
                 mainFile,
                 dependencies,
+                optionalDependencies: packageJson.optionalDependencies || {},
                 dependencyDetails,
             };
         });

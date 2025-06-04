@@ -819,9 +819,9 @@ describe("PluginManager:", function() {
 				}
 			});
 
-			it("if the ignored dependencies is required the plugin will not be loaded", async function() {
-				const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
-				await manager.installFromPath(pluginSourcePath);
+            it("if the ignored dependencies is required the plugin will not be loaded", async function() {
+                        const pluginSourcePath = path.join(__dirname, "my-plugin-with-dep");
+                        await manager.installFromPath(pluginSourcePath);
 
 				// expected to fail because moment is missing...
 				try {
@@ -830,9 +830,40 @@ describe("PluginManager:", function() {
 					assert.isTrue(err.message.includes("Cannot find module 'moment'"));
 					return;
 				}
-				throw new Error("Expected to fail");
-			});
-		});
+                        throw new Error("Expected to fail");
+                });
+            });
+
+            describe("Optional dependencies", function() {
+                    describe("Given a package with optional dependencies", function() {
+                            beforeEach(async function() {
+                                    const pluginSourcePath = path.join(__dirname, "my-plugin-with-opt-dep");
+                                    await manager.installFromPath(pluginSourcePath);
+                            });
+
+                            it("optional dependencies are installed", function() {
+                                    assert.equal(manager.list().length, 2);
+                                    assert.equal(manager.list()[0].name, "moment");
+                                    assert.equal(manager.list()[1].name, "my-plugin-with-opt-dep");
+                            });
+
+                            it("optional dependencies are available", function() {
+                                    const pluginInstance = manager.require("my-plugin-with-opt-dep");
+                                    assert.equal(pluginInstance.testMoment, "1981/10/06");
+                            });
+                    });
+
+                    it("installation continues when an optional dependency fails", async function() {
+                            const pluginSourcePath = path.join(__dirname, "my-plugin-with-bad-opt-dep");
+                            await manager.installFromPath(pluginSourcePath);
+
+                            assert.equal(manager.list().length, 1);
+                            assert.equal(manager.list()[0].name, "my-plugin-with-bad-opt-dep");
+
+                            const pluginInstance = manager.require("my-plugin-with-bad-opt-dep");
+                            assert.isTrue(pluginInstance.ok);
+                    });
+            });
 
 		describe("handling updates", function() {
 
