@@ -740,7 +740,9 @@ describe("PluginManager:", function () {
                     return __awaiter(this, void 0, void 0, function* () {
                         chai_1.assert.equal(manager.list().length, 2);
                         chai_1.assert.equal(manager.list()[0].name, "moment");
+                        chai_1.assert.equal(manager.list()[0].location, path.join(manager.options.pluginsPath, "moment"));
                         chai_1.assert.equal(manager.list()[1].name, "my-plugin-with-dep");
+                        chai_1.assert.equal(manager.list()[1].location, path.join(manager.options.pluginsPath, "my-plugin-with-dep"));
                     });
                 });
                 it("dependencies are available", function () {
@@ -772,31 +774,13 @@ describe("PluginManager:", function () {
                         });
                     });
                     it("requiring the plugin will fail", function () {
-                        try {
-                            manager.require("my-plugin-with-dep");
-                        }
-                        catch (e) {
-                            return;
-                        }
-                        throw new Error("Excepted to fail");
+                        // VersionManager should be keep the dependencies of my-plugin-with-dep
+                        // after uninstalling moment
+                        const pluginInstance = manager.require("my-plugin-with-dep");
+                        chai_1.assert.equal(pluginInstance.testMoment, "1981/10/06");
                     });
                     it("if dependency is reinstalled plugin will work again", function () {
                         return __awaiter(this, void 0, void 0, function* () {
-                            yield manager.installFromNpm("moment", "2.18.1");
-                            const pluginInstance = manager.require("my-plugin-with-dep");
-                            chai_1.assert.equal(pluginInstance.testMoment, "1981/10/06");
-                        });
-                    });
-                    it("after a plugin load error if dependency is reinstalled plugin will work again", function () {
-                        return __awaiter(this, void 0, void 0, function* () {
-                            let initialFailed = false;
-                            try {
-                                manager.require("my-plugin-with-dep");
-                            }
-                            catch (e) {
-                                initialFailed = true;
-                            }
-                            chai_1.assert.isTrue(initialFailed, "expected to fail to load without moment");
                             yield manager.installFromNpm("moment", "2.18.1");
                             const pluginInstance = manager.require("my-plugin-with-dep");
                             chai_1.assert.equal(pluginInstance.testMoment, "1981/10/06");
@@ -845,6 +829,35 @@ describe("PluginManager:", function () {
                 });
             });
         });
+        describe("Optional dependencies", function () {
+            describe("Given a package with optional dependencies", function () {
+                beforeEach(function () {
+                    return __awaiter(this, void 0, void 0, function* () {
+                        const pluginSourcePath = path.join(__dirname, "my-plugin-with-opt-dep");
+                        yield manager.installFromPath(pluginSourcePath);
+                    });
+                });
+                it("optional dependencies are installed", function () {
+                    chai_1.assert.equal(manager.list().length, 2);
+                    chai_1.assert.equal(manager.list()[0].name, "moment");
+                    chai_1.assert.equal(manager.list()[1].name, "my-plugin-with-opt-dep");
+                });
+                it("optional dependencies are available", function () {
+                    const pluginInstance = manager.require("my-plugin-with-opt-dep");
+                    chai_1.assert.equal(pluginInstance.testMoment, "1981/10/06");
+                });
+            });
+            it("installation continues when an optional dependency fails", function () {
+                return __awaiter(this, void 0, void 0, function* () {
+                    const pluginSourcePath = path.join(__dirname, "my-plugin-with-bad-opt-dep");
+                    yield manager.installFromPath(pluginSourcePath);
+                    chai_1.assert.equal(manager.list().length, 1);
+                    chai_1.assert.equal(manager.list()[0].name, "my-plugin-with-bad-opt-dep");
+                    const pluginInstance = manager.require("my-plugin-with-bad-opt-dep");
+                    chai_1.assert.isTrue(pluginInstance.ok);
+                });
+            });
+        });
         describe("handling updates", function () {
             beforeEach(function () {
                 return __awaiter(this, void 0, void 0, function* () {
@@ -860,27 +873,48 @@ describe("PluginManager:", function () {
                     chai_1.assert.equal(manager.list()[0].name, "my-plugin-a");
                     chai_1.assert.equal(manager.list()[0].version, "1.0.0");
                     chai_1.assert.equal(manager.list()[1].name, "my-plugin-b");
+                    // - my-plugin-a@v1
+                    // - my-plugin-b
+                    //     - (depends) my-plugin-a@v1
+                    chai_1.assert.equal(manager.require("my-plugin-a"), "v1");
                     const initialPluginInstance = manager.require("my-plugin-b");
                     chai_1.assert.equal(initialPluginInstance, "a = v1");
                     yield manager.installFromPath(path.join(__dirname, "my-plugin-a@v2"));
                     chai_1.assert.equal(manager.list().length, 2);
                     chai_1.assert.isDefined(manager.alreadyInstalled("my-plugin-b", "=1.0.0"));
                     chai_1.assert.isDefined(manager.alreadyInstalled("my-plugin-a", "=2.0.0"));
+                    // - my-plugin-a@v2 <- only this has been updated
+                    // - my-plugin-b
+                    //     - (depends) my-plugin-a@v1 <- keep the dependency
+                    // my-plugin-a should return 'a = v2' because it has been updated
+                    chai_1.assert.equal(manager.require("my-plugin-a"), "v2");
+                    // my-plugin-b should return 'a = v1' because it depends on my-plugin-a@1.0.0
                     const pluginInstance = manager.require("my-plugin-b");
-                    chai_1.assert.equal(pluginInstance, "a = v2");
+                    chai_1.assert.equal(pluginInstance, "a = v1");
                 });
             });
             it("updating a package that need a prev version will not downgrade the dependency", function () {
                 return __awaiter(this, void 0, void 0, function* () {
                     yield manager.installFromPath(path.join(__dirname, "my-plugin-a@v2")); // update dependency to v2
                     yield manager.uninstall("my-plugin-b");
+                    try {
+                        yield manager.installFromPath(path.join(__dirname, "my-plugin-b")); // depend on my-plugin-a@1.0.0
+                        throw new Error("Expected to fail");
+                    }
+                    catch (err) {
+                        // This test should fail.
+                        // because my-plugin-b depends on my-plugin-a@1.0.0, but when my-plugin-b is uninstalled, my-plugin-a@1.0.0 is
+                        // uninstalled. So VersionManager only keeps my-plugin-a@2.0.0, and my-plugin-a does not exist in npm.
+                        chai_1.assert.isTrue(err.message.includes("Failed to get package 'my-plugin-a' Response error 404 Not Found"));
+                    }
+                    yield manager.installFromPath(path.join(__dirname, "my-plugin-a@v1"));
                     yield manager.installFromPath(path.join(__dirname, "my-plugin-b")); // depend on my-plugin-a@1.0.0
                     chai_1.assert.equal(manager.list().length, 2);
                     chai_1.assert.equal(manager.list()[0].name, "my-plugin-a");
-                    chai_1.assert.equal(manager.list()[0].version, "2.0.0");
+                    chai_1.assert.equal(manager.list()[0].version, "1.0.0");
                     chai_1.assert.equal(manager.list()[1].name, "my-plugin-b");
                     const initialPluginInstance = manager.require("my-plugin-b");
-                    chai_1.assert.equal(initialPluginInstance, "a = v2");
+                    chai_1.assert.equal(initialPluginInstance, "a = v1");
                 });
             });
         });
@@ -1335,6 +1369,253 @@ describe("PluginManager:", function () {
                     const result = manager.require("my-plugin-with-sandbox");
                     chai_1.assert.equal(result, require.resolve("fs"));
                 });
+            });
+        });
+    });
+    describe("uninstall", function () {
+        afterEach(function () {
+            return __awaiter(this, void 0, void 0, function* () {
+                yield manager.uninstallAll();
+            });
+        });
+        it("uninstall a single plugin", function () {
+            return __awaiter(this, void 0, void 0, function* () {
+                const pluginSourcePath = path.join(__dirname, "my-basic-plugin");
+                yield manager.installFromPath(pluginSourcePath);
+                const plugins = manager.list();
+                chai_1.assert.equal(plugins.length, 1);
+                const pluginFiles = yield fs.readdir(manager.options.pluginsPath);
+                chai_1.assert.equal(pluginFiles.filter(f => f !== '.versions').length, 1);
+                const versionsPath = path.join(manager.options.pluginsPath, ".versions");
+                const versionFiles = yield fs.readdir(versionsPath);
+                chai_1.assert.equal(versionFiles.length, 1);
+                yield manager.uninstall("my-basic-plugin");
+                const cleanedPlugins = manager.list();
+                chai_1.assert.equal(cleanedPlugins.length, 0);
+                const cleanedPluginFiles = yield fs.readdir(manager.options.pluginsPath);
+                chai_1.assert.equal(cleanedPluginFiles.filter(f => f !== '.versions').length, 0);
+                const cleanedVersionFiles = yield fs.readdir(versionsPath);
+                chai_1.assert.equal(cleanedVersionFiles.length, 0);
+            });
+        });
+        it("uninstall a single plugin with multiple versions", function () {
+            return __awaiter(this, void 0, void 0, function* () {
+                yield manager.installFromPath(path.join(__dirname, "my-plugin-a@v1"));
+                yield manager.installFromPath(path.join(__dirname, "my-plugin-a@v2"));
+                const plugins = manager.list();
+                chai_1.assert.equal(plugins.length, 1);
+                chai_1.assert.equal(plugins[0].name, "my-plugin-a");
+                chai_1.assert.equal(plugins[0].version, "2.0.0");
+                const pluginFiles = yield fs.readdir(manager.options.pluginsPath);
+                chai_1.assert.equal(pluginFiles.filter(f => f !== '.versions').length, 1);
+                const versionsPath = path.join(manager.options.pluginsPath, ".versions");
+                const versionFiles = yield fs.readdir(versionsPath);
+                chai_1.assert.equal(versionFiles.length, 1);
+                yield manager.uninstall("my-plugin-a");
+                const cleanedPlugins = manager.list();
+                chai_1.assert.equal(cleanedPlugins.length, 0);
+                const cleanedPluginFiles = yield fs.readdir(manager.options.pluginsPath);
+                chai_1.assert.equal(cleanedPluginFiles.filter(f => f !== '.versions').length, 0);
+                const cleanedVersionFiles = yield fs.readdir(versionsPath);
+                chai_1.assert.equal(cleanedVersionFiles.length, 0);
+            });
+        });
+        it("uninstall a single plugin with multiple versions and keep other plugins", function () {
+            return __awaiter(this, void 0, void 0, function* () {
+                yield manager.installFromPath(path.join(__dirname, "my-plugin-a@v1"));
+                yield manager.installFromPath(path.join(__dirname, "my-basic-plugin"));
+                yield manager.installFromPath(path.join(__dirname, "my-plugin-a@v2"));
+                const plugins = manager.list();
+                chai_1.assert.equal(plugins.length, 2);
+                chai_1.assert.equal(plugins[0].name, "my-basic-plugin");
+                chai_1.assert.equal(plugins[1].name, "my-plugin-a");
+                chai_1.assert.equal(plugins[1].version, "2.0.0");
+                const pluginFiles = yield fs.readdir(manager.options.pluginsPath);
+                chai_1.assert.equal(pluginFiles.filter(f => f !== '.versions').length, 2);
+                const versionsPath = path.join(manager.options.pluginsPath, ".versions");
+                const versionFiles = yield fs.readdir(versionsPath);
+                chai_1.assert.equal(versionFiles.length, 2);
+                yield manager.uninstall("my-plugin-a");
+                const cleanedPlugins = manager.list();
+                chai_1.assert.equal(cleanedPlugins.length, 1);
+                chai_1.assert.equal(cleanedPlugins[0].name, "my-basic-plugin");
+                const cleanedPluginFiles = yield fs.readdir(manager.options.pluginsPath);
+                chai_1.assert.equal(cleanedPluginFiles.filter(f => f !== '.versions').length, 1);
+                const cleanedVersionFiles = yield fs.readdir(versionsPath);
+                chai_1.assert.equal(cleanedVersionFiles.length, 1);
+            });
+        });
+        it("uninstall a plugin with dependencies, uninstall main package", function () {
+            return __awaiter(this, void 0, void 0, function* () {
+                yield manager.installFromPath(path.join(__dirname, "my-plugin-with-dep"));
+                const plugins = manager.list();
+                chai_1.assert.equal(plugins.length, 2);
+                chai_1.assert.equal(plugins[0].name, "moment");
+                chai_1.assert.equal(plugins[1].name, "my-plugin-with-dep");
+                const pluginFiles = yield fs.readdir(manager.options.pluginsPath);
+                chai_1.assert.equal(pluginFiles.filter(f => f !== '.versions').length, 2);
+                const versionsPath = path.join(manager.options.pluginsPath, ".versions");
+                const versionFiles = yield fs.readdir(versionsPath);
+                chai_1.assert.equal(versionFiles.length, 2);
+                yield manager.uninstall("my-plugin-with-dep");
+                // Uninstalling my-plugin-with-dep should not uninstall its dependencies
+                const cleanedPlugins = manager.list();
+                chai_1.assert.equal(cleanedPlugins.length, 1);
+                chai_1.assert.equal(cleanedPlugins[0].name, "moment");
+                const cleanedPluginFiles = yield fs.readdir(manager.options.pluginsPath);
+                chai_1.assert.equal(cleanedPluginFiles.filter(f => f !== '.versions').length, 1);
+                const cleanedVersionFiles = yield fs.readdir(versionsPath);
+                chai_1.assert.equal(cleanedVersionFiles.length, 1);
+            });
+        });
+        it("uninstall a plugin with dependencies, uninstall dependency", function () {
+            return __awaiter(this, void 0, void 0, function* () {
+                yield manager.installFromPath(path.join(__dirname, "my-plugin-with-dep"));
+                const plugins = manager.list();
+                chai_1.assert.equal(plugins.length, 2);
+                chai_1.assert.equal(plugins[0].name, "moment");
+                chai_1.assert.equal(plugins[1].name, "my-plugin-with-dep");
+                const pluginFiles = yield fs.readdir(manager.options.pluginsPath);
+                chai_1.assert.equal(pluginFiles.filter(f => f !== '.versions').length, 2);
+                const versionsPath = path.join(manager.options.pluginsPath, ".versions");
+                const versionFiles = yield fs.readdir(versionsPath);
+                chai_1.assert.equal(versionFiles.length, 2);
+                yield manager.uninstall("moment");
+                // Uninstalling moment should not uninstall my-plugin-with-dep and its dependencies
+                const cleanedPlugins = manager.list();
+                chai_1.assert.equal(cleanedPlugins.length, 1);
+                chai_1.assert.equal(cleanedPlugins[0].name, "my-plugin-with-dep");
+                const cleanedPluginFiles = yield fs.readdir(manager.options.pluginsPath);
+                chai_1.assert.equal(cleanedPluginFiles.filter(f => f !== '.versions').length, 1);
+                const cleanedVersionFiles = yield fs.readdir(versionsPath);
+                chai_1.assert.equal(cleanedVersionFiles.length, 2);
+            });
+        });
+        it("uninstall a plugin with host dependencies", function () {
+            return __awaiter(this, void 0, void 0, function* () {
+                yield manager.installFromPath(path.join(__dirname, "my-plugin-with-host-dep"));
+                const plugins = manager.list();
+                chai_1.assert.equal(plugins.length, 1);
+                chai_1.assert.equal(plugins[0].name, "my-plugin-with-host-dep");
+                const pluginFiles = yield fs.readdir(manager.options.pluginsPath);
+                chai_1.assert.equal(pluginFiles.filter(f => f !== '.versions').length, 1);
+                const versionsPath = path.join(manager.options.pluginsPath, ".versions");
+                const versionFiles = yield fs.readdir(versionsPath);
+                chai_1.assert.equal(versionFiles.length, 1);
+                yield manager.uninstall("my-plugin-with-host-dep");
+                const cleanedPlugins = manager.list();
+                chai_1.assert.equal(cleanedPlugins.length, 0);
+                const cleanedPluginFiles = yield fs.readdir(manager.options.pluginsPath);
+                chai_1.assert.equal(cleanedPluginFiles.filter(f => f !== '.versions').length, 0);
+                const cleanedVersionFiles = yield fs.readdir(versionsPath);
+                chai_1.assert.equal(cleanedVersionFiles.length, 0);
+            });
+        });
+        it("uninstall a scoped plugin", function () {
+            return __awaiter(this, void 0, void 0, function* () {
+                yield manager.installFromPath(path.join(__dirname, "my-basic-plugin-scoped"));
+                const plugins = manager.list();
+                chai_1.assert.equal(plugins.length, 1);
+                chai_1.assert.equal(plugins[0].name, "@myscope/my-basic-plugin-scoped");
+                const pluginFiles = yield fs.readdir(manager.options.pluginsPath);
+                chai_1.assert.equal(pluginFiles.filter(f => f !== '.versions').length, 1);
+                const versionsPath = path.join(manager.options.pluginsPath, ".versions");
+                const versionFiles = yield fs.readdir(versionsPath);
+                chai_1.assert.equal(versionFiles.length, 1);
+                yield manager.uninstall("@myscope/my-basic-plugin-scoped");
+                const cleanedPlugins = manager.list();
+                chai_1.assert.equal(cleanedPlugins.length, 0);
+                const cleanedPluginFiles = yield fs.readdir(manager.options.pluginsPath);
+                chai_1.assert.equal(cleanedPluginFiles.filter(f => f !== '.versions').length, 0);
+                const cleanedVersionFiles = yield fs.readdir(versionsPath);
+                chai_1.assert.equal(cleanedVersionFiles.length, 0);
+            });
+        });
+        it("uninstall a scoped plugin, keep scope directory", function () {
+            return __awaiter(this, void 0, void 0, function* () {
+                yield manager.installFromPath(path.join(__dirname, "my-basic-plugin-scoped"));
+                yield manager.installFromPath(path.join(__dirname, "my-plugin-a@v1"));
+                yield manager.installFromPath(path.join(__dirname, "my-plugin-scoped-with-dep"));
+                const plugins = manager.list();
+                chai_1.assert.equal(plugins.length, 3);
+                chai_1.assert.equal(plugins[0].name, "@myscope/my-basic-plugin-scoped");
+                chai_1.assert.equal(plugins[1].name, "my-plugin-a");
+                chai_1.assert.equal(plugins[2].name, "@myscope/my-plugin-scoped-with-dep");
+                const pluginFiles = yield fs.readdir(manager.options.pluginsPath);
+                chai_1.assert.equal(pluginFiles.filter(f => f !== '.versions').length, 2);
+                const versionsPath = path.join(manager.options.pluginsPath, ".versions");
+                const versionFiles = yield fs.readdir(versionsPath);
+                chai_1.assert.equal(versionFiles.length, 2);
+                yield manager.uninstall("my-plugin-a");
+                // VersionManager should keep the dependencies of my-plugin-scoped-with-dep
+                const plugin = manager.require("@myscope/my-plugin-scoped-with-dep");
+                chai_1.assert.equal(plugin, "a = v1");
+                yield manager.uninstall("@myscope/my-plugin-scoped-with-dep");
+                const cleanedPlugins = manager.list();
+                chai_1.assert.equal(cleanedPlugins.length, 1);
+                chai_1.assert.equal(cleanedPlugins[0].name, "@myscope/my-basic-plugin-scoped");
+                const cleanedPluginFiles = yield fs.readdir(manager.options.pluginsPath);
+                chai_1.assert.equal(cleanedPluginFiles.filter(f => f !== '.versions').length, 1);
+                chai_1.assert.isTrue(cleanedPluginFiles.includes("@myscope"));
+                const scopedPluginFiles = yield fs.readdir(path.join(manager.options.pluginsPath, "@myscope"));
+                chai_1.assert.equal(scopedPluginFiles.length, 1);
+                chai_1.assert.isTrue(scopedPluginFiles.includes("my-basic-plugin-scoped"));
+                const cleanedVersionFiles = yield fs.readdir(versionsPath);
+                chai_1.assert.equal(cleanedVersionFiles.length, 1);
+                chai_1.assert.isTrue(cleanedVersionFiles.includes("@myscope"));
+                const scopedVersionFiles = yield fs.readdir(path.join(versionsPath, "@myscope"));
+                chai_1.assert.equal(scopedVersionFiles.length, 1);
+                chai_1.assert.isTrue(scopedVersionFiles.includes("my-basic-plugin-scoped@1.0.0"));
+            });
+        });
+        it("uninstall a plugin with scoped dependencies", function () {
+            return __awaiter(this, void 0, void 0, function* () {
+                yield manager.installFromPath(path.join(__dirname, "my-basic-plugin-scoped"));
+                yield manager.installFromPath(path.join(__dirname, "my-plugin-with-scoped-dep"));
+                const plugins = manager.list();
+                chai_1.assert.equal(plugins.length, 2);
+                chai_1.assert.equal(plugins[0].name, "@myscope/my-basic-plugin-scoped");
+                chai_1.assert.equal(plugins[1].name, "my-plugin-with-scoped-dep");
+                const pluginFiles = yield fs.readdir(manager.options.pluginsPath);
+                chai_1.assert.equal(pluginFiles.filter(f => f !== '.versions').length, 2);
+                const versionsPath = path.join(manager.options.pluginsPath, ".versions");
+                const versionFiles = yield fs.readdir(versionsPath);
+                chai_1.assert.equal(versionFiles.length, 2);
+                yield manager.uninstall("@myscope/my-basic-plugin-scoped");
+                yield manager.uninstall("my-plugin-with-scoped-dep");
+                const cleanedPlugins = manager.list();
+                chai_1.assert.equal(cleanedPlugins.length, 0);
+                const cleanedPluginFiles = yield fs.readdir(manager.options.pluginsPath);
+                chai_1.assert.equal(cleanedPluginFiles.filter(f => f !== '.versions').length, 0);
+                const cleanedVersionFiles = yield fs.readdir(versionsPath);
+                chai_1.assert.equal(cleanedVersionFiles.length, 0);
+            });
+        });
+        it("uninstall a plugin with git dependencies", function () {
+            return __awaiter(this, void 0, void 0, function* () {
+                yield manager.installFromPath(path.join(__dirname, "my-plugin-with-git-dep"));
+                const plugins = manager.list();
+                chai_1.assert.equal(plugins.length, 2);
+                chai_1.assert.equal(plugins[0].name, "underscore");
+                chai_1.assert.equal(plugins[1].name, "my-plugin-with-git-dep");
+                const pluginFiles = yield fs.readdir(manager.options.pluginsPath);
+                chai_1.assert.equal(pluginFiles.filter(f => f !== '.versions').length, 2);
+                const versionsPath = path.join(manager.options.pluginsPath, ".versions");
+                const versionFiles = yield fs.readdir(versionsPath);
+                chai_1.assert.equal(versionFiles.length, 2);
+                const resultBeforeUninstall = manager.require("my-plugin-with-git-dep");
+                chai_1.assert.equal(resultBeforeUninstall.testUnderscore, "hello underscore!");
+                yield manager.uninstall("underscore");
+                // VersionManager should keep the dependencies of my-plugin-with-git-dep after uninstalling underscore
+                const resultAfterUninstall = manager.require("my-plugin-with-git-dep");
+                chai_1.assert.equal(resultAfterUninstall.testUnderscore, "hello underscore!");
+                const cleanedPlugins = manager.list();
+                chai_1.assert.equal(cleanedPlugins.length, 1);
+                chai_1.assert.equal(cleanedPlugins[0].name, "my-plugin-with-git-dep");
+                const cleanedPluginFiles = yield fs.readdir(manager.options.pluginsPath);
+                chai_1.assert.equal(cleanedPluginFiles.filter(f => f !== '.versions').length, 1);
+                const cleanedVersionFiles = yield fs.readdir(versionsPath);
+                chai_1.assert.equal(cleanedVersionFiles.length, 2);
             });
         });
     });

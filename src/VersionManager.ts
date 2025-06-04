@@ -1,6 +1,6 @@
 import * as fs from "./fileSystem";
 import * as path from "path";
-import {IPluginInfo} from "./PluginInfo";
+import { IPluginInfo } from "./PluginInfo";
 import * as semver from "semver";
 import Debug from "debug";
 import { PackageJsonInfo, PackageInfo } from "./PackageInfo";
@@ -32,7 +32,7 @@ export class VersionManager {
 			options.rootPath = path.join(options.cwd, "plugin_packages", ".versions");
 		}
 
-		this.options = {...createDefaultOptions(), ...(options || {})};
+		this.options = { ...createDefaultOptions(), ...(options || {}) };
 	}
 
 	/**
@@ -49,7 +49,7 @@ export class VersionManager {
 	 * @returns A location for the specified package name and version
 	 */
 	public getPath(packageInfo: PackageInfo): string {
-		const {name, version} = packageInfo;
+		const { name, version } = packageInfo;
 		return path.join(this.options.rootPath, `${name}@${version}`);
 	}
 
@@ -166,39 +166,39 @@ export class VersionManager {
 			throw new Error(`Invalid plugin ${location}, package.json is missing`);
 		}
 
-                const mainFile = path.normalize(path.join(location, packageJson.main || DefaultMainFile));
-                if (!withDependencies) {
-                        return {
-                                name: packageJson.name,
-                                version: packageJson.version,
-                                location,
-                                mainFile,
-                                dependencies: packageJson.dependencies || {},
-                                optionalDependencies: packageJson.optionalDependencies || {},
-                        };
-                }
+		const mainFile = path.normalize(path.join(location, packageJson.main || DefaultMainFile));
+		if (!withDependencies) {
+			return {
+				name: packageJson.name,
+				version: packageJson.version,
+				location,
+				mainFile,
+				dependencies: packageJson.dependencies || {},
+				optionalDependencies: packageJson.optionalDependencies || {},
+			};
+		}
 
-                const dependencies = packageJson.dependencies || {};
-                const dependencyNames = Object.keys(dependencies);
+		const dependencies = packageJson.dependencies || {};
+		const dependencyNames = Object.keys(dependencies);
 		const dependencyPackageJsons = await Promise.all(dependencyNames.map(async (name) => {
 			const moduleLocation = path.join(location, "node_modules", name);
 			return await this.readPackageJsonFromPath(moduleLocation);
 		}));
-                const dependencyDetails: { [name: string]: PackageJsonInfo | undefined } = {};
-                dependencyPackageJsons.forEach((p, i) => {
-                        dependencyDetails[dependencyNames[i]] = p;
-                });
+		const dependencyDetails: { [name: string]: PackageJsonInfo | undefined } = {};
+		dependencyPackageJsons.forEach((p, i) => {
+			dependencyDetails[dependencyNames[i]] = p;
+		});
 
-                return {
-                        name: packageJson.name,
-                        version: packageJson.version,
-                        location,
-                        mainFile,
-                        dependencies,
-                        optionalDependencies: packageJson.optionalDependencies || {},
-                        dependencyDetails,
-                };
-        }
+		return {
+			name: packageJson.name,
+			version: packageJson.version,
+			location,
+			mainFile,
+			dependencies,
+			optionalDependencies: packageJson.optionalDependencies || {},
+			dependencyDetails,
+		};
+	}
 
 	/**
 	 * Check whether the filename is satisfied with the specified package name and version.
@@ -277,7 +277,7 @@ export class VersionManager {
 	private async checkVersionUsedInDir(
 		packageInfo: PackageInfo, baseDir?: string,
 	): Promise<boolean> {
-		const {name, version} = packageInfo;
+		const { name, version } = packageInfo;
 		const location = baseDir || this.options.rootPath;
 		const files = await this.listVersionDirs(location);
 		if (debug.enabled) {
@@ -320,7 +320,7 @@ export class VersionManager {
 		if (!packageJson.dependencies) {
 			return false;
 		}
-		const {name, version} = packageInfo;
+		const { name, version } = packageInfo;
 		if (!packageJson.dependencies[name]) {
 			return false;
 		}

@@ -1,8 +1,8 @@
 import * as fs from "./fileSystem";
 import * as path from "path";
-import {NpmRegistryClient, NpmRegistryConfig} from "./NpmRegistryClient";
-import {PluginVm} from "./PluginVm";
-import {IPluginInfo} from "./PluginInfo";
+import { NpmRegistryClient, NpmRegistryConfig } from "./NpmRegistryClient";
+import { PluginVm } from "./PluginVm";
+import { IPluginInfo } from "./PluginInfo";
 import * as lockFile from "lockfile";
 import * as semver from "semver";
 import Debug from "debug";
@@ -80,7 +80,7 @@ export class PluginManager {
 			options.pluginsPath = path.join(options.cwd, "plugin_packages");
 		}
 
-		this.options = {...createDefaultOptions(), ...(options || {})};
+		this.options = { ...createDefaultOptions(), ...(options || {}) };
 		this.versionManager = new VersionManager({
 			cwd: this.options.cwd,
 			rootPath: this.options.versionsPath || path.join(this.options.pluginsPath, ".versions")
@@ -210,7 +210,7 @@ export class PluginManager {
 	}
 
 	require(fullName: string): any {
-		const {pluginName, requiredPath} = this.vm.splitRequire(fullName);
+		const { pluginName, requiredPath } = this.vm.splitRequire(fullName);
 
 		const info = this.getInfo(pluginName);
 		if (!info) {
@@ -519,7 +519,7 @@ export class PluginManager {
 				debug(`Create plugin ${name} to ${this.options.pluginsPath} from code`);
 			}
 
-			const location = this.versionManager.getPath({name, version});
+			const location = this.versionManager.getPath({ name, version });
 			if (!location) {
 				throw new Error(`Cannot resolve path for ${name}@${version}`);
 			}
@@ -533,85 +533,85 @@ export class PluginManager {
 		return this.addPlugin(pluginInfo);
 	}
 
-        private async installDependencies(plugin: IPluginInfo): Promise<{ [name: string]: string }> {
-                const dependencies: { [name: string]: string } = {};
+	private async installDependencies(plugin: IPluginInfo): Promise<{ [name: string]: string }> {
+		const dependencies: { [name: string]: string } = {};
 
-                const installOne = async (key: string, version: string, optional = false) => {
-                        if (this.shouldIgnore(key)) {
-                                return;
-                        }
+		const installOne = async (key: string, version: string, optional = false) => {
+			if (this.shouldIgnore(key)) {
+				return;
+			}
 
-                        if (this.isModuleAvailableFromHost(key, version)) {
-                                if (debug.enabled) {
-                                        debug(`Installing dependencies of ${plugin.name}: ${key} is already available on host`);
-                                }
-                        } else if (this.alreadyInstalled(key, version)) {
-                                if (debug.enabled) {
-                                        debug(`Installing dependencies of ${plugin.name}: ${key} is already installed`);
-                                }
-                                const installed = await this.versionManager.resolvePath(key, version);
-                                if (!installed) {
-                                        if (optional) {
-                                                if (debug.enabled) {
-                                                        debug(`Cannot resolve optional dependency path for ${key}@${version}`);
-                                                }
-                                                return;
-                                        }
-                                        throw new Error(`Cannot resolve path for ${key}@${version}`);
-                                }
-                                await this.linkDependencyToPlugin(plugin, key, installed);
-                        } else {
-                                if (debug.enabled) {
-                                        debug(`Installing dependencies of ${plugin.name}: ${key} ...`);
-                                }
-                                try {
-                                        const installedPlugin = await this.installLockFree(key, version);
-                                        const installed = await this.versionManager.resolvePath(installedPlugin.name, installedPlugin.version);
-                                        if (!installed) {
-                                                if (optional) {
-                                                        if (debug.enabled) {
-                                                                debug(`Cannot resolve optional dependency path for ${installedPlugin.name}@${installedPlugin.version}`);
-                                                        }
-                                                        return;
-                                                }
-                                                throw new Error(`Cannot resolve path for ${installedPlugin.name}@${installedPlugin.version}`);
-                                        }
-                                        await this.linkDependencyToPlugin(plugin, key, installed);
-                                } catch (err) {
-                                        if (optional) {
-                                                if (debug.enabled) {
-                                                        debug(`Failed to install optional dependency ${key}@${version}`, err);
-                                                }
-                                                return;
-                                        }
-                                        throw err;
-                                }
-                        }
+			if (this.isModuleAvailableFromHost(key, version)) {
+				if (debug.enabled) {
+					debug(`Installing dependencies of ${plugin.name}: ${key} is already available on host`);
+				}
+			} else if (this.alreadyInstalled(key, version)) {
+				if (debug.enabled) {
+					debug(`Installing dependencies of ${plugin.name}: ${key} is already installed`);
+				}
+				const installed = await this.versionManager.resolvePath(key, version);
+				if (!installed) {
+					if (optional) {
+						if (debug.enabled) {
+							debug(`Cannot resolve optional dependency path for ${key}@${version}`);
+						}
+						return;
+					}
+					throw new Error(`Cannot resolve path for ${key}@${version}`);
+				}
+				await this.linkDependencyToPlugin(plugin, key, installed);
+			} else {
+				if (debug.enabled) {
+					debug(`Installing dependencies of ${plugin.name}: ${key} ...`);
+				}
+				try {
+					const installedPlugin = await this.installLockFree(key, version);
+					const installed = await this.versionManager.resolvePath(installedPlugin.name, installedPlugin.version);
+					if (!installed) {
+						if (optional) {
+							if (debug.enabled) {
+								debug(`Cannot resolve optional dependency path for ${installedPlugin.name}@${installedPlugin.version}`);
+							}
+							return;
+						}
+						throw new Error(`Cannot resolve path for ${installedPlugin.name}@${installedPlugin.version}`);
+					}
+					await this.linkDependencyToPlugin(plugin, key, installed);
+				} catch (err) {
+					if (optional) {
+						if (debug.enabled) {
+							debug(`Failed to install optional dependency ${key}@${version}`, err);
+						}
+						return;
+					}
+					throw err;
+				}
+			}
 
-                        // NOTE: maybe here I should put the actual version?
-                        dependencies[key] = version;
-                };
+			// NOTE: maybe here I should put the actual version?
+			dependencies[key] = version;
+		};
 
-                if (plugin.dependencies) {
-                        for (const key in plugin.dependencies) {
-                                if (!plugin.dependencies.hasOwnProperty(key)) {
-                                        continue;
-                                }
-                                await installOne(key, plugin.dependencies[key], false);
-                        }
-                }
+		if (plugin.dependencies) {
+			for (const key in plugin.dependencies) {
+				if (!plugin.dependencies.hasOwnProperty(key)) {
+					continue;
+				}
+				await installOne(key, plugin.dependencies[key], false);
+			}
+		}
 
-                if (plugin.optionalDependencies) {
-                        for (const key in plugin.optionalDependencies) {
-                                if (!plugin.optionalDependencies.hasOwnProperty(key)) {
-                                        continue;
-                                }
-                                await installOne(key, plugin.optionalDependencies[key], true);
-                        }
-                }
+		if (plugin.optionalDependencies) {
+			for (const key in plugin.optionalDependencies) {
+				if (!plugin.optionalDependencies.hasOwnProperty(key)) {
+					continue;
+				}
+				await installOne(key, plugin.optionalDependencies[key], true);
+			}
+		}
 
-                return dependencies;
-        }
+		return dependencies;
+	}
 
 	private async linkDependencyToPlugin(plugin: IPluginInfo, packageName: string, versionPath: string) {
 		const nodeModulesPath = path.join(plugin.location, "node_modules");
@@ -683,7 +683,7 @@ export class PluginManager {
 
 		// '/' is permitted to support scoped packages
 		if (name.startsWith(".")
-		|| name.indexOf("\\") >= 0) {
+			|| name.indexOf("\\") >= 0) {
 			return false;
 		}
 
@@ -937,7 +937,7 @@ export class PluginManager {
 	}
 
 	private async createPluginInfo(packageInfo: PackageInfo): Promise<IPluginInfo> {
-		const {name, version} = packageInfo;
+		const { name, version } = packageInfo;
 		const location = await this.versionManager.resolvePath(name, version);
 		if (!location) {
 			throw new Error(`Cannot resolve path for ${name}@${version}`);
