@@ -478,82 +478,74 @@ class PluginManager {
             return this.addPlugin(pluginInfo);
         });
     }
-    installDependencies(plugin) {
+    installDependency(plugin, name, version) {
         return __awaiter(this, void 0, void 0, function* () {
-            const dependencies = {};
-            const installOne = (key, version, optional = false) => __awaiter(this, void 0, void 0, function* () {
-                if (this.shouldIgnore(key)) {
-                    return;
+            try {
+                if (this.shouldIgnore(name)) {
+                    return { installed: false };
                 }
-                if (this.isModuleAvailableFromHost(key, version)) {
+                if (this.isModuleAvailableFromHost(name, version)) {
                     if (debug.enabled) {
-                        debug(`Installing dependencies of ${plugin.name}: ${key} is already available on host`);
+                        debug(`Installing dependencies of ${plugin.name}: ${name} is already available on host`);
                     }
                 }
-                else if (this.alreadyInstalled(key, version)) {
+                else if (this.alreadyInstalled(name, version)) {
                     if (debug.enabled) {
-                        debug(`Installing dependencies of ${plugin.name}: ${key} is already installed`);
+                        debug(`Installing dependencies of ${plugin.name}: ${name} is already installed`);
                     }
-                    const installed = yield this.versionManager.resolvePath(key, version);
+                    const installed = yield this.versionManager.resolvePath(name, version);
                     if (!installed) {
-                        if (optional) {
-                            if (debug.enabled) {
-                                debug(`Cannot resolve optional dependency path for ${key}@${version}`);
-                            }
-                            return;
-                        }
-                        throw new Error(`Cannot resolve path for ${key}@${version}`);
+                        const error = new Error(`Cannot resolve path for ${name}@${version}`);
+                        return { installed: false, error };
                     }
-                    yield this.linkDependencyToPlugin(plugin, key, installed);
+                    yield this.linkDependencyToPlugin(plugin, name, installed);
                 }
                 else {
                     if (debug.enabled) {
-                        debug(`Installing dependencies of ${plugin.name}: ${key} ...`);
+                        debug(`Installing dependencies of ${plugin.name}: ${name} ...`);
                     }
-                    try {
-                        const installedPlugin = yield this.installLockFree(key, version);
-                        const installed = yield this.versionManager.resolvePath(installedPlugin.name, installedPlugin.version);
-                        if (!installed) {
-                            if (optional) {
-                                if (debug.enabled) {
-                                    debug(`Cannot resolve optional dependency path for ${installedPlugin.name}@${installedPlugin.version}`);
-                                }
-                                return;
-                            }
-                            throw new Error(`Cannot resolve path for ${installedPlugin.name}@${installedPlugin.version}`);
-                        }
-                        yield this.linkDependencyToPlugin(plugin, key, installed);
+                    const installedPlugin = yield this.installLockFree(name, version);
+                    const installed = yield this.versionManager.resolvePath(installedPlugin.name, installedPlugin.version);
+                    if (!installed) {
+                        const error = new Error(`Cannot resolve path for ${installedPlugin.name}@${installedPlugin.version}`);
+                        return { installed: false, error };
                     }
-                    catch (err) {
-                        if (optional) {
-                            if (debug.enabled) {
-                                debug(`Failed to install optional dependency ${key}@${version}`, err);
-                            }
-                            return;
-                        }
-                        throw err;
-                    }
+                    yield this.linkDependencyToPlugin(plugin, name, installed);
                 }
-                // NOTE: maybe here I should put the actual version?
-                dependencies[key] = version;
-            });
-            if (plugin.dependencies) {
-                for (const key in plugin.dependencies) {
-                    if (!plugin.dependencies.hasOwnProperty(key)) {
+                return { installed: true };
+            }
+            catch (error) {
+                if (debug.enabled) {
+                    debug(`Error installing dependency ${name} for ${plugin.name}:`, error);
+                }
+                const err = error instanceof Error ? error : new Error(String(error));
+                return { installed: false, error: err };
+            }
+        });
+    }
+    listDependencies(plugin) {
+        const allDependenciesToInstall = Object.keys(plugin.dependencies).map((key) => ({ isOptional: false, name: key, version: plugin.dependencies[key] }));
+        if (plugin.optionalDependencies) {
+            const optDeps = plugin.optionalDependencies;
+            allDependenciesToInstall.push(...Object.keys(optDeps).map((key) => ({ isOptional: true, name: key, version: optDeps[key] })));
+        }
+        return allDependenciesToInstall;
+    }
+    installDependencies(plugin) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const installedDependencies = {};
+            for (const dep of this.listDependencies(plugin)) {
+                const installResult = yield this.installDependency(plugin, dep.name, dep.version);
+                if (!installResult.installed && installResult.error) {
+                    if (dep.isOptional) {
                         continue;
                     }
-                    yield installOne(key, plugin.dependencies[key], false);
+                    throw installResult.error;
                 }
+                // NOTE: maybe here I should put the actual installed version?
+                installedDependencies[dep.name] = dep.version;
             }
-            if (plugin.optionalDependencies) {
-                for (const key in plugin.optionalDependencies) {
-                    if (!plugin.optionalDependencies.hasOwnProperty(key)) {
-                        continue;
-                    }
-                    yield installOne(key, plugin.optionalDependencies[key], true);
-                }
-            }
-            return dependencies;
+            return installedDependencies;
         });
     }
     linkDependencyToPlugin(plugin, packageName, versionPath) {
